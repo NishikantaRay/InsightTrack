@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><rect x='6' y='18' width='4' height='8' rx='1' fill='white' opacity='0.7'/><rect x='12' y='12' width='4' height='14' rx='1' fill='white' opacity='0.85'/><rect x='18' y='8' width='4' height='18' rx='1' fill='white'/><polyline points='7,16 13,10 19,6 25,4' stroke='%23a5f3fc' stroke-width='2' fill='none' stroke-linecap='round'/><circle cx='25' cy='4' r='2' fill='%23a5f3fc'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Website - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #667eea;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #764ba2;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .hero {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin: 2rem 0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-card h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .tracking-demo {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .tracking-demo h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .event-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .event-log {
+            background: #1a1a2e;
+            color: #0f0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .event-log p {
+            margin: 0.25rem 0;
+            font-size: 0.875rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="products.html">Products</a></li>
+            <li><a href="pricing.html">Pricing</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="hero">
+            <h1>🚀 Welcome to Demo Website</h1>
+            <p>This is a test website to demonstrate analytics tracking</p>
+            <a href="products.html" class="btn">View Products</a>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>📊 Real-time Analytics</h3>
+                <p>Track visitors, page views, and user behavior in real-time with our powerful analytics dashboard.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎯 Conversion Tracking</h3>
+                <p>Monitor your conversion funnel and optimize user journeys for better results.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🌍 Geographic Insights</h3>
+                <p>Understand where your visitors come from and tailor content accordingly.</p>
+            </div>
+        </div>
+
+        <div class="tracking-demo">
+            <h2>🧪 Test Custom Events</h2>
+            <p>Click the buttons below to trigger custom analytics events:</p>
+
+            <div class="event-buttons">
+                <button class="btn" onclick="trackEvent('button_click', {button: 'cta_primary'})">
+                    Track Button Click
+                </button>
+                <button class="btn" onclick="trackEvent('add_to_cart', {product: 'demo-product', price: 99})">
+                    Add to Cart
+                </button>
+                <button class="btn" onclick="trackEvent('signup_start', {source: 'homepage'})">
+                    Start Signup
+                </button>
+                <button class="btn" onclick="trackEvent('video_play', {video_id: 'intro-video'})">
+                    Play Video
+                </button>
+            </div>
+
+            <div class="event-log" id="eventLog">
+                <p>📝 Event log will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Demo Website for Analytics Testing | Site ID: site_123</p>
+    </footer>
+
+    <!-- Analytics Tracking Script (single source of truth) -->
+    <script src="http://localhost:3001/api/sites/site_fd033f9e/script"></script>
+    <!-- <script src="/analytics.js"></script> -->
+    <script>
+        // Custom event handlers for demo buttons
+        function trackEvent(type, props) {
+            if (window.trackCustomEvent) {
+                window.trackCustomEvent(type, props);
+            }
+        }
+    </script>
+</body>
+
+</html>

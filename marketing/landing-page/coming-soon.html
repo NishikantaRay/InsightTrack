@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><rect x='6' y='18' width='4' height='8' rx='1' fill='white' opacity='0.7'/><rect x='12' y='12' width='4' height='14' rx='1' fill='white' opacity='0.85'/><rect x='18' y='8' width='4' height='18' rx='1' fill='white'/><polyline points='7,16 13,10 19,6 25,4' stroke='%23a5f3fc' stroke-width='2' fill='none' stroke-linecap='round'/><circle cx='25' cy='4' r='2' fill='%23a5f3fc'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>InsightTrack — Open-Source, Self-Hosted Web Analytics (Coming Soon)</title>
+    <meta name="description"
+        content="InsightTrack: Privacy-first, self-hosted web analytics powered by DuckDB. Open source. Coming soon." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Particle canvas */
+        #particle-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Animate in elements */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(.25, .46, .45, .94);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Gradient text animation */
+        .gradient-animate {
+            background-size: 200% 200%;
+            animation: gradient-shift 6s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        /* Floating badge pulse */
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.5);
+            }
+        }
+
+        /* Smooth hover lift */
+        .hover-lift {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .dark .hover-lift:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Email input focus ring */
+        .email-ring:focus-within {
+            border-color: rgb(99 102 241 / 0.5);
+            box-shadow: 0 0 0 3px rgb(99 102 241 / 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white relative z-10">
+
+        <!-- Navigation -->
+        <nav
+            class="fixed top-0 w-full z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800">
+            <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight">InsightTrack</span>
+                </div>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features"
+                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Features</a>
+                    <a href="#how-it-works"
+                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">How
+                        It Works</a>
+                    <a href="#tech-stack"
+                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Tech
+                        Stack</a>
+                    <a href="#roadmap"
+                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Roadmap</a>
+                    <a href="#comparison"
+                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Compare</a>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleTheme()"
+                        class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors"
+                        aria-label="Toggle theme">
+                        <svg class="w-4 h-4 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5" />
+                            <line x1="12" y1="1" x2="12" y2="3" />
+                            <line x1="12" y1="21" x2="12" y2="23" />
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                            <line x1="1" y1="12" x2="3" y2="12" />
+                            <line x1="21" y1="12" x2="23" y2="12" />
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                        </svg>
+                        <svg class="w-4 h-4 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                        </svg>
+                    </button>
+                    <a href="#notify"
+                        class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors shadow-sm">Get
+                        Early Access</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="pt-32 pb-20 px-6 relative overflow-hidden">
+            <div class="absolute inset-0 -z-10">
+                <div
+                    class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-transparent rounded-full blur-3xl">
+                </div>
+            </div>
+            <div class="max-w-4xl mx-auto text-center">
+                <div class="reveal flex flex-col items-center gap-3 mb-8">
+                    <div
+                        class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20">
+                        <div class="w-2 h-2 rounded-full bg-emerald-500"
+                            style="animation: pulse-dot 2s ease-in-out infinite"></div>
+                        <span class="text-xs font-medium text-indigo-700 dark:text-indigo-300">Open Source &middot;
+                            Self-Hosted &middot; Privacy First</span>
+                    </div>
+
+                </div>
+                <h1 class="reveal text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-8">
+                    Know exactly why<br />
+                    <span
+                        class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-500 to-pink-500 gradient-animate">visitors
+                        leave your site</span>
+                </h1>
+
+                <!-- Launch Countdown -->
+                <div class="reveal mb-8">
+                    <p
+                        class="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
+                        🚀 Launching April 30, 2026</p>
+                    <div id="countdown" class="flex items-end justify-center gap-3 md:gap-5">
+                        <div class="text-center">
+                            <div id="cd-days"
+                                class="text-4xl md:text-6xl font-black tabular-nums bg-clip-text text-transparent bg-gradient-to-b from-indigo-500 to-purple-600">
+                                33</div>
+                            <div class="text-[10px] uppercase text-gray-400 dark:text-gray-500 mt-1 tracking-widest">
+                                Days</div>
+                        </div>
+                        <div class="text-3xl md:text-5xl font-black text-gray-200 dark:text-gray-700 pb-6">:</div>
+                        <div class="text-center">
+                            <div id="cd-hours"
+                                class="text-4xl md:text-6xl font-black tabular-nums bg-clip-text text-transparent bg-gradient-to-b from-indigo-500 to-purple-600">
+                                00</div>
+                            <div class="text-[10px] uppercase text-gray-400 dark:text-gray-500 mt-1 tracking-widest">
+                                Hours</div>
+                        </div>
+                        <div class="text-3xl md:text-5xl font-black text-gray-200 dark:text-gray-700 pb-6">:</div>
+                        <div class="text-center">
+                            <div id="cd-mins"
+                                class="text-4xl md:text-6xl font-black tabular-nums bg-clip-text text-transparent bg-gradient-to-b from-indigo-500 to-purple-600">
+                                00</div>
+                            <div class="text-[10px] uppercase text-gray-400 dark:text-gray-500 mt-1 tracking-widest">
+                                Mins</div>
+                        </div>
+                        <div class="text-3xl md:text-5xl font-black text-gray-200 dark:text-gray-700 pb-6">:</div>
+                        <div class="text-center">
+                            <div id="cd-secs"
+                                class="text-4xl md:text-6xl font-black tabular-nums bg-clip-text text-transparent bg-gradient-to-b from-indigo-500 to-purple-600">
+                                00</div>
+                            <div class="text-[10px] uppercase text-gray-400 dark:text-gray-500 mt-1 tracking-widest">
+                                Secs</div>
+                        </div>
+                    </div>
+                </div>
+
+                <p
+                    class="reveal text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                    Open-source, self-hosted web analytics powered by DuckDB. No third-party tracking, no cookies, no
+                    GDPR cookie banners — ever.
+                </p>
+                <div class="reveal flex flex-col sm:flex-row gap-4 justify-center mb-16" id="notify">
+                    <form id="email-form" class="flex flex-col sm:flex-row gap-3 w-full max-w-lg mx-auto"
+                        autocomplete="off">
+                        <div
+                            class="flex-1 flex gap-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-1.5 email-ring transition-all">
+                            <input type="email" id="email-input" required
+                                placeholder="Enter your email for early access" aria-label="Email address"
+                                class="flex-1 bg-transparent border-none outline-none px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400" />
+                            <button type="submit" id="email-btn"
+                                class="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all shadow-sm whitespace-nowrap">
+                                Get Early Access
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <p id="form-msg" class="text-sm min-h-[1.5em] -mt-10 mb-4"></p>
+
+                <!-- Trust indicators -->
+                <div
+                    class="reveal flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-gray-400 dark:text-gray-500 mb-12">
+                    <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>No credit card</span>
+                    <span class="text-gray-200 dark:text-gray-700">&middot;</span>
+                    <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>MIT licensed &amp; free forever</span>
+                    <span class="text-gray-200 dark:text-gray-700">&middot;</span>
+                    <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>Docker deploy in 60s</span>
+                    <span class="text-gray-200 dark:text-gray-700">&middot;</span>
+                    <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-500"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>Zero cookies</span>
+                </div>
+
+                <!-- Dashboard Preview Mockup -->
+                <div class="reveal max-w-5xl mx-auto relative">
+                    <div
+                        class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-4/5 h-48 bg-indigo-500/20 blur-3xl rounded-full pointer-events-none">
+                    </div>
+                    <div
+                        class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-2xl shadow-black/10 dark:shadow-black/40">
+                        <!-- Browser bar -->
+                        <div
+                            class="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
+                            <span class="w-3 h-3 rounded-full bg-red-400"></span>
+                            <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+                            <span class="w-3 h-3 rounded-full bg-green-400"></span>
+                            <div
+                                class="flex-1 ml-3 px-3 py-1 rounded-md bg-gray-200/70 dark:bg-gray-700/60 text-xs text-gray-500 dark:text-gray-400">
+                                analytics.yoursite.com</div>
+                        </div>
+                        <!-- Dashboard body -->
+                        <div class="flex min-h-[380px]">
+                            <!-- Sidebar -->
+                            <div
+                                class="hidden md:flex flex-col w-48 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 p-4">
+                                <div class="flex items-center gap-2 mb-6">
+                                    <div class="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
+                                        <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <line x1="18" y1="20" x2="18" y2="10" />
+                                            <line x1="12" y1="20" x2="12" y2="4" />
+                                            <line x1="6" y1="20" x2="6" y2="14" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-bold">InsightTrack</span>
+                                </div>
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mb-0.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium">
+                                    Dashboard</div>
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mb-0.5 text-gray-500 dark:text-gray-400">
+                                    Pages</div>
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mb-0.5 text-gray-500 dark:text-gray-400">
+                                    Funnels</div>
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mb-0.5 text-gray-500 dark:text-gray-400">
+                                    Realtime</div>
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs mb-0.5 text-gray-500 dark:text-gray-400">
+                                    Settings</div>
+                            </div>
+                            <!-- Main -->
+                            <div class="flex-1 p-5 overflow-hidden">
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-sm font-bold">Dashboard</span>
+                                    <div class="flex gap-1">
+                                        <span
+                                            class="px-2 py-0.5 rounded text-[10px] font-medium text-gray-400 dark:text-gray-500">Today</span>
+                                        <span
+                                            class="px-2 py-0.5 rounded text-[10px] font-medium text-gray-400 dark:text-gray-500">7d</span>
+                                        <span
+                                            class="px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-600 text-white">30d</span>
+                                        <span
+                                            class="px-2 py-0.5 rounded text-[10px] font-medium text-gray-400 dark:text-gray-500">90d</span>
+                                    </div>
+                                </div>
+                                <!-- KPI cards -->
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                                    <div
+                                        class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl p-3">
+                                        <p
+                                            class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                                            Visitors</p>
+                                        <p class="text-lg font-extrabold">12,847</p>
+                                        <span class="text-[10px] font-semibold text-emerald-500">&uarr; 12.3%</span>
+                                        <svg class="mt-1 w-full h-6" viewBox="0 0 120 24" preserveAspectRatio="none">
+                                            <path
+                                                d="M0,20 L10,17 L20,14 L30,16 L40,11 L50,13 L60,8 L70,10 L80,5 L90,7 L100,3 L110,5 L120,2"
+                                                fill="none" stroke="#818cf8" stroke-width="1.5" />
+                                        </svg>
+                                    </div>
+                                    <div
+                                        class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl p-3">
+                                        <p
+                                            class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                                            Pageviews</p>
+                                        <p class="text-lg font-extrabold">34,201</p>
+                                        <span class="text-[10px] font-semibold text-emerald-500">&uarr; 8.7%</span>
+                                        <svg class="mt-1 w-full h-6" viewBox="0 0 120 24" preserveAspectRatio="none">
+                                            <path
+                                                d="M0,20 L10,17 L20,14 L30,16 L40,11 L50,13 L60,8 L70,10 L80,5 L90,7 L100,3 L110,5 L120,2"
+                                                fill="none" stroke="#34d399" stroke-width="1.5" />
+                                        </svg>
+                                    </div>
+                                    <div
+                                        class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl p-3">
+                                        <p
+                                            class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                                            Bounce Rate</p>
+                                        <p class="text-lg font-extrabold">42.5%</p>
+                                        <span class="text-[10px] font-semibold text-red-500">&darr; 2.1%</span>
+                                        <svg class="mt-1 w-full h-6" viewBox="0 0 120 24" preserveAspectRatio="none">
+                                            <path
+                                                d="M0,20 L10,17 L20,14 L30,16 L40,11 L50,13 L60,8 L70,10 L80,5 L90,7 L100,3 L110,5 L120,2"
+                                                fill="none" stroke="#fb923c" stroke-width="1.5" />
+                                        </svg>
+                                    </div>
+                                    <div
+                                        class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl p-3">
+                                        <p
+                                            class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                                            Avg. Duration</p>
+                                        <p class="text-lg font-extrabold">3m 05s</p>
+                                        <span class="text-[10px] font-semibold text-emerald-500">&uarr; 5.4%</span>
+                                        <svg class="mt-1 w-full h-6" viewBox="0 0 120 24" preserveAspectRatio="none">
+                                            <path
+                                                d="M0,20 L10,17 L20,14 L30,16 L40,11 L50,13 L60,8 L70,10 L80,5 L90,7 L100,3 L110,5 L120,2"
+                                                fill="none" stroke="#c084fc" stroke-width="1.5" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <!-- Charts -->
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                    <div
+                                        class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl p-4">
+                                        <p class="text-xs font-semibold mb-3">Traffic Over Time</p>
+                                        <svg class="w-full h-24" viewBox="0 0 300 90" preserveAspectRatio="none">
+                                            <path
+                                                d="M0,70 C20,65 40,45 60,50 C80,55 100,30 120,35 C140,40 160,22 180,27 C200,32 220,15 240,20 C260,25 280,12 300,8"
+                                                fill="none" stroke="#818cf8" stroke-width="2" />
+                                            <path
+                                                d="M0,70 C20,65 40,45 60,50 C80,55 100,30 120,35 C140,40 160,22 180,27 C200,32 220,15 240,20 C260,25 280,12 300,8 L300,90 L0,90Z"
+                                                fill="#6366f1" opacity="0.1" />
+                                        </svg>
+                                    </div>
+                                    <div
+                                        class="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-xl p-4">
+                                        <p class="text-xs font-semibold mb-3">Top Pages</p>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center gap-2"><span
+                                                    class="w-14 text-[10px] text-gray-400 dark:text-gray-500 truncate">/home</span>
+                                                <div
+                                                    class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-indigo-500 rounded-full" style="width:90%">
+                                                    </div>
+                                                </div><span
+                                                    class="w-8 text-right text-[10px] text-gray-400 dark:text-gray-500">4,230</span>
+                                            </div>
+                                            <div class="flex items-center gap-2"><span
+                                                    class="w-14 text-[10px] text-gray-400 dark:text-gray-500 truncate">/pricing</span>
+                                                <div
+                                                    class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-indigo-500 rounded-full" style="width:65%">
+                                                    </div>
+                                                </div><span
+                                                    class="w-8 text-right text-[10px] text-gray-400 dark:text-gray-500">2,810</span>
+                                            </div>
+                                            <div class="flex items-center gap-2"><span
+                                                    class="w-14 text-[10px] text-gray-400 dark:text-gray-500 truncate">/about</span>
+                                                <div
+                                                    class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-indigo-500 rounded-full" style="width:45%">
+                                                    </div>
+                                                </div><span
+                                                    class="w-8 text-right text-[10px] text-gray-400 dark:text-gray-500">1,940</span>
+                                            </div>
+                                            <div class="flex items-center gap-2"><span
+                                                    class="w-14 text-[10px] text-gray-400 dark:text-gray-500 truncate">/blog</span>
+                                                <div
+                                                    class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-indigo-500 rounded-full" style="width:35%">
+                                                    </div>
+                                                </div><span
+                                                    class="w-8 text-right text-[10px] text-gray-400 dark:text-gray-500">1,520</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats strip -->
+        <section class="py-14 px-6 border-y border-gray-100 dark:border-gray-800/60">
+            <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div class="reveal">
+                    <div class="text-3xl font-black text-gray-900 dark:text-white mb-1">&lt;2KB</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Tracking script</div>
+                </div>
+                <div class="reveal">
+                    <div class="text-3xl font-black text-gray-900 dark:text-white mb-1">&lt;50ms</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Query response</div>
+                </div>
+                <div class="reveal">
+                    <div class="text-3xl font-black text-gray-900 dark:text-white mb-1">100%</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Open source</div>
+                </div>
+                <div class="reveal">
+                    <div class="text-3xl font-black text-gray-900 dark:text-white mb-1">0</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Cookies used</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section id="features" class="py-24 px-6 bg-gray-50 dark:bg-gray-900/50">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="reveal text-3xl md:text-4xl font-bold mb-4">Everything you need to understand your users
+                    </h2>
+                    <p class="reveal text-gray-600 dark:text-gray-400 max-w-xl mx-auto">A complete analytics suite that
+                        puts you in control — no third-party dependencies.</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 group">
+                        <div
+                            class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
+                            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-2">Real-Time Analytics</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">See visitors on your site
+                            right now. Track pageviews, sessions, and engagement as they happen.</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 group">
+                        <div
+                            class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
+                            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-2">Privacy-First</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">No cookies, no
+                            fingerprinting, no personal data collection. Fully GDPR compliant out of the box.</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 group">
+                        <div
+                            class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
+                            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-2">Lightweight Script</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Under 2KB tracking script.
+                            Zero impact on your site performance — no slowdowns, ever.</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 group">
+                        <div
+                            class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
+                            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="2" y1="12" x2="22" y2="12" />
+                                <path
+                                    d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-2">Country Detection</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Automatic visitor country
+                            detection using timezone — no external GeoIP services required.</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 group">
+                        <div
+                            class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
+                            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                <polyline points="17 6 23 6 23 12" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-2">Conversion Funnels</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Define multi-step funnels to
+                            track user journeys from landing to conversion.</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 group">
+                        <div
+                            class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
+                            <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                                <polyline points="2 17 12 22 22 17" />
+                                <polyline points="2 12 12 17 22 12" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-2">Multi-Site Support</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Manage unlimited websites
+                            from a single dashboard. Switch between sites instantly.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section id="how-it-works" class="py-24 px-6">
+            <div class="max-w-5xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="reveal text-3xl md:text-4xl font-bold mb-4">Up and running in 3 steps</h2>
+                    <p class="reveal text-gray-600 dark:text-gray-400">From zero to full analytics in under 5 minutes.
+                    </p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="reveal">
+                        <div class="text-6xl font-black text-gray-100 dark:text-gray-800 mb-4">01</div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div
+                                class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold">Create an Account</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Sign up and add your first
+                            website. Enter your site name and domain — that's it.</p>
+                    </div>
+                    <div class="reveal">
+                        <div class="text-6xl font-black text-gray-100 dark:text-gray-800 mb-4">02</div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div
+                                class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <polyline points="16 18 22 12 16 6" />
+                                    <polyline points="8 6 2 12 8 18" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold">Add Tracking Script</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Copy the one-line script tag
+                            and paste it into your website's &lt;head&gt;. Under 2KB, no setup needed.</p>
+                    </div>
+                    <div class="reveal">
+                        <div class="text-6xl font-black text-gray-100 dark:text-gray-800 mb-4">03</div>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div
+                                class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M23 6l-9.5 9.5-5-5L1 18" />
+                                    <polyline points="17 6 23 6 23 12" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold">View Your Dashboard</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Traffic, pageviews, sources,
+                            devices, countries — all updating in real-time within seconds.</p>
+                    </div>
+                </div>
+                <!-- Code snippet -->
+                <div class="reveal mt-16 bg-gray-900 rounded-2xl p-6 overflow-hidden shadow-2xl">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="ml-3 text-xs text-gray-500">index.html</span>
+                    </div>
+                    <pre class="text-sm text-gray-300 overflow-x-auto"><code>&lt;head&gt;
+  &lt;!-- One line — that's all you need --&gt;
+  &lt;script src="https://your-server.com/api/sites/YOUR_SITE_ID/script"&gt;&lt;/script&gt;
+&lt;/head&gt;</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Roadmap -->
+        <section id="roadmap" class="py-24 px-6">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-16">
+                    <div
+                        class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 mb-4">
+                        <span class="text-xs font-medium text-amber-700 dark:text-amber-400">🗺️ Roadmap</span>
+                    </div>
+                    <h2 class="reveal text-3xl md:text-4xl font-bold mb-4">Built in public</h2>
+                    <p class="reveal text-gray-600 dark:text-gray-400">Transparent progress — see exactly what's shipped
+                        and what's next.</p>
+                </div>
+                <div class="space-y-3">
+                    <div
+                        class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 flex items-start gap-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Pageview &amp; session tracking</h3><span
+                                    class="px-2 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full">✓
+                                    Shipped</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Automatic pageview, session
+                                duration, bounce rate, and exit page tracking.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 flex items-start gap-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Real-time visitor dashboard</h3><span
+                                    class="px-2 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full">✓
+                                    Shipped</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Live visitor counts, active
+                                pages, device types, and geographic breakdown.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 flex items-start gap-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">DuckDB + PostgreSQL dual-database</h3><span
+                                    class="px-2 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full">✓
+                                    Shipped</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">10–100× faster OLAP queries vs
+                                pure PostgreSQL. Writes to PG, reads from DuckDB.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 flex items-start gap-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Conversion funnel builder</h3><span
+                                    class="px-2 py-0.5 text-xs font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-full">✓
+                                    Shipped</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Define multi-step funnels to
+                                visualize where users drop off in key flows.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 p-5 flex items-start gap-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Custom goal &amp; event tracking</h3><span
+                                    class="px-2 py-0.5 text-xs font-semibold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-full">Q2
+                                    2026</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Define conversion goals and track
+                                how many users complete each step.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 p-5 flex items-start gap-4">
+                        <div
+                            class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">Weekly email digest reports</h3><span
+                                    class="px-2 py-0.5 text-xs font-semibold bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-full">Q2
+                                    2026</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Automated weekly &amp; monthly
+                                analytics summaries delivered to your inbox.</p>
+                        </div>
+                    </div>
+                    <div
+                        class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800/40 p-5 flex items-start gap-4 opacity-60">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                                <path d="M2 17l10 5 10-5" />
+                                <path d="M2 12l10 5 10-5" />
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-semibold">AI traffic anomaly detection</h3><span
+                                    class="px-2 py-0.5 text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-full">On
+                                    the horizon</span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Smart local AI that flags unusual
+                                traffic spikes and surfaces growth opportunities.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tech Stack -->
+        <section id="tech-stack" class="py-24 px-6 bg-gray-50 dark:bg-gray-900/50">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="reveal text-3xl md:text-4xl font-bold mb-4">Built for speed &amp; reliability</h2>
+                    <p class="reveal text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Dual-database architecture:
+                        PostgreSQL handles writes, DuckDB powers lightning-fast analytical queries. Auto-synced every 60
+                        seconds.</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-16">
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 text-center">
+                        <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <polyline points="16 18 22 12 16 6" />
+                            <polyline points="8 6 2 12 8 18" />
+                        </svg>
+                        <h4 class="font-semibold text-sm mb-1">React 18</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Modern dashboard UI</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 text-center">
+                        <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                            <line x1="6" y1="6" x2="6.01" y2="6" />
+                            <line x1="6" y1="18" x2="6.01" y2="18" />
+                        </svg>
+                        <h4 class="font-semibold text-sm mb-1">Express + Node.js</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Rock-solid backend</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 text-center">
+                        <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <ellipse cx="12" cy="5" rx="9" ry="3" />
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        </svg>
+                        <h4 class="font-semibold text-sm mb-1">PostgreSQL + DuckDB</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Dual-database architecture</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 text-center">
+                        <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <h4 class="font-semibold text-sm mb-1">JWT Auth</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Secure authentication</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 text-center">
+                        <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <line x1="6" y1="3" x2="6" y2="15" />
+                            <circle cx="18" cy="6" r="3" />
+                            <circle cx="6" cy="18" r="3" />
+                            <path d="M18 9a9 9 0 0 1-9 9" />
+                        </svg>
+                        <h4 class="font-semibold text-sm mb-1">Open Source</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Self-hosted, full control</p>
+                    </div>
+                    <div
+                        class="reveal hover-lift bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 text-center">
+                        <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <h4 class="font-semibold text-sm mb-1">Auto Sync</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">PG &rarr; DuckDB every 60s</p>
+                    </div>
+                </div>
+
+                <!-- Architecture diagram -->
+                <div
+                    class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 max-w-4xl mx-auto">
+                    <h3 class="text-lg font-semibold mb-6 text-center">System Architecture</h3>
+                    <div class="flex flex-col md:flex-row items-center gap-4 md:gap-6">
+                        <div class="flex flex-col gap-4 w-full md:w-auto shrink-0">
+                            <div
+                                class="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/20">
+                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="2" y1="12" x2="22" y2="12" />
+                                    <path
+                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                </svg>
+                                <div>
+                                    <div class="font-semibold text-sm">Your Website</div>
+                                    <div class="text-[10px] text-gray-500 dark:text-gray-400">(tracking script)</div>
+                                </div>
+                            </div>
+                            <div
+                                class="flex items-center gap-3 px-4 py-3 bg-cyan-50 dark:bg-cyan-500/10 rounded-xl border border-cyan-200 dark:border-cyan-500/20">
+                                <svg class="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect width="7" height="9" x="3" y="3" rx="1" />
+                                    <rect width="7" height="5" x="14" y="3" rx="1" />
+                                    <rect width="7" height="9" x="14" y="12" rx="1" />
+                                    <rect width="7" height="5" x="3" y="16" rx="1" />
+                                </svg>
+                                <div>
+                                    <div class="font-semibold text-sm">Dashboard</div>
+                                    <div class="text-[10px] text-gray-500 dark:text-gray-400">React SPA</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-6 items-center shrink-0">
+                            <div class="flex flex-col items-center">
+                                <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                    <polyline points="12 5 19 12 12 19" />
+                                </svg>
+                                <span
+                                    class="text-[8px] text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap">POST
+                                    /api/track/*</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 rotate-180" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                    <polyline points="12 5 19 12 12 19" />
+                                </svg>
+                                <span
+                                    class="text-[8px] text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap">GET
+                                    /api/analytics/*</span>
+                            </div>
+                        </div>
+                        <div
+                            class="flex-1 w-full bg-green-50 dark:bg-green-500/10 rounded-xl border border-green-200 dark:border-green-500/20 p-4">
+                            <div class="flex items-center gap-2 mb-4">
+                                <svg class="w-5 h-5 text-green-600 dark:text-green-400" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                                    <line x1="6" y1="6" x2="6.01" y2="6" />
+                                    <line x1="6" y1="18" x2="6.01" y2="18" />
+                                </svg>
+                                <div>
+                                    <div class="font-semibold text-sm">Unified Backend</div>
+                                    <div class="text-[10px] text-gray-500 dark:text-gray-400">Express + Node.js</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 justify-center">
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg border border-indigo-200 dark:border-indigo-500/20">
+                                    <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <ellipse cx="12" cy="5" rx="9" ry="3" />
+                                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                                    </svg>
+                                    <div>
+                                        <div class="text-xs font-semibold">PostgreSQL</div>
+                                        <div class="text-[9px] text-gray-500 dark:text-gray-400">(writes)</div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-center gap-0.5">
+                                    <svg class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="23 4 23 10 17 10" />
+                                        <polyline points="1 20 1 14 7 14" />
+                                        <path
+                                            d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                    </svg>
+                                    <span class="text-[8px] text-amber-600 dark:text-amber-400 font-medium">sync</span>
+                                </div>
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-500/10 rounded-lg border border-purple-200 dark:border-purple-500/20">
+                                    <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                    </svg>
+                                    <div>
+                                        <div class="text-xs font-semibold">DuckDB</div>
+                                        <div class="text-[9px] text-gray-500 dark:text-gray-400">(reads)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison -->
+        <section id="comparison" class="py-24 px-6">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="reveal text-3xl md:text-4xl font-bold mb-4">Why InsightTrack?</h2>
+                </div>
+                <div
+                    class="reveal bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-800">
+                                <th class="text-left px-6 py-4 font-semibold">Feature</th>
+                                <th class="px-6 py-4 font-semibold text-indigo-600">InsightTrack</th>
+                                <th class="px-6 py-4 font-semibold text-gray-400">Google Analytics</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">Privacy-first (no cookies)</td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><span
+                                        class="text-gray-300 dark:text-gray-600">&mdash;</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">Self-hosted / own your data
+                                </td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><span
+                                        class="text-gray-300 dark:text-gray-600">&mdash;</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">Open source</td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><span
+                                        class="text-gray-300 dark:text-gray-600">&mdash;</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">Lightweight script (&lt;2KB)
+                                </td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><span
+                                        class="text-gray-300 dark:text-gray-600">&mdash;</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">Real-time dashboard</td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-gray-400 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">No GDPR cookie banner needed
+                                </td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><span
+                                        class="text-gray-300 dark:text-gray-600">&mdash;</span></td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800/50">
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">DuckDB-powered analytics</td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><span
+                                        class="text-gray-300 dark:text-gray-600">&mdash;</span></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">Free forever</td>
+                                <td class="px-6 py-3.5 text-center"><svg class="w-5 h-5 text-emerald-500 mx-auto"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg></td>
+                                <td class="px-6 py-3.5 text-center"><span
+                                        class="text-gray-300 dark:text-gray-600">&mdash;</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="py-24 px-6">
+            <div class="max-w-3xl mx-auto text-center">
+                <div
+                    class="reveal bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 rounded-3xl p-12 md:p-16 text-white relative overflow-hidden">
+                    <div class="absolute inset-0 opacity-10">
+                        <div class="absolute top-10 left-10 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+                        <div class="absolute bottom-10 right-10 w-60 h-60 bg-purple-300 rounded-full blur-3xl"></div>
+                    </div>
+                    <div class="relative z-10">
+                        <div
+                            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 mb-4">
+                            <div class="w-2 h-2 rounded-full bg-emerald-400"
+                                style="animation: pulse-dot 2s ease-in-out infinite"></div>
+                            <span class="text-xs font-medium text-white/80">Launching April 30, 2026 &mdash; limited
+                                early access</span>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-bold mb-4">Don't miss the launch</h2>
+                        <p class="text-white/70 mb-8 max-w-lg mx-auto">1,247 developers are already on the list. Join
+                            them for early access, self-host guides, and pre-launch perks — completely free.</p>
+                        <form id="cta-form" class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto"
+                            autocomplete="off">
+                            <input type="email" required placeholder="your@email.com"
+                                aria-label="Email for early access"
+                                class="flex-1 px-5 py-3.5 rounded-xl text-sm text-gray-900 bg-white border-none outline-none placeholder-gray-400" />
+                            <button type="submit"
+                                class="px-8 py-3.5 text-sm font-semibold bg-white/20 hover:bg-white/30 text-white rounded-xl transition-colors border border-white/20 whitespace-nowrap">
+                                Join Waitlist
+                            </button>
+                        </form>
+                        <p id="cta-msg" class="text-sm text-white/60 mt-4 min-h-[1.5em]"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-gray-200 dark:border-gray-800 py-12 px-6">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                    </div>
+                    <span class="text-sm font-semibold">InsightTrack</span>
+                </div>
+                <div class="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+                    <a href="#features" class="hover:text-gray-900 dark:hover:text-white transition-colors">Features</a>
+                    <a href="#how-it-works" class="hover:text-gray-900 dark:hover:text-white transition-colors">How It
+                        Works</a>
+                    <a href="#tech-stack" class="hover:text-gray-900 dark:hover:text-white transition-colors">Tech
+                        Stack</a>
+                </div>
+                <p class="text-xs text-gray-400 dark:text-gray-600">&copy; 2026 InsightTrack. Open-source web analytics.
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script>
+        /* ── Theme Toggle ── */
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('insighttrack-cs-theme', isDark ? 'dark' : 'light');
+        }
+        (function () {
+            const saved = localStorage.getItem('insighttrack-cs-theme');
+            if (saved === 'light') document.documentElement.classList.remove('dark');
+            else if (saved === 'dark' || !saved) document.documentElement.classList.add('dark');
+        })();
+
+        /* ── Scroll Reveal ── */
+        (function initReveal() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        })();
+
+        /* ── Particle Background ── */
+        (function initParticles() {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let w, h;
+            let mouseX = -1000, mouseY = -1000;
+
+            function resize() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            const COUNT = Math.min(60, Math.floor(window.innerWidth / 20));
+            const CONNECTION_DIST = 140;
+
+            for (let i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
+                    size: Math.random() * 1.5 + 0.5,
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+
+                const isDark = document.documentElement.classList.contains('dark');
+                const dotColor = isDark ? '165, 180, 252' : '99, 102, 241';
+                const lineColor = isDark ? '165, 180, 252' : '99, 102, 241';
+
+                // Connections
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < CONNECTION_DIST) {
+                            const alpha = (1 - dist / CONNECTION_DIST) * 0.06;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = `rgba(${lineColor}, ${alpha})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+
+                    // Mouse connections
+                    const mdx = particles[i].x - mouseX;
+                    const mdy = particles[i].y - mouseY;
+                    const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+                    if (mDist < 180) {
+                        const alpha = (1 - mDist / 180) * 0.15;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(mouseX, mouseY);
+                        ctx.strokeStyle = `rgba(${lineColor}, ${alpha})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    }
+                }
+
+                // Dots
+                for (const p of particles) {
+                    const dx = mouseX - p.x;
+                    const dy = mouseY - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) {
+                        p.vx += dx * 0.00003;
+                        p.vy += dy * 0.00003;
+                    }
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.999;
+                    p.vy *= 0.999;
+
+                    if (p.x < 0) p.x = w;
+                    if (p.x > w) p.x = 0;
+                    if (p.y < 0) p.y = h;
+                    if (p.y > h) p.y = 0;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${dotColor}, 0.25)`;
+                    ctx.fill();
+                }
+
+                requestAnimationFrame(draw);
+            }
+            requestAnimationFrame(draw);
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+        })();
+
+        /* ── Email Forms ── */
+        function handleEmailSubmit(formId, msgId) {
+            const form = document.getElementById(formId);
+            const msg = document.getElementById(msgId);
+            if (!form) return;
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = form.querySelector('input[type="email"]');
+                const email = input.value.trim();
+
+                if (!email || !email.includes('@') || !email.includes('.')) {
+                    msg.textContent = 'Please enter a valid email address.';
+                    msg.className = 'text-sm text-red-500 mt-4 min-h-[1.5em]';
+                    gsap.fromTo(msg, { opacity: 0, y: 5 }, { opacity: 1, y: 0, duration: 0.3 });
+                    return;
+                }
+
+                const btn = form.querySelector('button');
+                const originalText = btn.textContent;
+                btn.textContent = '\u2713 You\'re on the list!';
+                gsap.to(btn, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
+
+                msg.textContent = 'We\'ll notify you when InsightTrack launches.';
+                msg.className = 'text-sm text-emerald-500 mt-4 min-h-[1.5em]';
+                if (msgId === 'cta-msg') msg.className = 'text-sm text-emerald-300 mt-4 min-h-[1.5em]';
+                gsap.fromTo(msg, { opacity: 0, y: 5 }, { opacity: 1, y: 0, duration: 0.4 });
+
+                input.value = '';
+                setTimeout(() => { btn.textContent = originalText; }, 3000);
+            });
+        }
+        handleEmailSubmit('email-form', 'form-msg');
+        handleEmailSubmit('cta-form', 'cta-msg');
+
+        /* ── GSAP hero entrance ── */
+        window.addEventListener('load', () => {
+            gsap.from('nav', { y: -20, opacity: 0, duration: 0.6, ease: 'power2.out' });
+        });
+
+        /* ── Countdown Timer ── */
+        (function initCountdown() {
+            const launchDate = new Date('2026-04-30T00:00:00').getTime();
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function update() {
+                const diff = launchDate - Date.now();
+                if (diff <= 0) {
+                    const el = document.getElementById('countdown');
+                    if (el) el.innerHTML = '<div class="text-3xl font-bold text-emerald-500 py-4">🚀 We\'re Live!</div>';
+                    return;
+                }
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = pad(val); };
+                set('cd-days', Math.floor(diff / 86400000));
+                set('cd-hours', Math.floor((diff % 86400000) / 3600000));
+                set('cd-mins', Math.floor((diff % 3600000) / 60000));
+                set('cd-secs', Math.floor((diff % 60000) / 1000));
+            }
+            update();
+            setInterval(update, 1000);
+        })();
+
+        /* ── Smooth scroll for nav links ── */
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    </script>
+</body>
+
+</html>

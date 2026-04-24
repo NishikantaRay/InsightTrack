@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231e1b4b'/><rect x='8' y='13' width='16' height='13' rx='2' fill='%23c7d2fe'/><path d='M12 13 Q12 8 16 8 Q20 8 20 13' stroke='%23a5b4fc' stroke-width='2' fill='none' stroke-linecap='round'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About — ShopEasy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f9fafb;
+            color: #111;
+        }
+
+        header {
+            background: #1e1b4b;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header a {
+            color: #c7d2fe;
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        header a:hover {
+            color: white;
+        }
+
+        .page-hero {
+            background: #1e1b4b;
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .page-hero h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-hero p {
+            opacity: 0.8;
+        }
+
+        .content {
+            max-width: 860px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            color: #1e1b4b;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: #374151;
+            line-height: 1.7;
+            margin-bottom: 0.75rem;
+        }
+
+        .team {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .member {
+            text-align: center;
+        }
+
+        .avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: #e0e7ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 0.75rem;
+        }
+
+        .member strong {
+            display: block;
+        }
+
+        .member span {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #4f46e5;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+            font-size: 0.9rem;
+            background: #f3f4f6;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <strong style="font-size:1.2rem"><a href="/" style="color:white;text-decoration:none">🛍️ ShopEasy</a></strong>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/products.html">Products</a>
+            <a href="/pricing.html">Pricing</a>
+            <a href="/about.html" style="color:white">About</a>
+        </nav>
+    </header>
+
+    <section class="page-hero">
+        <h1>About ShopEasy</h1>
+        <p>Making e-commerce simple for everyone</p>
+    </section>
+
+    <div class="content">
+        <div class="section">
+            <h2>Our Story</h2>
+            <p>ShopEasy was founded in 2020 with one goal: make it easy for anyone to run an online store without a
+                technical background. We believe great products deserve great tools.</p>
+            <p>Today, thousands of small businesses use ShopEasy to sell their products online — from handmade crafts to
+                electronics to artisan food.</p>
+        </div>
+
+        <div class="section">
+            <h2>By the Numbers</h2>
+            <div class="stats">
+                <div>
+                    <div class="stat-val">12K+</div>
+                    <div class="stat-label">Active Stores</div>
+                </div>
+                <div>
+                    <div class="stat-val">2M+</div>
+                    <div class="stat-label">Orders Processed</div>
+                </div>
+                <div>
+                    <div class="stat-val">98%</div>
+                    <div class="stat-label">Uptime SLA</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Meet the Team</h2>
+            <div class="team">
+                <div class="member">
+                    <div class="avatar">👩‍💼</div>
+                    <strong>Sara Chen</strong>
+                    <span>Co-founder & CEO</span>
+                </div>
+                <div class="member">
+                    <div class="avatar">👨‍💻</div>
+                    <strong>Marcus Lee</strong>
+                    <span>Co-founder & CTO</span>
+                </div>
+                <div class="member">
+                    <div class="avatar">👩‍🎨</div>
+                    <strong>Priya Nair</strong>
+                    <span>Head of Design</span>
+                </div>
+                <div class="member">
+                    <div class="avatar">👨‍📊</div>
+                    <strong>Tom Alvarez</strong>
+                    <span>Head of Growth</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 ShopEasy Demo Store · Powered by InsightTrack Analytics</p>
+    </footer>
+
+    <script src="http://localhost:3001/api/sites/site_d1799b4b/script"></script>
+</body>
+
+</html>

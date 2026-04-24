@@ -1,0 +1,82 @@
+
+Considered improvements for analytics dashboard features
+Based on the current state of the project, here are the key areas to improve:
+
+Data & Tracking
+
+IP-based geolocation — Replace timezone-based country detection with a real GeoIP lookup (e.g., MaxMind GeoLite2) for accurate country/city data
+✅ UTM parameter tracking — Capture utm_source, utm_medium, utm_campaign from URLs to properly attribute traffic sources
+✅ Referrer parsing — Classify referrers into categories (Search, Social, Direct, Email, Referral) with expanded provider detection
+Dashboard UI
+✅ Date range picker — Add custom date range with calendar picker in addition to preset ranges (7d/30d/90d)
+✅ Comparison mode — Show previous period overlay on charts (e.g., this week vs last week)
+✅ Export functionality — CSV/JSON/PNG export for reports + print support
+✅ Sparklines for Bounce Rate & Avg. Session cards — All 4 KPI cards now have sparklines
+
+New Pages/Features
+✅ User flow / path analysis — Show how visitors navigate between pages
+✅ Live visitor map — Geographic visualization on the Realtime page
+✅ Alerts/notifications — Traffic spike or drop alerts on the Settings page
+✅ Multi-site support — Settings page to add/manage multiple websites
+
+Performance & Reliability
+✅ API response caching — In-memory cache with TTL presets for analytics queries to reduce DB load
+✅ Data aggregation jobs — Pre-compute daily rollups instead of querying raw events
+✅ Error boundaries — Better error handling in UI when API calls fail (ErrorBoundary components wrap page sections)
+
+═══════════════════════════════════════════════════════
+  FUTURE ANALYTICS FEATURES ROADMAP
+═══════════════════════════════════════════════════════
+
+── Real-Time ──
+  ✅ Live visitor map — Show active visitors on a world map by country/city
+  ✅ Real-time event stream — Live feed of pageviews, clicks, custom events as they happen
+
+── Engagement ──
+  ✅ Scroll depth tracking — Measure how far users scroll (25%, 50%, 75%, 100%) per page
+  ✅ Heatmaps — Click heatmaps per page (record x/y coordinates of clicks)
+  ✅ Rage click detection — Detect repeated rapid clicks indicating user frustration
+  ✅ Time on page — Per-page average read time (not just session duration)
+
+── Conversion & Funnels ──
+  ✅ Goal tracking — Set up custom goals like "user visited the signup page" or "user clicked the Buy Now button", then see how many visitors complete each goal over time with conversion rate trends
+  ✅ A/B test tracking — Create A/B tests to compare two versions of a page or feature, see which variant gets more traffic and higher conversions, displayed in a clear side-by-side dashboard
+  ✅ Revenue attribution — Attach dollar values to purchase events so you can see total revenue, average order value, and which traffic sources or campaigns generate the most income
+
+── Audience ──
+  ✅ New vs returning visitors — Instantly see what percentage of your traffic is first-time visitors vs people coming back, broken down by day with trend charts
+  ✅ User cohort analysis — Track how many users come back after their first visit (Day 1, Day 7, Day 30 retention) shown as a color-coded retention grid so you can spot engagement trends
+  ✅ Visitor segments — Mix and match filters like device type, country, traffic source, and browser to create custom audience segments and compare their behavior side by side
+
+── Content ──
+  ✅ Exit pages — See which pages visitors leave your site from most often, ranked by exit frequency, so you can identify where users drop off and improve those pages to keep them engaged
+  ✅ Entry pages — See which pages visitors land on first when they arrive at your site, helping you understand which content attracts new traffic and optimize landing experiences
+  ✅ Page flow / user journeys — Visual Sankey-style diagram showing how visitors navigate from page to page, so you can spot common paths through your site and identify unexpected drop-off points
+  ✅ Site search tracking — Capture what visitors type into your site's search bar, revealing what content they're looking for (and possibly can't find)
+
+── Acquisition ──
+  ✅ Campaign dashboard — Full breakdown of your UTM-tagged campaigns showing source, medium, and campaign name alongside visitor counts and revenue, so you can measure marketing ROI at a glance
+  ✅ Social media traffic — See exactly how much traffic comes from each social platform (Twitter, LinkedIn, Facebook, Reddit, etc.) with visitor counts and engagement metrics per platform
+  ✅ Search keyword tracking — Track which search terms and UTM keywords bring visitors to your site, so you can double down on what's working in SEO and paid search
+
+── Performance ──
+  ✅ Page load time — Monitor Core Web Vitals (LCP, FID, CLS) for every page on your site, with color-coded scores (good/needs-improvement/poor) so you can find and fix slow pages fast
+  ✅ Error tracking — Automatically capture JavaScript errors with their error messages, stack traces, and how often they occur, so your dev team can prioritize bug fixes
+
+── Reporting ──
+  ✅ Scheduled email reports — Set up automatic email summaries (daily, weekly, or monthly) with key metrics delivered to your inbox as clean HTML reports
+  ✅ Custom dashboards — Build your own dashboard by choosing which metrics and charts to display, then save layouts so every team member sees what matters most to them
+  ✅ Data export — Download any analytics data for any date range as CSV or JSON files for further analysis in Excel, Google Sheets, or your own BI tools
+  ✅ Annotations — Pin notes to specific dates on your traffic charts (like "launched new homepage" or "ran Black Friday sale") so you can visually correlate events with traffic changes
+
+── Privacy-Focused Differentiators ──
+  ✅ Cookieless tracking — Count unique visitors without cookies or browser fingerprinting, using a privacy-friendly daily rotating hash so no individual can be tracked across days
+  ✅ Data retention policies — Set a maximum age for stored analytics data (e.g., 90 days, 1 year) and older records get automatically cleaned up to minimize data storage and privacy risk
+  ✅ GDPR consent mode — Automatically respect the browser's Do Not Track setting and provide a consent API so your site can gate tracking behind cookie banners
+
+── Priority (Quick Wins) ──
+  ⭐ Scroll depth tracking — Minimal backend changes, high user value
+  ⭐ New vs returning visitors — Simple flag on user tracking
+  ⭐ Exit pages — Data already exists in sessions table
+  ⭐ Page load time (Core Web Vitals) — Easy to capture via Performance API
+✅ Error boundaries — Better error handling in UI when API calls fail (ErrorBoundary components wrap page sections)

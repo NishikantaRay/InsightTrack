@@ -1,0 +1,31 @@
+{
+  "name": "insighttrack-server",
+  "version": "1.0.0",
+  "description": "Web Analytics Dashboard Backend Server with PostgreSQL",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "seed": "node src/scripts/seed.js",
+    "migrate": "node src/scripts/migrate.js",
+    "aggregate": "node src/scripts/aggregate.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.18.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.2.2",
+    "vitest": "^4.0.18"
+  }
+}

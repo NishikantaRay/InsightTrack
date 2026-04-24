@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23166534'/><rect x='8' y='9' width='16' height='3' rx='1' fill='white'/><rect x='8' y='14' width='12' height='3' rx='1' fill='white' opacity='0.8'/><rect x='8' y='19' width='14' height='3' rx='1' fill='white' opacity='0.6'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechPulse - About</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #1a1a2e;
+            background: #f8f9fc;
+        }
+
+        nav {
+            background: #fff;
+            border-bottom: 1px solid #e8eaf0;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .nav-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: #4f46e5;
+            text-decoration: none;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: #4f46e5;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .about-content {
+            background: #fff;
+            border: 1px solid #e8eaf0;
+            border-radius: 12px;
+            padding: 2rem;
+            line-height: 1.8;
+        }
+
+        .about-content p {
+            color: #475569;
+            margin-bottom: 1.25rem;
+        }
+
+        .about-content h2 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 .75rem;
+            color: #1a1a2e;
+        }
+
+        .team {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .team-member {
+            text-align: center;
+            padding: 1.5rem;
+            background: #f8f9fc;
+            border-radius: 10px;
+        }
+
+        .team-member .avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            margin: 0 auto .75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .team-member h4 {
+            font-size: .95rem;
+            margin-bottom: .25rem;
+        }
+
+        .team-member p {
+            font-size: .8rem;
+            color: #94a3b8;
+        }
+
+        footer {
+            background: #1a1a2e;
+            color: #94a3b8;
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            font-size: .85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="nav-inner">
+            <a href="index.html" class="logo">TechPulse</a>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="tutorials.html">Tutorials</a></li>
+                <li><a href="reviews.html">Reviews</a></li>
+                <li><a href="about.html" class="active">About</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>About TechPulse</h1>
+        <div class="about-content">
+            <p>TechPulse is a developer blog dedicated to delivering high-quality tutorials, honest reviews, and
+                industry insights for modern software engineers.</p>
+            <p>Founded in 2024, we've grown to serve thousands of developers worldwide with actionable content that
+                helps them build better software.</p>
+
+            <h2>Our Mission</h2>
+            <p>We believe great documentation and tutorials should be free. Our mission is to make complex topics
+                accessible through clear, practical writing backed by real-world experience.</p>
+
+            <h2>The Team</h2>
+            <div class="team">
+                <div class="team-member">
+                    <div class="avatar">AK</div>
+                    <h4>Alex Kim</h4>
+                    <p>Founder & Editor</p>
+                </div>
+                <div class="team-member">
+                    <div class="avatar">SP</div>
+                    <h4>Sarah Park</h4>
+                    <p>Senior Writer</p>
+                </div>
+                <div class="team-member">
+                    <div class="avatar">MR</div>
+                    <h4>Mike Roberts</h4>
+                    <p>DevOps Writer</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2026 TechPulse Blog. Built for analytics testing.</p>
+    </footer>
+    <script src="http://localhost:3001/api/sites/site_00a47a67/script"></script>
+</body>
+
+</html>

@@ -1,0 +1,33 @@
+flowchart TB
+    subgraph PostgreSQL[PostgreSQL Operational Store]
+        PGE[events]
+        PGS[sessions]
+        PGSI[sites]
+        PGF[funnels]
+        PGD[daily_stats]
+        PGU[users]
+    end
+
+    subgraph Sync[Replication Layer]
+        HWM[High-water mark<br/>last_synced_at]
+        JOB[Sync job<br/>batch + retry]
+    end
+
+    subgraph DuckDB[DuckDB Analytics Store]
+        DE[events]
+        DS[sessions]
+        DSI[sites]
+        DF[funnels]
+        DD[daily_stats]
+        DU[users]
+        DM[_sync_meta]
+    end
+
+    PGE --> JOB --> DE
+    PGS --> JOB --> DS
+    PGSI --> JOB --> DSI
+    PGF --> JOB --> DF
+    PGD --> JOB --> DD
+    PGU --> JOB --> DU
+    HWM <--> JOB
+    JOB --> DM

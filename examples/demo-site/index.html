@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231e1b4b'/><rect x='8' y='13' width='16' height='13' rx='2' fill='%23c7d2fe'/><path d='M12 13 Q12 8 16 8 Q20 8 20 13' stroke='%23a5b4fc' stroke-width='2' fill='none' stroke-linecap='round'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShopEasy — Demo Store</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f9fafb;
+            color: #111;
+        }
+
+        header {
+            background: #1e1b4b;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header a {
+            color: #c7d2fe;
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        header a:hover {
+            color: white;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            text-align: center;
+            padding: 5rem 2rem;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.85;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background: white;
+            color: #4f46e5;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+            transition: transform 0.1s;
+        }
+
+        .btn:hover {
+            transform: scale(1.03);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            margin-left: 1rem;
+        }
+
+        .products {
+            max-width: 1100px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .products h2 {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.12);
+        }
+
+        .card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: #e0e7ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+        }
+
+        .card-emoji {
+            width: 100%;
+            height: 180px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: #e0e7ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card p {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .price {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 1rem;
+        }
+
+        .add-btn {
+            width: 100%;
+            padding: 0.6rem;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .add-btn:hover {
+            background: #4338ca;
+        }
+
+        .features {
+            background: #1e1b4b;
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .features h2 {
+            font-size: 1.8rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .feat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .feat {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+        }
+
+        .feat .icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+            font-size: 0.9rem;
+            background: #f3f4f6;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #10b981;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            display: none;
+            z-index: 999;
+        }
+
+        .toast.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(1rem);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <strong style="font-size:1.2rem">🛍️ ShopEasy</strong>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/products.html">Products</a>
+            <a href="/pricing.html">Pricing</a>
+            <a href="/about.html">About</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Shop Smarter, Not Harder</h1>
+        <p>Discover amazing products at unbeatable prices. Free shipping on orders over $50.</p>
+        <a href="/products.html" class="btn"
+            onclick="window.analytics?.track('cta_click', {location: 'hero', text: 'Shop Now'})">Shop Now</a>
+        <a href="/about.html" class="btn btn-outline"
+            onclick="window.analytics?.track('cta_click', {location: 'hero', text: 'Learn More'})">Learn More</a>
+    </section>
+
+    <section class="products">
+        <h2>Featured Products</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-emoji">📱</div>
+                <h3>Wireless Earbuds Pro</h3>
+                <p>Crystal clear sound with 30hr battery life and active noise cancellation.</p>
+                <div class="price">$79.99</div>
+                <button class="add-btn" onclick="addToCart('earbuds-pro', 79.99, 'Wireless Earbuds Pro')">Add to
+                    Cart</button>
+            </div>
+            <div class="card">
+                <div class="card-emoji">⌚</div>
+                <h3>Smart Watch Ultra</h3>
+                <p>Track your health, fitness, and stay connected with the latest smartwatch.</p>
+                <div class="price">$199.99</div>
+                <button class="add-btn" onclick="addToCart('smartwatch-ultra', 199.99, 'Smart Watch Ultra')">Add to
+                    Cart</button>
+            </div>
+            <div class="card">
+                <div class="card-emoji">💻</div>
+                <h3>Laptop Stand Pro</h3>
+                <p>Ergonomic aluminum stand for better posture and improved airflow.</p>
+                <div class="price">$49.99</div>
+                <button class="add-btn" onclick="addToCart('laptop-stand', 49.99, 'Laptop Stand Pro')">Add to
+                    Cart</button>
+            </div>
+            <div class="card">
+                <div class="card-emoji">🎧</div>
+                <h3>Studio Headphones</h3>
+                <p>Professional-grade headphones for audiophiles and creators.</p>
+                <div class="price">$149.99</div>
+                <button class="add-btn" onclick="addToCart('studio-headphones', 149.99, 'Studio Headphones')">Add to
+                    Cart</button>
+            </div>
+            <div class="card">
+                <div class="card-emoji">📷</div>
+                <h3>Action Camera 4K</h3>
+                <p>Capture every adventure in stunning 4K with waterproof design.</p>
+                <div class="price">$129.99</div>
+                <button class="add-btn" onclick="addToCart('action-camera', 129.99, 'Action Camera 4K')">Add to
+                    Cart</button>
+            </div>
+            <div class="card">
+                <div class="card-emoji">🔋</div>
+                <h3>Power Bank 20000mAh</h3>
+                <p>Never run out of battery. Fast charge for all your devices.</p>
+                <div class="price">$39.99</div>
+                <button class="add-btn" onclick="addToCart('power-bank', 39.99, 'Power Bank 20000mAh')">Add to
+                    Cart</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <h2>Why Choose ShopEasy?</h2>
+        <div class="feat-grid">
+            <div class="feat">
+                <div class="icon">🚚</div><strong>Free Shipping</strong>
+                <p style="margin-top:0.5rem;opacity:0.8">On all orders over $50</p>
+            </div>
+            <div class="feat">
+                <div class="icon">🔒</div><strong>Secure Payments</strong>
+                <p style="margin-top:0.5rem;opacity:0.8">256-bit SSL encryption</p>
+            </div>
+            <div class="feat">
+                <div class="icon">↩️</div><strong>Easy Returns</strong>
+                <p style="margin-top:0.5rem;opacity:0.8">30-day hassle-free returns</p>
+            </div>
+            <div class="feat">
+                <div class="icon">💬</div><strong>24/7 Support</strong>
+                <p style="margin-top:0.5rem;opacity:0.8">Always here to help</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2026 ShopEasy Demo Store · Powered by InsightTrack Analytics</p>
+    </footer>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        function addToCart(productId, price, name) {
+            window.analytics?.track('add_to_cart', { product_id: productId, price: price, product_name: name });
+            const toast = document.getElementById('toast');
+            toast.textContent = '🛒 ' + name + ' added to cart!';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+    </script>
+
+    <!-- InsightTrack Analytics -->
+    <script src="http://localhost:3001/api/sites/site_d1799b4b/script"></script>
+
+</body>
+
+</html>

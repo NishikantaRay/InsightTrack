@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23166534'/><rect x='8' y='9' width='16' height='3' rx='1' fill='white'/><rect x='8' y='14' width='12' height='3' rx='1' fill='white' opacity='0.8'/><rect x='8' y='19' width='14' height='3' rx='1' fill='white' opacity='0.6'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechPulse Blog - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #1a1a2e;
+            background: #f8f9fc;
+        }
+
+        nav {
+            background: #fff;
+            border-bottom: 1px solid #e8eaf0;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .nav-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: #4f46e5;
+            text-decoration: none;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color .2s;
+        }
+
+        nav a:hover {
+            color: #4f46e5;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 1rem 3rem;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 span {
+            color: #4f46e5;
+        }
+
+        .hero p {
+            color: #64748b;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: .75rem 1.75rem;
+            background: #4f46e5;
+            color: #fff;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: .9rem;
+            transition: background .2s;
+        }
+
+        .btn:hover {
+            background: #4338ca;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #4f46e5;
+            color: #4f46e5;
+            margin-left: .75rem;
+        }
+
+        .btn-outline:hover {
+            background: #4f46e5;
+            color: #fff;
+        }
+
+        .posts {
+            display: grid;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .post-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.75rem;
+            border: 1px solid #e8eaf0;
+            transition: box-shadow .2s, transform .2s;
+        }
+
+        .post-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+            transform: translateY(-2px);
+        }
+
+        .post-card .tag {
+            display: inline-block;
+            padding: .2rem .6rem;
+            background: #eef2ff;
+            color: #4f46e5;
+            border-radius: 4px;
+            font-size: .75rem;
+            font-weight: 600;
+            margin-bottom: .75rem;
+        }
+
+        .post-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: .5rem;
+        }
+
+        .post-card h3 a {
+            text-decoration: none;
+            color: #1a1a2e;
+        }
+
+        .post-card h3 a:hover {
+            color: #4f46e5;
+        }
+
+        .post-card p {
+            color: #64748b;
+            font-size: .9rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .post-meta {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            font-size: .8rem;
+            color: #94a3b8;
+        }
+
+        .sidebar-section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #e8eaf0;
+            margin-bottom: 1.5rem;
+        }
+
+        .sidebar-section h4 {
+            font-size: .85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-section ul {
+            list-style: none;
+        }
+
+        .sidebar-section li {
+            margin-bottom: .5rem;
+        }
+
+        .sidebar-section a {
+            text-decoration: none;
+            color: #4f46e5;
+            font-size: .9rem;
+            font-weight: 500;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .newsletter {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 12px;
+            padding: 2rem;
+            color: #fff;
+            text-align: center;
+        }
+
+        .newsletter h3 {
+            font-size: 1.2rem;
+            margin-bottom: .5rem;
+        }
+
+        .newsletter p {
+            font-size: .85rem;
+            opacity: .85;
+            margin-bottom: 1rem;
+        }
+
+        .newsletter input {
+            width: 100%;
+            padding: .6rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: .9rem;
+            margin-bottom: .75rem;
+        }
+
+        .newsletter button {
+            width: 100%;
+            padding: .6rem;
+            background: #1e1b4b;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: .9rem;
+        }
+
+        footer {
+            background: #1a1a2e;
+            color: #94a3b8;
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            font-size: .85rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+    <script src="http://localhost:3001/api/sites/site_00a47a67/script"></script>
+</head>
+
+<body>
+    <nav>
+        <div class="nav-inner">
+            <a href="index.html" class="logo">TechPulse</a>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="tutorials.html">Tutorials</a></li>
+                <li><a href="reviews.html">Reviews</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Stay ahead with <span>TechPulse</span></h1>
+            <p>Your daily source for developer tutorials, tech reviews, and industry insights.</p>
+            <a href="tutorials.html" class="btn">Browse Tutorials</a>
+            <a href="about.html" class="btn btn-outline">About Us</a>
+        </div>
+
+        <div class="grid-layout">
+            <div class="posts">
+                <article class="post-card" data-track="card-click">
+                    <span class="tag">React</span>
+                    <h3><a href="tutorials.html">Building Scalable React Apps with Server Components</a></h3>
+                    <p>Learn how React Server Components change the game for performance and developer experience in
+                        modern web apps.</p>
+                    <div class="post-meta"><span>Mar 8, 2026</span><span>·</span><span>8 min read</span></div>
+                </article>
+                <article class="post-card" data-track="card-click">
+                    <span class="tag">DevOps</span>
+                    <h3><a href="tutorials.html">Docker in Production: Lessons from Running 500 Containers</a></h3>
+                    <p>Real-world tips and pitfalls from managing containerized workloads at scale across multiple cloud
+                        providers.</p>
+                    <div class="post-meta"><span>Mar 5, 2026</span><span>·</span><span>12 min read</span></div>
+                </article>
+                <article class="post-card" data-track="card-click">
+                    <span class="tag">AI</span>
+                    <h3><a href="reviews.html">AI Code Assistants Compared: Copilot vs Cursor vs Cody</a></h3>
+                    <p>We tested the top AI coding tools on real projects. Here's which one actually boosts your
+                        productivity.</p>
+                    <div class="post-meta"><span>Mar 2, 2026</span><span>·</span><span>10 min read</span></div>
+                </article>
+                <article class="post-card" data-track="card-click">
+                    <span class="tag">PostgreSQL</span>
+                    <h3><a href="tutorials.html">PostgreSQL Performance Tuning: From 5s to 50ms</a></h3>
+                    <p>A step-by-step guide to diagnosing and fixing slow queries using EXPLAIN ANALYZE and proper
+                        indexing.</p>
+                    <div class="post-meta"><span>Feb 28, 2026</span><span>·</span><span>15 min read</span></div>
+                </article>
+            </div>
+
+            <aside>
+                <div class="newsletter">
+                    <h3>Get the Newsletter</h3>
+                    <p>Weekly curated tech content. No spam, unsubscribe anytime.</p>
+                    <input type="email" placeholder="you@example.com" />
+                    <button data-track="newsletter-signup"
+                        onclick="window.analytics && window.analytics.track('signup_start', {form: 'newsletter'})">Subscribe</button>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Popular Topics</h4>
+                    <ul>
+                        <li><a href="tutorials.html">JavaScript & TypeScript</a></li>
+                        <li><a href="tutorials.html">System Design</a></li>
+                        <li><a href="reviews.html">Developer Tools</a></li>
+                        <li><a href="tutorials.html">Cloud & Infrastructure</a></li>
+                        <li><a href="tutorials.html">Career Growth</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="about.html">About TechPulse</a></li>
+                        <li><a href="reviews.html">Latest Reviews</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 TechPulse Blog. Built for analytics testing.</p>
+    </footer>
+    <script src="http://localhost:3001/api/sites/site_00a47a67/script"></script>
+</body>
+
+</html>

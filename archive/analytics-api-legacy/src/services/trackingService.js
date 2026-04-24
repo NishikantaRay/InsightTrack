@@ -1,0 +1,204 @@
+// Tracking Service using PostgreSQL
+import { query, getPool } from '../db/database.js';
+import { v4 as uuidv4 } from 'uuid';
+
+export const trackingService = {
+  // Track an event (pageview, click, custom, etc.)
+  async trackEvent(eventData) {
+    const {
+      siteId,
+      userId,
+      sessionId,
+      type = 'pageview',
+      url,
+      path,
+      referrer,
+      device = 'Desktop',
+      browser = '',
+      os = '',
+      country = '',
+      city = '',
+      props = {},
+      properties = {},
+      utm_source = '',
+      utm_medium = '',
+      utm_campaign = '',
+      utm_term = '',
+      utm_content = ''
+    } = eventData;
+
+    const mergedProps = { ...props, ...properties };
+
+    if (!siteId || !userId) {
+      throw new Error('siteId and userId are required');
+    }
+
+    // Input validation & truncation
+    const ALLOWED_TYPES = ['pageview', 'click', 'impression', 'add_to_cart', 'checkout', 'purchase', 'signup', 'custom', 'form_submit', 'lead', 'scroll_depth', 'time_on_page', 'button_click', 'signup_start', 'video_play', 'heatmap_click', 'rage_click', 'web_vital', 'js_error', 'site_search'];
+    const safeType = ALLOWED_TYPES.includes(type) ? type : 'custom';
+    const safeStr = (s, max = 255) => (typeof s === 'string' ? s.slice(0, max) : '');
+
+    const sid = sessionId || uuidv4();
+
+    await query(
+      `INSERT INTO events (site_id, user_id, session_id, type, url, path, referrer, device, browser, os, country, city, timestamp, properties, utm_source, utm_medium, utm_campaign, utm_term, utm_content)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+      [
+        safeStr(siteId, 64), safeStr(userId, 64), safeStr(sid, 64), safeType,
+        safeStr(url || '', 2048), safeStr(path || '/', 512),
+        referrer ? safeStr(referrer, 2048) : null,
+        safeStr(device, 50), safeStr(browser, 255), safeStr(os, 100),
+        safeStr(country, 100), safeStr(city, 255),
+        new Date().toISOString(),
+        JSON.stringify(typeof mergedProps === 'object' && mergedProps !== null ? mergedProps : {}),
+        safeStr(utm_source, 255), safeStr(utm_medium, 255), safeStr(utm_campaign, 255),
+        safeStr(utm_term, 255), safeStr(utm_content, 255)
+      ]
+    );
+
+    return { success: true, sessionId: sid };
+  },
+
+  // Start or update a session
+  async upsertSession(sessionData) {
+    const {
+      sessionId,
+      siteId,
+      userId,
+      entryPage,
+      exitPage,
+      referrer,
+      device = 'Desktop',
+      browser = '',
+      os = '',
+      country = '',
+      duration = 0,
+      pageviews = 1,
+      utm_source = '',
+      utm_medium = '',
+      utm_campaign = ''
+    } = sessionData;
+
+    // Check if session exists
+    const existingResult = await query(
+      `SELECT id, pageviews, started_at FROM sessions WHERE id = $1 LIMIT 1`,
+      [sessionId]
+    );
+
+    const existingSession = existingResult.rows[0];
+
+    if (existingSession) {
+      const newPageviews = Number(existingSession.pageviews) + 1;
+
+      await query(
+        `UPDATE sessions
+         SET ended_at = $1, duration = $2, pageviews = $3, exit_page = $4, is_bounce = $5
+         WHERE id = $6`,
+        [
+          new Date().toISOString(),
+          duration,
+          newPageviews,
+          exitPage || entryPage,
+          newPageviews === 1,
+          sessionId
+        ]
+      );
+    } else {
+      // Check if user has previous sessions (returning visitor)
+      const prevResult = await query(
+        `SELECT COUNT(*) AS cnt FROM sessions WHERE site_id = $1 AND user_id = $2`,
+        [siteId, userId]
+      );
+      const isReturning = Number(prevResult.rows[0]?.cnt || 0) > 0;
+
+      await query(
+        `INSERT INTO sessions (id, site_id, user_id, started_at, ended_at, duration, pageviews, entry_page, exit_page, referrer, device, browser, os, country, is_bounce, is_returning, utm_source, utm_medium, utm_campaign)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+        [
+          sessionId, siteId, userId,
+          new Date().toISOString(),
+          new Date().toISOString(),
+          duration, pageviews,
+          entryPage, exitPage || entryPage,
+          referrer || null,
+          device, browser, os, country,
+          true,
+          isReturning,
+          utm_source, utm_medium, utm_campaign
+        ]
+      );
+    }
+
+    return { success: true, sessionId };
+  },
+
+  // End a session
+  async endSession(sessionId, duration) {
+    const existingResult = await query(
+      `SELECT * FROM sessions WHERE id = $1 LIMIT 1`,
+      [sessionId]
+    );
+
+    const session = existingResult.rows[0];
+
+    if (session) {
+      await query(
+        `UPDATE sessions SET ended_at = $1, duration = $2, is_bounce = $3 WHERE id = $4`,
+        [
+          new Date().toISOString(),
+          duration || session.duration,
+          session.pageviews === 1,
+          sessionId
+        ]
+      );
+      return { success: true, sessionId };
+    }
+
+    return { success: false, error: 'Session not found' };
+  },
+
+  // Batch track events (for efficiency)
+  async trackBatch(events) {
+    const p = getPool();
+    const client = await p.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const insertQuery = `
+        INSERT INTO events (site_id, user_id, session_id, type, url, path, referrer, device, browser, os, country, city, timestamp, properties)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `;
+
+      for (const event of events) {
+        await client.query(insertQuery, [
+          event.siteId,
+          event.userId,
+          event.sessionId || uuidv4(),
+          event.type || 'pageview',
+          event.url || '',
+          event.path || '/',
+          event.referrer || null,
+          event.device || 'Desktop',
+          event.browser || '',
+          event.os || '',
+          event.country || '',
+          event.city || '',
+          event.timestamp || new Date().toISOString(),
+          JSON.stringify(event.props || {})
+        ]);
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    return { success: true, count: events.length };
+  }
+};
+
+export default trackingService;

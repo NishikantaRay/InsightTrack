@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23166534'/><rect x='8' y='9' width='16' height='3' rx='1' fill='white'/><rect x='8' y='14' width='12' height='3' rx='1' fill='white' opacity='0.8'/><rect x='8' y='19' width='14' height='3' rx='1' fill='white' opacity='0.6'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechPulse - Reviews</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #1a1a2e;
+            background: #f8f9fc;
+        }
+
+        nav {
+            background: #fff;
+            border-bottom: 1px solid #e8eaf0;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .nav-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: #4f46e5;
+            text-decoration: none;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        nav a:hover,
+        nav a.active {
+            color: #4f46e5;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: .5rem;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+
+        .reviews {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .review-card {
+            background: #fff;
+            border: 1px solid #e8eaf0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: box-shadow .2s, transform .2s;
+        }
+
+        .review-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+            transform: translateY(-2px);
+        }
+
+        .review-card .rating {
+            color: #f59e0b;
+            font-size: 1rem;
+            margin-bottom: .75rem;
+        }
+
+        .review-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: .5rem;
+        }
+
+        .review-card p {
+            color: #64748b;
+            font-size: .85rem;
+            line-height: 1.6;
+        }
+
+        .review-card .verdict {
+            margin-top: 1rem;
+            padding-top: .75rem;
+            border-top: 1px solid #f1f5f9;
+            font-size: .8rem;
+            font-weight: 600;
+            color: #4f46e5;
+        }
+
+        footer {
+            background: #1a1a2e;
+            color: #94a3b8;
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            font-size: .85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="nav-inner">
+            <a href="index.html" class="logo">TechPulse</a>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="tutorials.html">Tutorials</a></li>
+                <li><a href="reviews.html" class="active">Reviews</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>Reviews</h1>
+        <p class="subtitle">Honest, in-depth reviews of developer tools and services</p>
+        <div class="reviews">
+            <div class="review-card" data-track="review-click">
+                <div class="rating">★★★★★</div>
+                <h3>VS Code 2026</h3>
+                <p>Still the king of editors. The new AI features and remote development improvements make it
+                    unbeatable.</p>
+                <div class="verdict">Verdict: Must-have · 9.5/10</div>
+            </div>
+            <div class="review-card" data-track="review-click">
+                <div class="rating">★★★★☆</div>
+                <h3>Vercel v5</h3>
+                <p>Deployment is seamless but the new pricing tiers may push hobby projects to alternatives.</p>
+                <div class="verdict">Verdict: Great for teams · 8/10</div>
+            </div>
+            <div class="review-card" data-track="review-click">
+                <div class="rating">★★★★★</div>
+                <h3>Tailwind CSS v4</h3>
+                <p>The new engine is blazing fast. Zero-config setup and improved dark mode make it a joy to use.</p>
+                <div class="verdict">Verdict: Best-in-class · 9/10</div>
+            </div>
+            <div class="review-card" data-track="review-click">
+                <div class="rating">★★★★☆</div>
+                <h3>Supabase</h3>
+                <p>Firebase alternative that delivers. Postgres-based with great auth, storage, and realtime features.
+                </p>
+                <div class="verdict">Verdict: Highly recommended · 8.5/10</div>
+            </div>
+            <div class="review-card" data-track="review-click">
+                <div class="rating">★★★☆☆</div>
+                <h3>Bun 2.0</h3>
+                <p>Incredibly fast but ecosystem compatibility still lags behind Node.js in production scenarios.</p>
+                <div class="verdict">Verdict: Promising · 7/10</div>
+            </div>
+            <div class="review-card" data-track="review-click">
+                <div class="rating">★★★★★</div>
+                <h3>Linear</h3>
+                <p>The fastest project management tool. Keyboard-first design and GitHub integration are superb.</p>
+                <div class="verdict">Verdict: Game-changer · 9.5/10</div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2026 TechPulse Blog. Built for analytics testing.</p>
+    </footer>
+    <script src="http://localhost:3001/api/sites/site_00a47a67/script"></script>
+</body>
+
+</html>

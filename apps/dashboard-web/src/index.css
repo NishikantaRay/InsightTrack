@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-bg text-text-primary transition-colors duration-200;
+    }
+
+    .dark body,
+    body.dark-mode {
+        background-color: #0F1117;
+        color: #F1F5F9;
+    }
+}
+
+@layer components {
+    .card {
+        @apply bg-card rounded-xl shadow-card border border-border p-6 dark:bg-card-dark dark:border-border-dark dark:shadow-card-dark transition-all duration-200;
+    }
+
+    .card-hover {
+        @apply hover:shadow-card-hover dark:hover:shadow-lg transition-shadow duration-200;
+    }
+}
+
+/* Recharts overrides */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+    stroke: #E2E8F0;
+}
+
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line {
+    stroke: #2D3348;
+}
+
+.recharts-tooltip-wrapper {
+    outline: none !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+/* Smooth transitions for theme */
+* {
+    transition-property: background-color, border-color;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
+}
+
+/* Exclude transitions that shouldn't animate */
+.recharts-surface *,
+.recharts-layer *,
+svg * {
+    transition: none !important;
+}

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231e1b4b'/><rect x='8' y='13' width='16' height='13' rx='2' fill='%23c7d2fe'/><path d='M12 13 Q12 8 16 8 Q20 8 20 13' stroke='%23a5b4fc' stroke-width='2' fill='none' stroke-linecap='round'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pricing — ShopEasy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f9fafb;
+            color: #111;
+        }
+
+        header {
+            background: #1e1b4b;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header a {
+            color: #c7d2fe;
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        header a:hover {
+            color: white;
+        }
+
+        .page-hero {
+            background: #4f46e5;
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .page-hero h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-hero p {
+            opacity: 0.85;
+        }
+
+        .pricing {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .card.featured {
+            border: 2px solid #4f46e5;
+            position: relative;
+        }
+
+        .badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4f46e5;
+            color: white;
+            padding: 0.2rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .plan {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #4f46e5;
+            margin: 1rem 0;
+        }
+
+        .price span {
+            font-size: 1rem;
+            font-weight: 400;
+            color: #6b7280;
+        }
+
+        ul {
+            list-style: none;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+
+        ul li {
+            padding: 0.4rem 0;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+
+        ul li::before {
+            content: "✓ ";
+            color: #10b981;
+            font-weight: 700;
+        }
+
+        .btn {
+            display: block;
+            background: #4f46e5;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #4338ca;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #4f46e5;
+            border: 2px solid #4f46e5;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+            font-size: 0.9rem;
+            background: #f3f4f6;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <strong style="font-size:1.2rem"><a href="/" style="color:white;text-decoration:none">🛍️ ShopEasy</a></strong>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/products.html">Products</a>
+            <a href="/pricing.html" style="color:white">Pricing</a>
+            <a href="/about.html">About</a>
+        </nav>
+    </header>
+
+    <section class="page-hero">
+        <h1>Simple, Transparent Pricing</h1>
+        <p>Choose the plan that works best for you</p>
+    </section>
+
+    <section class="pricing">
+        <div class="grid">
+            <div class="card">
+                <div class="plan">Starter</div>
+                <div class="price">$9 <span>/month</span></div>
+                <ul>
+                    <li>Up to 100 orders/month</li>
+                    <li>Basic analytics</li>
+                    <li>Email support</li>
+                    <li>1 store</li>
+                </ul>
+                <button class="btn btn-outline" onclick="window.analytics?.track('pricing_click', {plan:'starter'})">Get
+                    Started</button>
+            </div>
+            <div class="card featured">
+                <div class="badge">Most Popular</div>
+                <div class="plan">Pro</div>
+                <div class="price">$29 <span>/month</span></div>
+                <ul>
+                    <li>Unlimited orders</li>
+                    <li>Advanced analytics</li>
+                    <li>Priority support</li>
+                    <li>5 stores</li>
+                    <li>Custom domain</li>
+                </ul>
+                <button class="btn" onclick="window.analytics?.track('pricing_click', {plan:'pro'})">Get Pro</button>
+            </div>
+            <div class="card">
+                <div class="plan">Enterprise</div>
+                <div class="price">$99 <span>/month</span></div>
+                <ul>
+                    <li>Unlimited everything</li>
+                    <li>Dedicated analytics</li>
+                    <li>24/7 phone support</li>
+                    <li>Unlimited stores</li>
+                    <li>SLA guarantee</li>
+                </ul>
+                <button class="btn btn-outline"
+                    onclick="window.analytics?.track('pricing_click', {plan:'enterprise'})">Contact Sales</button>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2026 ShopEasy Demo Store · Powered by InsightTrack Analytics</p>
+    </footer>
+
+    <script src="http://localhost:3001/api/sites/site_d1799b4b/script"></script>
+</body>
+
+</html>

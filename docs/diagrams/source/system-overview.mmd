@@ -1,0 +1,36 @@
+flowchart LR
+    subgraph Sites[Tracked Websites]
+        W1[Marketing Site<br/>tracking.js]
+        W2[Docs Site<br/>tracking.js]
+        W3[E-commerce Site<br/>tracking.js]
+        WN[N more websites]
+    end
+
+    subgraph API[InsightTrack Backend - Express 3001]
+        T[Tracking Routes<br/>POST /track/*]
+        A[Analytics Routes<br/>GET /api/analytics/*]
+        Auth[Auth and Sites Routes<br/>/api/auth, /api/sites]
+        C[(In-memory Cache<br/>TTL 10s 30s 60s 120s)]
+        S[Incremental Sync Worker<br/>High-water mark]
+    end
+
+    PG[(PostgreSQL 5432<br/>Source of truth<br/>Write optimized)]
+    D[(DuckDB embedded<br/>Analytics replica<br/>Read optimized)]
+    UI[Dashboard SPA<br/>React + Vite 5173]
+
+    W1 -->|sendBeacon/fetch events| T
+    W2 -->|sendBeacon/fetch events| T
+    W3 -->|sendBeacon/fetch events| T
+    WN -->|sendBeacon/fetch events| T
+
+    T -->|INSERT events/sessions| PG
+    Auth -->|CRUD users/sites/funnels| PG
+
+    PG -->|incremental sync| S
+    S -->|upsert analytics tables| D
+
+    UI -->|JWT + HTTP| A
+    A --> C
+    C -->|cache miss| D
+    D -->|aggregations| A
+    A -->|JSON response| UI

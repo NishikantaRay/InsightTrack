@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant Site as Website (tracking.js)
+    participant API as Express API
+    participant PG as PostgreSQL
+    participant SY as Sync Worker
+    participant DK as DuckDB
+    participant CA as Cache
+    participant UI as Dashboard SPA
+
+    Site->>API: POST /track/events (pageview/click/session)
+    API->>PG: Validate + insert raw data
+    PG-->>API: ACK
+
+    loop every sync interval
+        SY->>PG: Read new rows > last_synced_at
+        PG-->>SY: Delta rows
+        SY->>DK: Upsert analytics replica
+        SY->>DK: Update _sync_meta
+    end
+
+    UI->>API: GET /api/analytics/*
+    API->>CA: Check key by site/date/filter
+    alt cache hit
+        CA-->>API: Cached payload
+    else cache miss
+        API->>DK: Run aggregation query
+        DK-->>API: Result set
+        API->>CA: Store with route TTL
+    end
+    API-->>UI: JSON metrics + timeseries

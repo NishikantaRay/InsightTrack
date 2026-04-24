@@ -1,0 +1,7 @@
+node_modules
+duckdb/*.duckdb
+duckdb/*.wal
+tests
+*.test.js
+.env
+.git
