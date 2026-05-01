@@ -1,0 +1,45 @@
+flowchart LR
+    subgraph Edge[Frontend and ingestion]
+        FE[Web apps and SDKs<br/>pageview click session]
+        API[Tracking API<br/>Node.js Express]
+    end
+
+    subgraph Operational[Operational storage]
+        PG[(PostgreSQL<br/>source of truth<br/>writes only)]
+    end
+
+    subgraph Processing[Data movement]
+        SW[Incremental sync worker<br/>high-water mark + retries]
+        STG[DuckDB staging and transform step<br/>dedupe enrich compact]
+    end
+
+    subgraph Analytical[Storage and compute separation]
+        D[(DuckDB hot tables<br/>7 to 30 day window)]
+        P[(Parquet cold partitions<br/>data lake style storage)]
+        C[(Cache<br/>memory now Redis later)]
+        Q[Analytics API query layer<br/>reads DuckDB hot + Parquet cold]
+        UI[Dashboard and exports<br/>charts reports CSV]
+    end
+
+    FE -->|sendBeacon or fetch| API
+    API -->|validated inserts| PG
+
+    PG -->|ordered batches by id or updated_at| SW
+    SW -->|stage recent rows| STG
+    STG -->|upsert recent data| D
+    STG -->|write older partitions| P
+    D --> Q
+    P --> Q
+    Q --> C
+    C -->|cache hit| UI
+    Q -->|cache miss populate cache| UI
+
+    P -. open files for other engines .-> EXT[DuckDB Spark Trino Pandas]
+
+    classDef storage fill:#e8f1ff,stroke:#1d4ed8,color:#111827;
+    classDef process fill:#ecfdf5,stroke:#059669,color:#111827;
+    classDef api fill:#fff7ed,stroke:#ea580c,color:#111827;
+
+    class PG,D,P storage;
+    class SW,STG process;
+    class FE,API,Q,UI,C,EXT api;

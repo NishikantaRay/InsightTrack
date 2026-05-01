@@ -1,0 +1,61 @@
+flowchart TB
+    subgraph Source[PostgreSQL write plane]
+        E[events<br/>event_uuid unique<br/>id watermark]
+        S[sessions<br/>session_id business key<br/>updated_at watermark]
+        M[sync_state<br/>pipeline_name<br/>last_event_id<br/>last_updated_at]
+    end
+
+    subgraph Worker[Incremental sync worker]
+        F[Fetch changed rows<br/>ORDER BY id or updated_at]
+        X[Stage batch<br/>validate dedupe]
+        U[Upsert into DuckDB hot tables]
+        R[Roll old data to Parquet]
+        W[Advance watermark only after success]
+    end
+
+    subgraph Hot[DuckDB compute layer]
+        EH[(events_hot)]
+        SH[(sessions_hot)]
+        DM[(_sync_meta)]
+    end
+
+    subgraph Cold[Parquet storage layer]
+        PE[(events parquet<br/>site_id and event_date partitions)]
+        PS[(sessions parquet<br/>site_id and session_date partitions)]
+        MF[partition manifest or catalog]
+    end
+
+    subgraph Query[Query and cache]
+        V[UNION ALL hot and cold<br/>window functions for latest record logic]
+        CA[(API cache)]
+    end
+
+    E --> F
+    S --> F
+    M <--> F
+    F --> X --> U --> EH
+    X --> U --> SH
+    U --> DM
+    X --> R --> PE
+    X --> R --> PS
+    R --> MF
+    EH --> V
+    SH --> V
+    PE --> V
+    PS --> V
+    V --> CA
+    U --> W
+    R --> W
+    W --> M
+
+    classDef source fill:#eef2ff,stroke:#4f46e5,color:#111827;
+    classDef worker fill:#ecfeff,stroke:#0891b2,color:#111827;
+    classDef hot fill:#eff6ff,stroke:#2563eb,color:#111827;
+    classDef cold fill:#f0fdf4,stroke:#16a34a,color:#111827;
+    classDef query fill:#fff7ed,stroke:#f97316,color:#111827;
+
+    class E,S,M source;
+    class F,X,U,R,W worker;
+    class EH,SH,DM hot;
+    class PE,PS,MF cold;
+    class V,CA query;

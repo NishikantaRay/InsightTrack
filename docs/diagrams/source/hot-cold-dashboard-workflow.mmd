@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant UI as Dashboard SPA
+    participant API as Analytics API
+    participant CA as Cache
+    participant DK as DuckDB Hot
+    participant PQ as Parquet Cold
+    participant EX as Export / Report Layer
+
+    UI->>API: GET /api/analytics/* with site, date, filters
+    API->>CA: Lookup cache key
+
+    alt cache hit
+        CA-->>API: Cached JSON payload
+    else cache miss
+        API->>DK: Query recent hot window
+        alt range crosses hot boundary
+            API->>PQ: Read historical parquet partitions
+            DK-->>API: Recent rows / aggregates
+            PQ-->>API: Historical rows / aggregates
+            API->>API: UNION ALL + latest-record window logic
+        else hot-only request
+            DK-->>API: Full result from hot tables
+        end
+        API->>CA: Store response with route TTL
+    end
+
+    API-->>UI: Metrics, charts, tables
+    UI->>API: Export CSV / report request
+    API->>EX: Build export from hot + cold result set
+    EX-->>UI: Download stream / file URL
