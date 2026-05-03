@@ -12,3 +12,5 @@ duckdb/*.duckdb.wal
 .DS_Store
 .vite/
 *.pen
+data-lake/
+data-lake-export/

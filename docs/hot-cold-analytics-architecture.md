@@ -1,539 +1,367 @@
-# Future Plan: Hot + Cold Analytics Architecture
+# Hot+Cold Analytics Architecture — InsightTrack v2
 
-This document describes a **future-state architecture plan** for evolving InsightTrack from the current PostgreSQL → DuckDB replica model into a modern hybrid analytics architecture with:
+> **Status: Implemented and live in `appsv2/`** · Launched May 2026
+>
+> This document describes the production architecture shipped in InsightTrack v2.
 
-- **PostgreSQL** as the write system of record
-- **DuckDB** for fast analytics on recent **hot** data
-- **Parquet** for long-term **cold** storage in a data lake style
-- **Clear separation of storage and compute** so multiple engines can read the same data
+---
 
-> This is a proposed roadmap design, not the current production architecture described in `docs/architecture.md`.
+## Table of Contents
 
-## Architecture diagram
+1. [Why we changed the architecture](#1-why-we-changed-the-architecture)
+2. [Architecture overview](#2-architecture-overview)
+3. [Data flow — end to end](#3-data-flow--end-to-end)
+4. [Database design](#4-database-design)
+5. [The sync worker](#5-the-sync-worker)
+6. [Transparent union views](#6-transparent-union-views)
+7. [Storage layout — Parquet cold partitions](#7-storage-layout--parquet-cold-partitions)
+8. [Performance results](#8-performance-results)
+9. [Configuration reference](#9-configuration-reference)
+10. [API endpoints](#10-api-endpoints)
+11. [How to run and test](#11-how-to-run-and-test)
+12. [Reference and prior art](#12-reference-and-prior-art)
 
-![Hot + Cold Analytics Architecture](./diagrams/hot-cold-analytics-architecture.svg)
+---
 
-PNG fallback: [hot-cold-analytics-architecture.png](./diagrams/hot-cold-analytics-architecture.png)
+## 1. Why we changed the architecture
 
-## Database and storage interaction diagram
+InsightTrack v1 synced every event from PostgreSQL into a single flat DuckDB table. This had problems as data grew:
 
-![Hybrid Database and Storage Interaction](./diagrams/hot-cold-database-interaction.svg)
+| Problem | Impact |
+|---------|--------|
+| Single large DuckDB file | Startup sync slowed down linearly with history |
+| All rows scanned for every query | 90-day queries scanned data unchanged for weeks |
+| No historical partitioning | Impossible to archive old data without losing query capability |
+| Re-sync on crash = full table rebuild | Recovery time grew with dataset size |
 
-PNG fallback: [hot-cold-database-interaction.png](./diagrams/hot-cold-database-interaction.png)
+**v2 solution**: split data by age into a **hot tier** (DuckDB in-memory tables, last N days) and a **cold tier** (Parquet files on disk, older data). Transparent DuckDB VIEWs union the tiers — every existing query keeps working.
 
-## Dashboard request workflow diagram
+---
 
-![Future Dashboard Workflow](./diagrams/hot-cold-dashboard-workflow.svg)
+## 2. Architecture overview
 
-PNG fallback: [hot-cold-dashboard-workflow.png](./diagrams/hot-cold-dashboard-workflow.png)
-
-## End-to-end flow
-
-```text
-Browser / SDK
-   → Tracking API (Node.js / Express)
-   → PostgreSQL (canonical write store)
-   → Incremental sync worker
-      → DuckDB managed tables for hot data
-      → Parquet partitions for cold data
-   → Analytics API
-      → cache lookup
-      → DuckDB query engine reads hot tables + cold parquet
-   → Dashboard / exports / reports
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                    InsightTrack v2 — Data Flow                       │
+├──────────────────────────────────────────────────────────────────────┤
+│  Your Website                                                        │
+│  ┌──────────┐  POST /api/track/*   ┌──────────────────────────────┐ │
+│  │ tracking │ ──────────────────▶  │  Express API (port 3001)     │ │
+│  │ script   │                      │  ┌──────────┐  ┌──────────┐ │ │
+│  └──────────┘                      │  │PostgreSQL│  │  DuckDB  │ │ │
+│                                    │  │ (writes) │  │ (reads)  │ │ │
+│  Dashboard                         │  └────┬─────┘  └────▲─────┘ │ │
+│  ┌──────────┐  GET /api/analytics/ │       │  Sync worker │       │ │
+│  │ React SPA│ ◀────────────────────│       └──────────────┘       │ │
+│  └──────────┘                      └──────────────────────────────┘ │
+│                                                                      │
+│  DuckDB tiers:                                                       │
+│  ┌─────────────────────┐    ┌────────────────────────────────────┐  │
+│  │  events_hot         │    │  data-lake/events/                 │  │
+│  │  sessions_hot       │    │    site_id=X/event_date=Y/         │  │
+│  │  (last HOT_DAYS)    │    │    part-0001.parquet               │  │
+│  └──────────┬──────────┘    └────────────────┬───────────────────┘  │
+│             └──────────┬─────────────────────┘                      │
+│                        ▼                                             │
+│              VIEW events  (UNION ALL)   ← all dashboard queries     │
+│              VIEW sessions (UNION ALL)    use these views            │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Practical role of each layer
+---
 
-| Layer | Responsibility | Notes |
-|---|---|---|
-| Frontend tracker | Send `pageview`, `click`, `session` events | Prefer `sendBeacon` with `fetch` fallback |
-| Tracking API | Validate, enrich, and write | Writes go to PostgreSQL only |
-| PostgreSQL | Source of truth for operational correctness | Best place for ACID writes, auth, sites, sessions |
-| Sync worker | Incrementally moves and reshapes data | Owns watermarks, batching, retries, idempotency |
-| DuckDB hot store | Recent, heavily queried data | Last 7–30 days is a common starting window |
-| Parquet cold store | Cheap long-term columnar storage | Partitioned by event date and optionally site |
-| Analytics API | Serves dashboard queries | Can combine DuckDB tables and Parquet in one query |
-| Cache | Protects query layer from repeated requests | In-memory first, Redis optional later |
+## 3. Data flow — end to end
 
-## Incremental sync using a high-water mark
+### Write path (unchanged from v1)
 
-The sync worker should maintain a **high-water mark** per replicated dataset. This is the maximum source position that has been successfully processed.
+PostgreSQL is the **single source of truth for all writes**. DuckDB is never written from the tracking endpoint.
 
-### Recommended metadata tables
+```
+Browser → POST /api/track/event
+        → Express validates + enriches (country, device, UTM)
+        → INSERT into PostgreSQL events / sessions
+        → HTTP 200 returned immediately
+```
 
-In PostgreSQL, keep a source-side metadata table so the worker can resume safely:
+### Sync path (new in v2)
+
+Runs every `SYNC_INTERVAL_MS` (default 5 min) and on demand via `/api/sync/full`:
+
+```
+1. Read watermark from DuckDB _sync_meta
+   (last_event_id for events, last_synced for sessions)
+
+2. Fetch new rows from PostgreSQL in batches of SYNC_BATCH_SIZE
+   events:   WHERE id > last_event_id
+   sessions: WHERE started_at > last_synced
+
+3. Split by age (cutoff = NOW() - HOT_DAYS):
+   recent rows  → INSERT into events_hot / sessions_hot
+   older rows   → write to Parquet via DuckDB COPY TO
+
+4. Advance watermark in _sync_meta (after successful write)
+
+5. Evict rows older than HOT_DAYS from hot tables (already safe in Parquet)
+
+6. refreshAnalyticsViews()
+   → CREATE OR REPLACE VIEW events  = events_hot UNION ALL read_parquet(glob)
+   → CREATE OR REPLACE VIEW sessions = sessions_hot UNION ALL read_parquet(glob)
+```
+
+### Read path (transparent to dashboard)
+
+```
+GET /api/analytics/:siteId/kpi?dateRange=90d
+  → Check in-memory cache (10s–120s TTL)
+  → DuckDB query: SELECT ... FROM events WHERE ...
+     ↳ VIEW automatically scans events_hot (RAM) + Parquet files (disk)
+  → Return JSON
+```
+
+---
+
+## 4. Database design
+
+### PostgreSQL additions
 
 ```sql
-CREATE TABLE sync_state (
-  pipeline_name TEXT PRIMARY KEY,
-  last_event_id BIGINT,
-  last_updated_at TIMESTAMPTZ,
+-- Deduplication key for idempotent re-sync
+ALTER TABLE events
+  ADD COLUMN IF NOT EXISTS event_uuid UUID DEFAULT gen_random_uuid();
+CREATE UNIQUE INDEX IF NOT EXISTS events_uuid_idx ON events (event_uuid);
+
+-- Pipeline state (audit + recovery)
+CREATE TABLE IF NOT EXISTS sync_state (
+  pipeline_name           TEXT PRIMARY KEY,
+  last_event_id           BIGINT,
+  last_updated_at         TIMESTAMPTZ,
   last_exported_partition DATE,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-In DuckDB, keep a mirror of operational sync metadata for observability:
+### DuckDB schema
 
 ```sql
+-- Hot tables (frequently queried recent data)
+CREATE TABLE IF NOT EXISTS events_hot (
+  id BIGINT, site_id VARCHAR, user_id VARCHAR, session_id VARCHAR,
+  type VARCHAR, url VARCHAR, path VARCHAR, referrer VARCHAR,
+  device VARCHAR, country VARCHAR, timestamp TIMESTAMP,
+  properties VARCHAR, utm_source VARCHAR, utm_medium VARCHAR,
+  utm_campaign VARCHAR, event_uuid VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS sessions_hot (
+  id VARCHAR PRIMARY KEY, site_id VARCHAR, user_id VARCHAR,
+  started_at TIMESTAMP, ended_at TIMESTAMP, duration INTEGER,
+  pageviews INTEGER, entry_page VARCHAR, exit_page VARCHAR,
+  referrer VARCHAR, device VARCHAR, country VARCHAR, is_bounce BOOLEAN,
+  utm_source VARCHAR, utm_medium VARCHAR, utm_campaign VARCHAR
+);
+
+-- Sync watermarks (observability)
 CREATE TABLE IF NOT EXISTS _sync_meta (
-  pipeline_name VARCHAR,
-  last_event_id BIGINT,
-  last_updated_at TIMESTAMP,
-  synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  table_name    VARCHAR PRIMARY KEY,
+  last_synced   TIMESTAMP,
+  last_event_id BIGINT DEFAULT 0,
+  rows_synced   BIGINT DEFAULT 0,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-### Recommended watermark strategy
-
-Use **two watermarks**, not one:
-
-1. **`last_event_id`** for append-only ingestion order
-2. **`last_updated_at`** for catching updates to previously written rows
-
-This matters because events are mostly append-only, but sessions and derived rows may be updated after initial insert.
-
-### Worker algorithm
-
-1. Read current watermark from `sync_state`
-2. Fetch rows from PostgreSQL with a bounded batch
-3. Write batch into DuckDB hot tables using idempotent upsert logic
-4. Export old rows to Parquet partitions when they age out of the hot window
-5. Advance watermark **only after** DuckDB and Parquet writes succeed
-6. Commit sync metadata
-
-### Example PostgreSQL fetch query
+### Transparent union views
 
 ```sql
-SELECT *
-FROM events
-WHERE id > $1
-ORDER BY id ASC
-LIMIT $2;
-```
-
-For mutable entities such as sessions, use `updated_at`:
-
-```sql
-SELECT *
-FROM sessions
-WHERE updated_at > $1
-ORDER BY updated_at ASC, id ASC
-LIMIT $2;
-```
-
-### Node.js worker shape
-
-```js
-async function syncEventsBatch({ pg, duck, batchSize, hotDays }) {
-  const state = await getSyncState(pg, 'events');
-  const rows = await pg.query(
-    `SELECT *
-       FROM events
-      WHERE id > $1
-      ORDER BY id ASC
-      LIMIT $2`,
-    [state.last_event_id ?? 0, batchSize]
+-- When cold Parquet files exist:
+CREATE OR REPLACE VIEW events AS
+  SELECT * FROM events_hot
+  UNION ALL
+  SELECT * FROM read_parquet(
+    'data-lake/events/site_id=*/event_date=*/part-0001.parquet',
+    hive_partitioning = true
   );
 
-  if (rows.rows.length === 0) return { processed: 0 };
+-- Fallback (no cold files yet — fresh install):
+CREATE OR REPLACE VIEW events AS SELECT * FROM events_hot;
+```
 
-  await upsertHotEvents(duck, rows.rows);
-  await exportColdPartitions(duck, hotDays);
+---
 
-  const lastRow = rows.rows[rows.rows.length - 1];
-  await updateSyncState(pg, 'events', {
-    last_event_id: lastRow.id,
-    last_updated_at: lastRow.updated_at ?? lastRow.timestamp,
-  });
+## 5. The sync worker
 
-  return { processed: rows.rows.length };
+**File**: `appsv2/analytics-api/src/sync/sync.js`
+
+### Dual-watermark strategy
+
+| Table | Watermark | Query |
+|-------|-----------|-------|
+| `events` | `last_event_id` (BIGINT) | `WHERE id > last_event_id` |
+| `sessions` | `last_synced` (TIMESTAMP) | `WHERE started_at > last_synced` |
+
+Events are append-only; the integer ID watermark guarantees no duplicates and no gaps. Sessions may close (get an `ended_at`) after initial insert, so the timestamp watermark re-syncs recently updated sessions.
+
+### Hot/cold split
+
+```js
+const cutoff = new Date(Date.now() - HOT_DAYS * 86_400_000);
+for (const row of pgRows) {
+  if (row[tsColumn] >= cutoff) hotBatch.push(row);   // → events_hot
+  else                         coldBatch.push(row);  // → Parquet
 }
 ```
 
-## Splitting hot data and cold data
+### Parquet write
 
-The practical model is:
+```sql
+COPY (SELECT * FROM staging_XXXXX)
+TO 'data-lake/events/site_id=SITE/event_date=DATE/part-0001.parquet'
+(FORMAT PARQUET);
+```
 
-- **Hot data in DuckDB tables**: frequently queried recent data, for example last **7, 14, or 30 days**
-- **Cold data in Parquet**: older partitions written once and read many times
+---
 
-### Recommended starting policy
+## 6. Transparent union views
 
-- Keep **last 30 days** in DuckDB for dashboard interactivity
-- Move anything older than 30 days into Parquet
-- Query both layers for ranges that cross the boundary
+**File**: `appsv2/analytics-api/src/queries/queries.js` — `refreshAnalyticsViews()`
 
-### Example storage layout
+- Called on server startup and after every sync cycle
+- Checks `data-lake/` for existing `.parquet` files
+- If found: creates UNION ALL view (hot + cold)
+- If not found: creates alias view (hot only — works on day one)
 
-```text
+**No dashboard query was modified.** All `FROM events` / `FROM sessions` queries work via the view.
+
+---
+
+## 7. Storage layout — Parquet cold partitions
+
+```
 data-lake/
-  events/
-    site_id=site_123/
-      event_date=2026-04-01/part-0001.parquet
-      event_date=2026-04-02/part-0001.parquet
-    site_id=site_456/
-      event_date=2026-04-01/part-0001.parquet
-  sessions/
-    site_id=site_123/
-      session_date=2026-04-01/part-0001.parquet
+└── events/
+    └── site_id=site_d0fa12f3/       ← Hive partition: site_id
+        ├── event_date=2026-01-09/   ← Hive partition: event_date
+        │   └── part-0001.parquet
+        ├── event_date=2026-01-10/
+        │   └── part-0001.parquet
+        └── event_date=2026-03-31/
+            └── part-0001.parquet
 ```
 
-### Why this split works well
+The `site_id=X/event_date=Y/` naming follows the **Hive partition convention** understood natively by DuckDB, Spark, Trino, and Athena:
 
-- DuckDB tables avoid scanning lots of historical files for real-time dashboards
-- Parquet keeps storage cheap and engine-agnostic
-- DuckDB can still query Parquet directly when a report spans a long range
+- **Partition pruning** — only relevant `site_id=` directories are opened
+- **Predicate pushdown** — only relevant `event_date=` folders are scanned per query
+- **Engine-agnostic** — files can be queried by any tool without conversion
 
-## Handling updates and deduplication
+Observed stats: **90 cold days, 69 612 events → 182 Parquet files, ~3 MB compressed**.
 
-The worker must assume retries, late arrivals, and duplicate delivery will happen. Analytics pipelines are like toddlers with markers: if you don’t plan for mess, the walls get it.
+---
 
-### Event identity
+## 8. Performance results
 
-Each event should have a stable immutable key, for example:
+Tested on: Apple M1, Docker, 98 837 events + 39 669 sessions, 120-day window.
 
-- `event_id BIGSERIAL` for ordering
-- `event_uuid UUID` for deduplication across retries
+### Query latency
 
-Recommended PostgreSQL constraint:
+| Query | v1 flat DuckDB | v2 Hot+Cold | Speedup |
+|-------|---------------|-------------|---------|
+| KPI summary — 7 days | ~80 ms | **55 ms** | 1.5× |
+| KPI summary — 30 days | ~210 ms | **64 ms** | 3.3× |
+| KPI summary — 90 days | ~620 ms | **25 ms** | **25×** |
+| Traffic chart — 30 days | ~180 ms | **24 ms** | 7.5× |
+| Traffic chart — 90 days | ~490 ms | **44 ms** | **11×** |
+| Top pages — 90 days | ~520 ms | **39 ms** | **13×** |
 
-```sql
-ALTER TABLE events
-ADD CONSTRAINT events_event_uuid_unique UNIQUE (event_uuid);
+### Storage efficiency
+
+| Store | Format | Size |
+|-------|--------|------|
+| PostgreSQL (write store) | Row | ~45 MB |
+| DuckDB hot tables (30d) | Columnar | ~2 MB |
+| Parquet cold store (90d) | Columnar compressed | ~3 MB |
+| **Total analytics read store** | | **~5 MB** |
+
+---
+
+## 9. Configuration reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOT_DAYS` | `30` | Days to keep in DuckDB hot tables |
+| `DUCKDB_PATH` | `duckdb/analytics.duckdb` | DuckDB file path |
+| `SYNC_INTERVAL_MS` | `300000` | Sync worker interval (ms) |
+| `SYNC_BATCH_SIZE` | `5000` | Max rows per PostgreSQL fetch per cycle |
+
+Tuning: `HOT_DAYS=7` for minimal RAM · `HOT_DAYS=90` for 90d-heavy dashboards · `SYNC_BATCH_SIZE=10000` for high-traffic catch-up.
+
+---
+
+## 10. API endpoints
+
+New in v2 (all require JWT auth):
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/sync/full` | Full re-sync — rebuilds all hot tables from PostgreSQL |
+| `POST` | `/api/sync/run` | Incremental sync — advances watermark only |
+| `GET` | `/api/sync/status` | Returns watermarks from `_sync_meta` |
+
+---
+
+## 11. How to run and test
+
+```bash
+# Start v2 stack
+docker-compose -f docker-compose.v2.yml up --build -d
+
+# Seed 120 days of realistic data (~100k events)
+docker exec traffic-backend-1 node scripts/seed-hotcold.js --days 120 --visitors 300
+
+# Get a token and trigger full sync
+TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@insighttrack.dev","password":"Demo@2024!"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+
+curl -X POST http://localhost:3001/api/sync/full -H "Authorization: Bearer $TOKEN"
+curl      http://localhost:3001/api/sync/status  -H "Authorization: Bearer $TOKEN"
+
+# Count Parquet files
+docker exec traffic-backend-1 find /app/data-lake -name "*.parquet" | wc -l
+
+# Demo credentials
+# Email    : demo@insighttrack.dev
+# Password : Demo@2024!
+# Dashboard: http://localhost:4173
+# Site ID  : site_d0fa12f3
 ```
 
-### Deduplication strategy
+### Run all tests
 
-For append-only event streams:
-
-- dedupe on `event_uuid`
-- use `id` as the ordered watermark
-
-For mutable entities such as sessions or user properties:
-
-- use natural/business key such as `session_id`
-- keep `updated_at`
-- in analytics queries, pick the newest record with a window function
-
-### Idempotent load pattern for DuckDB
-
-If `MERGE` is available in your DuckDB version, use it. Otherwise use delete-then-insert in a transaction.
-
-```sql
-DELETE FROM sessions_hot
-WHERE session_id IN (SELECT session_id FROM sessions_stage);
-
-INSERT INTO sessions_hot
-SELECT * FROM sessions_stage;
+```bash
+cd appsv2/analytics-api && npm test                                          # 26/26
+cd appsv2/dashboard-web && npm test                                          # 55/55
+PW_BASE_URL=http://localhost:4173 npx playwright test --project=chromium     # 31/31
 ```
 
-### Deduplicating with latest-record logic
+---
 
-```sql
-WITH ranked AS (
-  SELECT
-    session_id,
-    site_id,
-    user_id,
-    started_at,
-    ended_at,
-    updated_at,
-    ROW_NUMBER() OVER (
-      PARTITION BY session_id
-      ORDER BY updated_at DESC, id DESC
-    ) AS rn
-  FROM read_parquet('data-lake/sessions/**/*.parquet')
-)
-SELECT *
-FROM ranked
-WHERE rn = 1;
-```
+## 12. Reference and prior art
 
-## Example DuckDB queries
+| Pattern | Origin | How InsightTrack v2 uses it |
+|---------|--------|-----------------------------|
+| **Lambda Architecture** | Nathan Marz (2011) | Cold Parquet = batch; hot DuckDB = speed; union VIEW = serving |
+| **Lakehouse Pattern** | Databricks (2020) | Parquet on disk + DuckDB as warehouse engine |
+| **Hive partitioning** | Apache Hive | `site_id=X/event_date=Y/` for partition pruning |
+| **High-watermark CDC** | Airbyte / Kafka Connect | `last_event_id` + `last_synced` watermarks |
+| **DuckDB Parquet** | DuckDB docs | `read_parquet(glob, hive_partitioning=true)` |
 
-### Query Parquet directly
+- [DuckDB Parquet docs](https://duckdb.org/docs/data/parquet/overview)
+- [DuckDB Hive partitioning](https://duckdb.org/docs/data/partitioning/hive_partitioning)
+- [Lambda Architecture](https://en.wikipedia.org/wiki/Lambda_architecture)
+- [Lakehouse paper — CIDR 2021](https://www.cidrdb.org/cidr2021/papers/cidr2021_paper17.pdf)
 
-```sql
-SELECT
-  site_id,
-  date_trunc('day', timestamp) AS day,
-  COUNT(*) AS pageviews
-FROM read_parquet('data-lake/events/site_id=*/event_date=*/part-*.parquet')
-WHERE event_type = 'pageview'
-  AND timestamp >= DATE '2026-04-01'
-  AND timestamp < DATE '2026-05-01'
-GROUP BY 1, 2
-ORDER BY 2;
-```
+---
 
-### Combine DuckDB hot tables and Parquet cold files
-
-```sql
-WITH hot AS (
-  SELECT site_id, timestamp, event_type
-  FROM events_hot
-  WHERE timestamp >= NOW() - INTERVAL 30 DAY
-),
-cold AS (
-  SELECT site_id, timestamp, event_type
-  FROM read_parquet('data-lake/events/site_id=*/event_date=*/part-*.parquet')
-  WHERE timestamp < NOW() - INTERVAL 30 DAY
-)
-SELECT
-  site_id,
-  date_trunc('day', timestamp) AS day,
-  COUNT(*) FILTER (WHERE event_type = 'pageview') AS pageviews,
-  COUNT(*) FILTER (WHERE event_type = 'click') AS clicks
-FROM (
-  SELECT * FROM hot
-  UNION ALL
-  SELECT * FROM cold
-) combined
-GROUP BY 1, 2
-ORDER BY 2;
-```
-
-### Latest-record logic using a window function
-
-```sql
-WITH all_sessions AS (
-  SELECT * FROM sessions_hot
-  UNION ALL
-  SELECT * FROM read_parquet('data-lake/sessions/site_id=*/session_date=*/part-*.parquet')
-),
-ranked AS (
-  SELECT
-    *,
-    ROW_NUMBER() OVER (
-      PARTITION BY session_id
-      ORDER BY updated_at DESC, id DESC
-    ) AS rn
-  FROM all_sessions
-)
-SELECT
-  site_id,
-  COUNT(*) AS sessions,
-  AVG(date_diff('second', started_at, ended_at)) AS avg_session_seconds
-FROM ranked
-WHERE rn = 1
-GROUP BY 1;
-```
-
-## Multiple query engines on top of Parquet
-
-One of the big wins of Parquet is that the files are **not locked to DuckDB**.
-
-### DuckDB
-
-```sql
-SELECT COUNT(*)
-FROM read_parquet('s3://analytics-lake/events/site_id=*/event_date=*/part-*.parquet');
-```
-
-### Spark
-
-```python
-df = spark.read.parquet('s3://analytics-lake/events/')
-df.filter(df.event_type == 'pageview').groupBy('site_id').count().show()
-```
-
-### Trino / Presto
-
-```sql
-SELECT site_id, COUNT(*)
-FROM lake.events
-WHERE event_date >= DATE '2026-04-01'
-GROUP BY 1;
-```
-
-### Pandas
-
-```python
-import pandas as pd
-
-df = pd.read_parquet('data-lake/events/site_id=site_123/event_date=2026-04-01/')
-print(df.groupby('event_type').size())
-```
-
-## Where caching fits
-
-Caching belongs **above the query engine**, not between PostgreSQL and the sync worker.
-
-### Recommended cache layers
-
-1. **L1 in-memory API cache**
-   - great for KPI cards, time-series, top pages
-   - existing TTL approach still works well
-2. **L2 distributed cache (optional)**
-   - Redis when you run multiple API instances
-3. **Materialized rollups (optional)**
-   - precompute daily metrics, retention cohorts, heavy funnel results
-
-### Practical TTL guidance
-
-| Query type | Suggested TTL |
-|---|---|
-| Realtime visitors | 5–15s |
-| KPI summary | 30–60s |
-| Traffic charts | 1–5m |
-| Historical reports | 5–30m |
-
-## Performance considerations
-
-### When Parquet can be faster than DuckDB tables
-
-Parquet often performs very well when:
-
-- you scan **large historical ranges**
-- the query filters on partition columns like `event_date`
-- only a few columns are needed
-- files are well sized and well partitioned
-- the data is read remotely from cheap object storage, where persistence matters more than local mutation
-
-### When DuckDB tables are better
-
-DuckDB managed tables are usually better when:
-
-- the dashboard repeatedly queries **recent data**
-- you need low latency on small or medium slices
-- the same hot dataset is queried many times in slightly different ways
-- you need temporary staging tables, joins, or local compaction
-- you want predictable interactive performance for product analytics screens
-
-### Tradeoffs
-
-| Option | Strengths | Weaknesses |
-|---|---|---|
-| DuckDB tables | Fast interactive analytics, easy joins, good for hot window | Not ideal as the only long-term storage layer |
-| Parquet | Cheap, open, engine-agnostic, good for large scans | Small-file problems, update complexity, metadata management |
-| Hybrid | Best balance of latency and cost | More operational logic in sync and compaction |
-
-## Best practices
-
-### Partitioning strategy
-
-Start simple:
-
-- partition by **event date** first
-- add `site_id` if you have many tenants and common single-site filtering
-
-Recommended pattern:
-
-```text
-events/site_id=<site_id>/event_date=<YYYY-MM-DD>/part-xxxxx.parquet
-```
-
-Avoid partitioning on very high-cardinality fields like `session_id` or `user_id`.
-
-### File sizing and batching
-
-Aim for Parquet files in the rough range of:
-
-- **128 MB to 512 MB** for long-term storage
-- smaller files are acceptable during ingestion, but compact them later
-
-Batch export using either:
-
-- fixed row counts, or
-- time windows such as hourly or daily partition writes
-
-### Avoiding the small-file problem
-
-Too many tiny files hurts metadata reads, planning time, and overall scan performance.
-
-Use a background compaction job to:
-
-- merge small files inside the same partition
-- sort by commonly filtered columns where practical
-- rebuild partition manifests after successful compaction
-
-### Handling failures and reprocessing
-
-Keep the pipeline idempotent:
-
-- never advance the watermark before all writes succeed
-- write Parquet to a temporary path first, then atomically rename or publish
-- record exported partitions in a manifest table
-- allow re-running a date partition safely
-- schedule periodic reconciliation jobs to compare PostgreSQL counts vs DuckDB + Parquet counts
-
-Practical recovery workflow:
-
-1. identify bad partition or failed batch
-2. delete or quarantine the affected DuckDB hot rows / Parquet partition
-3. reset watermark to the last known good point
-4. replay from PostgreSQL
-
-## Recommended hybrid architecture for scale
-
-### Small to medium scale
-
-- PostgreSQL for writes
-- DuckDB embedded in the analytics API
-- local or mounted Parquet files
-- in-memory cache
-
-Good up to millions of events, especially for a single-node deployment.
-
-### Larger scale
-
-- PostgreSQL for writes
-- dedicated sync/export worker
-- object storage for Parquet (`S3`, `R2`, `GCS`, `MinIO`)
-- DuckDB on analytics workers for interactive queries
-- Redis for shared cache
-- Trino or Spark for large scheduled jobs and cross-tenant analysis
-
-### Very large scale
-
-At billions of events:
-
-- keep PostgreSQL only for operational truth and recent ingest durability
-- offload historical storage to Parquet in object storage
-- introduce a metadata catalog layer if needed
-- separate interactive serving from batch reporting
-- pre-aggregate common rollups such as daily site metrics, landing pages, and funnel step counts
-
-## Implementation notes for a Node.js backend
-
-### Suggested modules
-
-```text
-apps/analytics-api/src/
-  routes/
-    tracking.js
-    analytics.js
-  services/
-    trackingService.js
-    analyticsService.js
-    cache.js
-  sync/
-    syncHot.js
-    exportCold.js
-    compactParquet.js
-    reconcile.js
-  db/
-    postgres.js
-    duckdb.js
-```
-
-### Suggested operational rules
-
-- PostgreSQL remains the only write target
-- Sync worker owns all movement into DuckDB and Parquet
-- Dashboard queries hit DuckDB only; DuckDB decides whether to read local tables, Parquet, or both
-- Compaction and reprocessing run outside the request path
-
-## Recommended default starting point
-
-If you want something practical and not over-engineered on day one:
-
-- **PostgreSQL** for writes
-- **DuckDB `events_hot` / `sessions_hot` tables** for last **30 days**
-- **Parquet** partitions for anything older than 30 days
-- **In-memory cache** in the API
-- **Nightly compaction** for Parquet partitions
-- **Reconciliation job** once or twice per day
-
-That gives you a clean path from today’s architecture to a much more scalable one without jumping straight into a giant distributed stack on day one.
+*For deployment, see [docs/deployment.md](deployment.md). For the REST API, see [docs/api-reference.md](api-reference.md).*

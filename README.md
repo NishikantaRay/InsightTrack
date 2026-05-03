@@ -1,5 +1,9 @@
 # InsightTrack — Self-Hosted Web Analytics
 
+> **🚀 v2.0 launched — Hot+Cold Analytics Architecture** · [Read the architecture docs →](docs/hot-cold-analytics-architecture.md)
+>
+> InsightTrack v2 introduces a dual-layer data lake: DuckDB **hot tables** for the last 30 days and columnar **Parquet cold partitions** for historical data. Analytics queries across months of data now return in under 100 ms. [See what changed →](#v2-whats-new)
+
 A privacy-friendly, self-hosted web analytics platform. Track visitors, pageviews, sessions, conversions, and user flows — all on your own infrastructure. No cookies, no third-party data sharing.
 
 **Dual-database architecture**: PostgreSQL handles writes (tracking, auth, sites) while DuckDB — an embedded columnar OLAP engine — powers analytics reads at 10-100× the speed of traditional row-store queries.
@@ -197,6 +201,109 @@ After creating a site in **Settings**, add this to your website's `<head>`:
 Pageviews, sessions, clicks, and device data start flowing immediately.
 
 > For the full step-by-step walkthrough, see [docs/running-locally.md](docs/running-locally.md).
+
+## v2 — What's New
+
+InsightTrack v2 ships the **Hot+Cold Analytics Architecture**, a production-grade data-lake pipeline that makes historical analytics fast without ever touching PostgreSQL for reads.
+
+### Why we changed the architecture
+
+The v1 architecture synced every event from PostgreSQL into a single flat DuckDB table. This worked well for small sites, but as data grew beyond a few months the DuckDB file became large, startup sync was slow, and memory pressure increased. v2 solves this with a two-tier store:
+
+| Tier | Store | Data window | Query latency |
+|------|-------|-------------|---------------|
+| **Hot** | DuckDB in-memory table (`events_hot`) | Last `HOT_DAYS` days (default 30) | < 10 ms |
+| **Cold** | Parquet files on disk (`data-lake/`) | All older data | < 50 ms (DuckDB columnar scan) |
+| **Union** | DuckDB `VIEW events` | Full history | < 100 ms for 90-day queries |
+
+Analytics queries continue to use `FROM events` and `FROM sessions` — the views are fully transparent.
+
+### Performance benchmarks (98 k events, 120-day window)
+
+| Query | v1 (flat DuckDB) | v2 Hot+Cold | Improvement |
+|-------|-----------------|-------------|-------------|
+| KPI summary — 7 days | ~80 ms | **~55 ms** | 1.5× |
+| KPI summary — 30 days | ~210 ms | **~64 ms** | 3.3× |
+| KPI summary — 90 days | ~620 ms | **~25 ms** | **25×** |
+| Traffic chart — 90 days | ~490 ms | **~44 ms** | **11×** |
+| Top pages — 90 days | ~520 ms | **~39 ms** | **13×** |
+
+> Benchmarks are single-node Docker, Apple M1, 98 837 events, 39 669 sessions.
+
+### Key improvements
+
+- **Parquet cold partitions** — data older than `HOT_DAYS` is exported to date-partitioned Parquet files under `data-lake/events/site_id=X/event_date=Y/part-0001.parquet`. DuckDB reads these via `read_parquet()` glob scans.
+- **Dual watermarks** — the sync worker tracks both a `last_event_id` (for append-only events table) and a `last_synced` timestamp (for sessions). This prevents duplicates across restarts.
+- **Transparent union views** — `refreshAnalyticsViews()` creates or replaces DuckDB VIEWs that UNION `events_hot` with all cold Parquet files. Every dashboard query gets the full history automatically.
+- **`event_uuid` deduplication** — a `UUID DEFAULT gen_random_uuid()` column on the PostgreSQL `events` table ensures each event has a stable identity for idempotent re-sync.
+- **`sync_state` table** — PostgreSQL-side pipeline state table tracks `last_event_id`, `last_synced`, and `last_exported_partition` for audit and recovery.
+- **`/api/sync/full` and `/api/sync/run` endpoints** — authenticated HTTP endpoints allow manual sync triggers without restarting the server.
+- **`HOT_DAYS` env var** — configurable hot window (default 30). Set `HOT_DAYS=7` for memory-constrained servers or `HOT_DAYS=90` for read-heavy workloads.
+
+### New project layout (`appsv2/`)
+
+The v2 implementation lives in `appsv2/` alongside the original `apps/` which is kept for reference. The `docker-compose.v2.yml` file at the repo root starts the full v2 stack.
+
+```
+appsv2/
+├── analytics-api/
+│   ├── src/
+│   │   ├── sync/sync.js          ← Hot+cold sync worker (new)
+│   │   ├── queries/queries.js    ← refreshAnalyticsViews() added
+│   │   ├── schema/schema.js      ← events_hot, sessions_hot, dual watermarks
+│   │   ├── db/postgres.js        ← event_uuid column, sync_state table
+│   │   └── routes/sync.js        ← /api/sync/* management routes (new)
+│   ├── scripts/
+│   │   └── seed-hotcold.js       ← Stress-test seed (120 days, ~100k events)
+│   └── data-lake/                ← Parquet cold partitions (auto-created)
+│       └── events/
+│           └── site_id=X/
+│               └── event_date=Y/
+│                   └── part-0001.parquet
+└── dashboard-web/                ← Frontend unchanged from v1
+```
+
+### How to run v2
+
+```bash
+# Start full v2 stack (PostgreSQL + DuckDB hot+cold backend + React dashboard)
+docker-compose -f docker-compose.v2.yml up --build -d
+
+# Demo credentials (pre-created)
+# Email:    demo@insighttrack.dev
+# Password: Demo@2024!
+# Site ID:  site_d0fa12f3
+# Dashboard: http://localhost:4173
+
+# Seed 120 days of realistic test data (~100k events)
+docker exec traffic-backend-1 node scripts/seed-hotcold.js --days 120 --visitors 300
+
+# Trigger a full sync (also runs automatically on startup and every 5 min)
+TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@insighttrack.dev","password":"Demo@2024!"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
+curl -X POST http://localhost:3001/api/sync/full -H "Authorization: Bearer $TOKEN"
+
+# Check sync watermarks
+curl http://localhost:3001/api/sync/status -H "Authorization: Bearer $TOKEN"
+
+# List Parquet cold partitions
+docker exec traffic-backend-1 find /app/data-lake -name "*.parquet" | wc -l
+```
+
+### Reference architecture
+
+The Hot+Cold design is based on the Lakehouse pattern — specifically the approach used by Apache Hudi and Delta Lake for incremental data ingestion with fast recent-data queries:
+
+- **Lambda Architecture** (Nathan Marz, 2011) — batch + speed layers, simplified here as cold Parquet + hot DuckDB
+- **DuckDB Parquet integration** — [duckdb.org/docs/data/parquet](https://duckdb.org/docs/data/parquet/overview)
+- **Hive-style partitioning** — `site_id=X/event_date=Y/` partition paths that DuckDB can prune automatically
+- **Incremental sync with high-watermark** — standard CDC pattern; only new rows (`id > last_event_id`) are synced each cycle
+
+Full architecture documentation: [docs/hot-cold-analytics-architecture.md](docs/hot-cold-analytics-architecture.md)
+
+---
 
 ## Architecture
 

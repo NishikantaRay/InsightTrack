@@ -1,0 +1,83 @@
+# docker-compose.v2.yml — InsightTrack Hot+Cold Analytics Architecture
+# Uses appsv2/ which implements DuckDB hot tables + Parquet cold store
+#
+# Usage:
+#   docker-compose -f docker-compose.v2.yml up --build
+#   docker-compose -f docker-compose.v2.yml down -v
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_v2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./appsv2/analytics-api
+    environment:
+      PG_HOST: db
+      PG_PORT: 5432
+      PG_USER: ${POSTGRES_USER}
+      PG_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_DATABASE: ${POSTGRES_DB}
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      # Hot+Cold configuration
+      HOT_DAYS: ${HOT_DAYS:-30}
+      DUCKDB_PATH: duckdb/analytics.duckdb
+      SYNC_INTERVAL_MS: ${SYNC_INTERVAL_MS:-60000}
+      SYNC_BATCH_SIZE: ${SYNC_BATCH_SIZE:-5000}
+    ports:
+      - "3001:3001"
+    volumes:
+      # Persist DuckDB hot store
+      - duckdb_v2:/app/duckdb
+      # Persist Parquet cold store (data lake)
+      - datalake_v2:/app/data-lake
+    depends_on:
+      db:
+        condition: service_healthy
+
+  ui:
+    build: ./appsv2/dashboard-web
+    environment:
+      VITE_API_URL: http://backend:3001
+    ports:
+      - "4173:4173"
+    depends_on:
+      - backend
+
+  demo-site:
+    build: ./examples/demo-site
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "5050:5050"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata_v2:
+  duckdb_v2:
+  datalake_v2:

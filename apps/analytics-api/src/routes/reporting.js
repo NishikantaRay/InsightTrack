@@ -1,5 +1,7 @@
 import express from 'express';
+import { randomUUID } from 'crypto';
 import { reportingService } from '../services/reportingService.js';
+import { query } from '../db/postgres.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -169,6 +171,55 @@ router.post('/:siteId/retention/cleanup', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error running retention cleanup:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// ─── Saved UTM Links ─────────────────────────────
+
+router.get('/:siteId/utm-links', async (req, res) => {
+    try {
+        const result = await query(
+            'SELECT * FROM utm_links WHERE site_id = $1 ORDER BY created_at DESC',
+            [req.params.siteId]
+        );
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error('Error listing UTM links:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+router.post('/:siteId/utm-links', async (req, res) => {
+    try {
+        const { label, url, utm_source, utm_medium, utm_campaign, utm_term, utm_content, built_url } = req.body;
+        if (!label || !url || !built_url) {
+            return res.status(400).json({ success: false, error: 'label, url, and built_url are required' });
+        }
+        const id = randomUUID();
+        const result = await query(
+            `INSERT INTO utm_links (id, site_id, label, url, utm_source, utm_medium, utm_campaign, utm_term, utm_content, built_url)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+            [id, req.params.siteId, label, url,
+                utm_source || '', utm_medium || '', utm_campaign || '',
+                utm_term || '', utm_content || '', built_url]
+        );
+        res.status(201).json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        console.error('Error creating UTM link:', error);
+        res.status(400).json({ success: false, error: safeError(error) });
+    }
+});
+
+router.delete('/:siteId/utm-links/:linkId', async (req, res) => {
+    try {
+        await query(
+            'DELETE FROM utm_links WHERE id = $1 AND site_id = $2',
+            [req.params.linkId, req.params.siteId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting UTM link:', error);
         res.status(500).json({ success: false, error: safeError(error) });
     }
 });

@@ -3,10 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
+    <script>if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(function (regs) { regs.forEach(function (r) { r.unregister(); }); }); }</script>
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><rect x='6' y='18' width='4' height='8' rx='1' fill='white' opacity='0.7'/><rect x='12' y='12' width='4' height='14' rx='1' fill='white' opacity='0.85'/><rect x='18' y='8' width='4' height='18' rx='1' fill='white'/><polyline points='7,16 13,10 19,6 25,4' stroke='%23a5f3fc' stroke-width='2' fill='none' stroke-linecap='round'/><circle cx='25' cy='4' r='2' fill='%23a5f3fc'/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Demo Website - Home</title>
+    <script src="http://localhost:3001/api/sites/site_230afff7/script"></script>
     <style>
         * {
             margin: 0;
@@ -216,17 +218,14 @@
     </div>
 
     <footer>
-        <p>Demo Website for Analytics Testing | Site ID: site_123</p>
+        <p>Demo Website for Analytics Testing | Site ID: site_b9764437</p>
     </footer>
 
-    <!-- Analytics Tracking Script (single source of truth) -->
-    <script src="http://localhost:3001/api/sites/site_fd033f9e/script"></script>
-    <!-- <script src="/analytics.js"></script> -->
     <script>
         // Custom event handlers for demo buttons
         function trackEvent(type, props) {
-            if (window.trackCustomEvent) {
-                window.trackCustomEvent(type, props);
+            if (window.analytics && window.analytics.track) {
+                window.analytics.track(type, props);
             }
         }
     </script>

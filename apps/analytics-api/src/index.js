@@ -28,10 +28,10 @@ const allowedOrigins = new Set(
 );
 
 const publicCors = cors({
-    origin: true,
+    origin: (origin, callback) => callback(null, origin || true),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: false,
+    credentials: true,
 });
 
 const privateCors = cors({

@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Calendar, Mail, LayoutDashboard, Download, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 import { useSiteStore } from '../store/useSiteStore';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { reportingAPI, analyticsAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import PageNote from '../components/ui/PageNote';
 
 function AnnotationsTab() {
     const siteId = useSiteStore((s) => s.siteId);
@@ -127,7 +128,7 @@ function ScheduledReportsTab() {
         setLoaded(true);
     }, [siteId]);
 
-    if (!loaded) { load(); }
+    useEffect(() => { load(); }, [load]);
 
     const handleCreate = useCallback(async () => {
         if (!form.email) return toast.error('Email is required');
@@ -301,14 +302,26 @@ export default function Reporting() {
                 </div>
             </div>
 
+            <PageNote
+                title="What is Reporting?"
+                summary="Reporting gives you tools to communicate analytics insights across your team — annotate your charts, schedule automated email reports, and export raw data for deeper analysis."
+                details={[
+                    { label: 'Annotations', text: 'Mark important events on your timeline (e.g. "Launched new homepage", "Sent email campaign"). Helps you connect traffic changes to real-world actions.' },
+                    { label: 'Scheduled Reports', text: 'Set up automatic weekly or monthly email digests with key metrics. Keep your whole team informed without anyone needing to log in.' },
+                    { label: 'Data Export', text: 'Download your raw analytics data as CSV for use in spreadsheets, BI tools, or custom analysis. Always your data, no lock-in.' },
+                ]}
+                businessTip="Use annotations every time you make a significant change — new ad campaign, redesigned homepage, changed pricing. They help you understand WHY your metrics changed, not just that they did."
+                devTip="Annotations are stored in the annotations table and overlaid on chart data client-side. Scheduled reports use node-cron to trigger email sends. Exports stream CSV directly from DuckDB via the /api/reporting/:siteId/export endpoint."
+            />
+
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                 {TABS.map(({ key, label, icon: Icon }) => (
                     <button
                         key={key}
                         onClick={() => setActiveTab(key)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === key
-                                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         <Icon className="w-4 h-4" />

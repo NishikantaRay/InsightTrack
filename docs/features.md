@@ -490,22 +490,56 @@ Referrers are automatically categorized:
 - Each site gets a unique site ID and isolated analytics data
 - Switch between sites via the site selector dropdown in the navbar
 
+### Settings Page — Tabbed Layout *(updated May 2026)*
+
+The Settings page was fully rewritten with a 4-tab layout for clarity:
+
+| Tab | Contents |
+|-----|----------|
+| **Sites** | `SiteManager` card — add, switch, delete sites |
+| **Tracking** | Auto-generated `<script>` snippet, custom event examples, platform guides |
+| **Connection** | API Base URL, Active Site ID, Analytics Endpoint, Tracking Endpoint — each copyable |
+| **Alerts** | Alert thresholds panel — now isolated from site configuration |
+
+A **PageNote** banner at the top provides contextual help for both business owners and developers.
+
 ### Tracking Script Installation
 
-Three delivery methods available from **Settings → Tracking Script**:
+From **Settings → Tracking tab** — the script for the currently active site is shown automatically:
 
-1. **External script tag** — `<script src="https://your-server/api/sites/:siteId/script"></script>`
-2. **HTML snippet** — Inline `<script>` block for direct paste
-3. **Raw JavaScript** — Download the script file with the site ID pre-configured
+```html
+<script src="https://your-server/api/sites/:siteId/script"></script>
+```
 
-One-click copy-to-clipboard for easy installation.
+- One-click copy-to-clipboard
+- Platform quick-start guides for: WordPress, Webflow, Shopify, Next.js, Squarespace, Static HTML
+
+#### Custom Event Tracking
+
+Four copy-ready code examples are shown in the Tracking tab:
+
+```js
+window.insightTrack?.track('button_click', { button: 'sign-up' });
+window.insightTrack?.track('form_submit', { form: 'contact' });
+window.insightTrack?.track('video_play', { title: 'intro-video' });
+window.insightTrack?.track('purchase', { value: 49.99, currency: 'USD' });
+```
+
+### SiteManager Component *(updated May 2026)*
+
+Each site card in the Sites tab supports:
+
+- **Expand/collapse** — click the card or Code icon to reveal the tracking snippet
+- **Inline copy** — site ID and tracking script each have independent copy buttons (no state conflicts)
+- **Auto-expand** — newly created sites expand immediately to show their snippet
+- **Active site protection** — delete button is hidden for the currently active site
+- **Quick info row** — shows site ID, created date, and analytics endpoint when expanded
 
 ### Site CRUD
 
-- **Create** — Add a website with name and domain
-- **Update** — Rename or change the domain
-- **Delete** — Remove the site and its data
-- **View details** — Retrieve site metadata and stats
+- **Create** — Add a website with name and domain (validated format)
+- **Delete** — Remove a non-active site and its data
+- **View details** — Retrieve site metadata, script snippet, and stats inline
 
 ---
 

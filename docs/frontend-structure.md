@@ -36,6 +36,20 @@ This guide explains the structure, patterns, and best practices for the InsightT
 
 See `src/components/charts/VisitorMap.jsx` and `src/components/realtime/EventStream.jsx` for details.
 
+### UI Helper Components (added May 2026)
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **PageNote** | `src/components/ui/PageNote.jsx` | Collapsible contextual help banner added to every analytics page. Props: `title`, `summary`, `details[]`, `businessTip`, `devTip`, `defaultOpen`. Indigo color scheme, chevron toggle, emerald card for business tips, violet for dev tips. |
+| **InfoTooltip** | `src/components/ui/InfoTooltip.jsx` | `(i)` icon with fixed-position hover tooltip. Props: `content`, `title`, `size`, `position`, `className`. Used in `MetricCard` and `ChartCard` via `info` prop. |
+| **SiteManager** | `src/components/ui/SiteManager.jsx` | Site CRUD card with per-site expandable snippet panel, inline copy buttons (`CopyInline`), active-site protection, loading spinner, and empty state. |
+
+### Page-Level Conventions (May 2026)
+
+- Every analytics page has a `<PageNote>` at the top with `businessTip` and `devTip`.
+- `MetricCard` and `ChartCard` accept an `info` prop that renders an `InfoTooltip`.
+- Settings page uses a 4-tab layout: Sites / Tracking / Connection / Alerts.
+
 ## Pages
 
 | Page | Route | Description |
@@ -48,8 +62,8 @@ See `src/components/charts/VisitorMap.jsx` and `src/components/realtime/EventStr
 | **Acquisition** | `/acquisition` | Campaigns, social media, keywords (3 tabs) |
 | **Performance** | `/performance` | Web Vitals with thresholds, JS errors with trends (2 tabs) |
 | **Reporting** | `/reporting` | Annotations, scheduled reports, data export (3 tabs) |
-| **Privacy** | `/privacy` | Privacy features overview, data retention config (2 tabs) |
-| **Settings** | `/settings` | Site management, tracking script installation |
+| **Privacy** | `/privacy` | Privacy features overview, data retention config — dual-audience tabs (Business Owner / Developer) |
+| **Settings** | `/settings` | 4-tab layout: Sites (SiteManager), Tracking (snippet + custom events + platform guides), Connection (API endpoints), Alerts |
 | **Login / Register** | `/login`, `/register` | Authentication pages |
 | **Docs** | `/docs` | Documentation pages |
 
