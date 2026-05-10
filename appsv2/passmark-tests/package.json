@@ -1,0 +1,25 @@
+{
+  "name": "insighttrack-passmark-tests",
+  "version": "1.0.0",
+  "description": "AI-powered Passmark regression tests for InsightTrack analytics dashboard",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:chromium": "playwright test --project chromium",
+    "test:headed": "playwright test --headed",
+    "test:auth": "playwright test tests/auth/ --project chromium",
+    "test:dashboard": "playwright test tests/dashboard/ --project chromium",
+    "test:public": "playwright test tests/public/ --project chromium",
+    "test:navigation": "playwright test tests/navigation.spec.ts --project chromium",
+    "test:report": "playwright show-report"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "passmark": "^1.0.13"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5"
+  }
+}
