@@ -1418,6 +1418,22 @@ function DashboardBuilderTab() {
         }
     }, [isDark, widgets]);
 
+    // ── edit-view drag-to-reorder handlers ───────────────────────────────────
+    const updateWidget = (id, patch) => setWidgets(ws => ws.map(w => w.id === id ? patch : w));
+    const removeWidget = (id) => setWidgets(ws => ws.filter(w => w.id !== id));
+    const moveWidget = (from, to) => {
+        if (to < 0 || to >= widgets.length) return;
+        setWidgets(ws => { const a = [...ws]; a.splice(to, 0, a.splice(from, 1)[0]); return a; });
+    };
+    const onDragStart = (i) => { dragIndex.current = i; };
+    const onDragOver = (e, i) => { e.preventDefault(); setDragOver(i); };
+    const onDrop = (i) => {
+        const from = dragIndex.current;
+        if (from != null && from !== i) moveWidget(from, i);
+        dragIndex.current = null; setDragOver(null);
+    };
+    const onDragEnd = () => { dragIndex.current = null; setDragOver(null); };
+
     // ── save / delete ────────────────────────────────────────────────────────
     const handleSave = async () => {
         if (!dashName.trim()) return toast.error('Dashboard name is required');
