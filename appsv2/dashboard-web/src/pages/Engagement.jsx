@@ -5,7 +5,9 @@ import DataTable from '../components/ui/DataTable';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import MetricCard from '../components/ui/MetricCard';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
 import { exportToCSV } from '../utils/exportUtils';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 import {
     ArrowDown,
     MousePointerClick,
@@ -125,6 +127,7 @@ const timeColumns = [
 
 export default function Engagement() {
     const [activeTab, setActiveTab] = useState('scroll');
+    const { focusMode } = useFocusModeStore();
 
     const { data: summary, loading: summaryLoading } = useAnalytics('getEngagementSummary');
     const { data: scrollData, loading: scrollLoading } = useAnalytics('getScrollDepth');
@@ -141,17 +144,24 @@ export default function Engagement() {
 
     return (
         <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">
-                    Engagement
-                </h1>
-                <p className="text-sm text-text-muted dark:text-text-muted-dark mt-1">
-                    Understand how visitors interact with your pages
-                </p>
+            <div className="flex items-start justify-between">
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">
+                            Engagement
+                        </h1>
+                        <p className="text-sm text-text-muted dark:text-text-muted-dark mt-1">
+                            Understand how visitors interact with your pages
+                        </p>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
+            {!focusMode && (
+                <>
+                    {/* Page Header */}
+                    <PageNote
                 title="What is Engagement?"
                 summary="Engagement measures the quality of visitor interactions — how far they scroll, where they click, whether they click the same element in frustration, and how long they spend on each page."
                 details={[
@@ -162,7 +172,9 @@ export default function Engagement() {
                 ]}
                 businessTip="Rage clicks are your fastest wins. Each one points to a broken or confusing element. Fix those first, then use scroll depth to decide where to put your most important calls-to-action."
                 devTip="Scroll events fire at 25/50/75/100% thresholds via IntersectionObserver in the tracking script. Click coordinates are captured on document click and stored as events with type=click. Rage = 3+ clicks in 500ms."
-            />
+                    />
+                </>
+            )}
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

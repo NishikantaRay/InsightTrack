@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Target, FlaskConical, DollarSign, Plus, Trash2, TrendingUp, ArrowUpRight, ArrowDownRight, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useSiteStore } from '../store/useSiteStore';
@@ -6,6 +6,8 @@ import { goalsAPI } from '../services/api';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import toast from 'react-hot-toast';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 const PAGE_SIZE = 10;
@@ -79,7 +81,34 @@ function RevenueBySourceTable({ bySource }) {
 
 function GoalsSection() {
     const siteId = useSiteStore((s) => s.siteId);
-    const { data: conversions, loading: convLoading, refetch } = useAnalytics('getGoalConversions');
+
+    // Goal list from PostgreSQL — always up-to-date, no sync delay
+    const [goals, setGoals] = useState([]);
+    const [goalsLoading, setGoalsLoading] = useState(true);
+
+    const fetchGoals = useCallback(async () => {
+        if (!siteId) return;
+        try {
+            const res = await goalsAPI.list(siteId);
+            setGoals(res?.data ?? []);
+        } catch {
+            setGoals([]);
+        } finally {
+            setGoalsLoading(false);
+        }
+    }, [siteId]);
+
+    useEffect(() => { fetchGoals(); }, [fetchGoals]);
+
+    // Conversion counts from DuckDB — may lag by up to 60s after goal creation
+    const { data: conversions, refetch: refetchConversions } = useAnalytics('getGoalConversions');
+
+    // Map goalId → conversion stats for fast lookup
+    const conversionMap = useMemo(() => {
+        if (!conversions) return {};
+        return Object.fromEntries(conversions.map((c) => [c.goalId, c]));
+    }, [conversions]);
+
     const [showCreate, setShowCreate] = useState(false);
     const [form, setForm] = useState({ name: '', type: 'page_visit', path: '', eventType: '', selector: '' });
     const [creating, setCreating] = useState(false);
@@ -101,23 +130,25 @@ function GoalsSection() {
             toast.success('Goal created');
             setShowCreate(false);
             setForm({ name: '', type: 'page_visit', path: '', eventType: '', selector: '' });
-            refetch();
+            fetchGoals();
+            refetchConversions();
         } catch (err) {
             toast.error(err.message || 'Failed to create goal');
         } finally {
             setCreating(false);
         }
-    }, [form, siteId, refetch]);
+    }, [form, siteId, fetchGoals, refetchConversions]);
 
     const handleDelete = useCallback(async (goalId) => {
         try {
             await goalsAPI.delete(siteId, goalId);
             toast.success('Goal deleted');
-            refetch();
+            fetchGoals();
+            refetchConversions();
         } catch (err) {
             toast.error(err.message || 'Failed to delete goal');
         }
-    }, [siteId, refetch]);
+    }, [siteId, fetchGoals, refetchConversions]);
 
     return (
         <div className="space-y-6">
@@ -156,25 +187,28 @@ function GoalsSection() {
                 </div>
             )}
 
-            {convLoading ? (
+            {goalsLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {[1, 2, 3].map((i) => <div key={i} className="h-32 rounded-xl bg-card dark:bg-card-dark animate-pulse" />)}
                 </div>
-            ) : conversions?.length > 0 ? (
+            ) : goals?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {conversions.map((goal) => (
-                        <div key={goal.goalId} onClick={() => setSelectedGoalId(goal.goalId)} className={`relative bg-card dark:bg-card-dark rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${selectedGoalId === goal.goalId ? 'border-accent ring-1 ring-accent/30' : 'border-border dark:border-border-dark'}`}>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(goal.goalId); }} className="absolute top-3 right-3 p-1 text-text-muted hover:text-red-500 transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                            <p className="text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">{goal.goalName}</p>
-                            <p className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">{goal.conversions.toLocaleString()}</p>
-                            <div className="flex items-center justify-between mt-2">
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500">{goal.type.replace('_', ' ')}</span>
-                                <span className="text-sm font-semibold text-emerald-500">{goal.conversionRate}%</span>
+                    {goals.map((goal) => {
+                        const stats = conversionMap[goal.id] || { conversions: 0, conversionRate: 0 };
+                        return (
+                            <div key={goal.id} onClick={() => setSelectedGoalId(goal.id)} className={`relative bg-card dark:bg-card-dark rounded-xl border p-5 cursor-pointer transition-all hover:shadow-md ${selectedGoalId === goal.id ? 'border-accent ring-1 ring-accent/30' : 'border-border dark:border-border-dark'}`}>
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(goal.id); }} className="absolute top-3 right-3 p-1 text-text-muted hover:text-red-500 transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                <p className="text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">{goal.name}</p>
+                                <p className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">{stats.conversions.toLocaleString()}</p>
+                                <div className="flex items-center justify-between mt-2">
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500">{goal.type.replace('_', ' ')}</span>
+                                    <span className="text-sm font-semibold text-emerald-500">{stats.conversionRate}%</span>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="text-center py-12 bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark">
@@ -330,15 +364,22 @@ const TABS = [
 
 export default function Conversions() {
     const [activeTab, setActiveTab] = useState('goals');
+    const { focusMode } = useFocusModeStore();
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">Conversions & Funnels</h1>
-                <p className="text-text-muted dark:text-text-muted-dark mt-1">Track goals, compare A/B tests, and measure revenue</p>
+            <div className="flex items-start justify-between">
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">Conversions & Funnels</h1>
+                        <p className="text-text-muted dark:text-text-muted-dark mt-1">Track goals, compare A/B tests, and measure revenue</p>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
+            {!focusMode && (
+                <PageNote
                 title="What are Conversions?"
                 summary="Conversions measure the actions that matter most to your business — sign-ups, purchases, button clicks, or time spent. Everything here is tied directly to business outcomes."
                 details={[
@@ -348,7 +389,8 @@ export default function Conversions() {
                 ]}
                 businessTip="Start with one high-value goal (e.g. sign-up or purchase). Measure it for 2 weeks, then set up an A/B test on your main CTA button to try to improve it."
                 devTip="Goals are stored in the goals table. Conversions fire when the tracking script emits an event matching the goal config. A/B test variants are assigned by the frontend and sent as a custom event. Revenue uses track event with type=purchase and a value field."
-            />
+                    />
+            )}
 
             <div className="flex gap-1 bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-1">
                 {TABS.map(({ id, label, icon: Icon }) => (

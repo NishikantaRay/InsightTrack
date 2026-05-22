@@ -1,5 +1,6 @@
 import { Users, Eye, BarChart3, Clock, RefreshCw, BookmarkCheck, X } from 'lucide-react';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import MetricCard from '../components/ui/MetricCard';
@@ -17,11 +18,13 @@ import { useAnalytics } from '../hooks/useAnalytics';
 import { formatNumber, formatDuration, formatPercent } from '../utils/formatters';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import { useFunnelStore } from '../store/useFunnelStore';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 export default function Dashboard() {
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { savedSteps, clearSavedFunnel } = useFunnelStore();
+    const { focusMode } = useFocusModeStore();
 
     const { data: kpiData, loading: kpiLoading, refetch: refetchKPI } = useAnalytics('getKPIs');
     const { data: trafficData, refetch: refetchTraffic } = useAnalytics('getTraffic');
@@ -53,8 +56,8 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-6">
-            {/* Page note */}
-            <PageNote
+            {!focusMode && (
+                <PageNote
                 title="What is the Dashboard?"
                 summary="Your Dashboard is a real-time summary of everything happening on your website. It shows unique visitors, pageviews, bounce rate, and average session duration — all in one place."
                 details={[
@@ -66,24 +69,30 @@ export default function Dashboard() {
                 businessTip="Focus on the bounce rate and avg session duration together. A low bounce + long session = your audience finds real value in your content."
                 devTip="KPI data comes from GET /api/analytics/:siteId/kpi. Sparklines use /traffic, /bounce-rate-trend, and /avg-session-trend endpoints. All support ?from=&to= date params."
             />
+            )}
 
             {/* Page header */}
             <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
-                        Overview of your website analytics &mdash;
-                        <span className="ml-1 text-xs opacity-60">auto-refreshes every 30s · last updated {lastUpdated.toLocaleTimeString()}</span>
-                    </p>
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
+                            Overview of your website analytics &mdash;
+                            <span className="ml-1 text-xs opacity-60">auto-refreshes every 30s · last updated {lastUpdated.toLocaleTimeString()}</span>
+                        </p>
+                    </div>
+                )}
+                <div className="flex items-center gap-2 shrink-0">
+                    <FocusToggleButton />
+                    <button
+                        onClick={handleRefresh}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent/10 hover:bg-accent/20 dark:bg-accent/20 dark:hover:bg-accent/30 text-accent transition-colors"
+                        title="Refresh dashboard"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
                 </div>
-                <button
-                    onClick={handleRefresh}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent/10 hover:bg-accent/20 dark:bg-accent/20 dark:hover:bg-accent/30 text-accent transition-colors"
-                    title="Refresh dashboard"
-                >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
             </div>
 
             {/* KPI Cards */}

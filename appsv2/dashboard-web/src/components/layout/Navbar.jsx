@@ -3,7 +3,8 @@ import ThemeToggle from '../ui/ThemeToggle';
 import DateFilter from '../ui/DateFilter';
 import SiteSwitcher from '../ui/SiteSwitcher';
 import UserMenu from '../ui/UserMenu';
-import { Bell, RefreshCw } from 'lucide-react';
+import { Bell, RefreshCw, Focus } from 'lucide-react';
+import { useFocusModeStore } from '../../store/useFocusModeStore';
 import { useRealtime } from '../../hooks/useAnalytics';
 
 const DUMMY_NOTIFICATIONS = [
@@ -22,6 +23,8 @@ export default function Navbar() {
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState(DUMMY_NOTIFICATIONS);
     const panelRef = useRef(null);
+
+    const { focusMode, toggleFocusMode } = useFocusModeStore();
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -123,6 +126,19 @@ export default function Navbar() {
                 </div>
 
                 <ThemeToggle />
+
+                {/* Focus mode toggle */}
+                <button
+                    onClick={toggleFocusMode}
+                    title={focusMode ? 'Exit focus mode' : 'Enter focus mode — hides page headers'}
+                    className={`p-2 rounded-lg transition-colors ${
+                        focusMode
+                            ? 'text-accent bg-accent/10 dark:bg-accent/20'
+                            : 'text-text-muted dark:text-text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5'
+                    }`}
+                >
+                    <Focus className="w-5 h-5" />
+                </button>
 
                 <UserMenu />
             </div>

@@ -3,6 +3,8 @@ import { FileText, LogIn, LogOut, Search, ChevronLeft, ChevronRight, X } from 'l
 import { useAnalytics } from '../hooks/useAnalytics';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const TABS = [
     { key: 'entry', label: 'Entry Pages', icon: LogIn },
@@ -237,30 +239,38 @@ function SiteSearchTab() {
 
 export default function Content() {
     const [activeTab, setActiveTab] = useState('entry');
+    const { focusMode } = useFocusModeStore();
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                    <FileText className="w-6 h-6 text-blue-500" />
-                </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Content Analytics</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Understand how visitors navigate your content</p>
-                </div>
+            <div className="flex items-center justify-between gap-3">
+                {!focusMode && (
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-blue-500/10">
+                            <FileText className="w-6 h-6 text-blue-500" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Content Analytics</h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Understand how visitors navigate your content</p>
+                        </div>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
-                title="What is Content Analytics?"
-                summary="Content Analytics reveals how visitors move through your website — which pages hook them first, where they leave, and what they search for."
-                details={[
-                    { label: 'Entry Pages', text: 'The first pages visitors land on. A high-bounce entry page needs better content or a clearer call-to-action.' },
-                    { label: 'Exit Pages', text: 'Pages where visitors leave your site. High exits on checkout or sign-up pages often indicate friction or confusion.' },
-                    { label: 'Site Search', text: 'What visitors type into your on-site search box. These terms reveal exactly what your audience wants but can’t easily find.' },
-                ]}
-                businessTip="Your top entry pages are your most important real estate. If those pages have high bounce rates, improving them will have the biggest impact on conversions."
-                devTip="Entry/exit data is derived from session first/last pageview. Site search captures ?q= or ?search= query params. All sourced from GET /api/analytics/:siteId/top-pages with type filters."
-            />
+            {!focusMode && (
+                <PageNote
+                        title="What is Content Analytics?"
+                        summary="Content Analytics reveals how visitors move through your website — which pages hook them first, where they leave, and what they search for."
+                        details={[
+                            { label: 'Entry Pages', text: 'The first pages visitors land on. A high-bounce entry page needs better content or a clearer call-to-action.' },
+                            { label: 'Exit Pages', text: 'Pages where visitors leave your site. High exits on checkout or sign-up pages often indicate friction or confusion.' },
+                            { label: 'Site Search', text: 'What visitors type into your on-site search box. These terms reveal exactly what your audience wants but can’t easily find.' },
+                        ]}
+                        businessTip="Your top entry pages are your most important real estate. If those pages have high bounce rates, improving them will have the biggest impact on conversions."
+                        devTip="Entry/exit data is derived from session first/last pageview. Site search captures ?q= or ?search= query params. All sourced from GET /api/analytics/:siteId/top-pages with type filters."
+                    />
+            )}
 
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                 {TABS.map(({ key, label, icon: Icon }) => (

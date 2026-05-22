@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Megaphone, Share2, KeyRound, Search, ChevronLeft, ChevronRight, X, Link2, Copy, Check, Info, Trash2, Save, ExternalLink, Users, BarChart2 } from 'lucide-react';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useSiteStore } from '../store/useSiteStore';
 import { reportingAPI, analyticsAPI } from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 const PAGE_SIZE = 10;
@@ -270,6 +272,7 @@ function KeywordsTab({ onBuildLink }) {
 export default function Acquisition() {
     const [activeTab, setActiveTab] = useState('campaigns');
     const [prefill, setPrefill] = useState(null);
+    const { focusMode } = useFocusModeStore();
 
     const goToBuilder = (vals) => {
         setPrefill(vals);
@@ -285,28 +288,35 @@ export default function Acquisition() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                    <Megaphone className="w-6 h-6 text-green-500" />
-                </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Acquisition</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Understand where your visitors come from</p>
-                </div>
+            <div className="flex items-center justify-between gap-3">
+                {!focusMode && (
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-green-500/10">
+                            <Megaphone className="w-6 h-6 text-green-500" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Acquisition</h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Understand where your visitors come from</p>
+                        </div>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
-                title="What is Acquisition?"
-                summary="Acquisition shows you exactly how visitors found your website — through paid ads, social media, organic search, direct links, or email campaigns."
-                details={[
-                    { label: 'Campaigns', text: 'Traffic tagged with UTM parameters (utm_source, utm_medium, utm_campaign). Use this to measure ROI of marketing spend.' },
-                    { label: 'Social Media', text: 'Visits originating from social platforms like Facebook, Twitter, LinkedIn, and Instagram.' },
-                    { label: 'Keywords', text: 'Search keywords that drove visitors to your site. Requires utm_term parameter on your links.' },
-                    { label: 'URL Builder', text: 'A tool to generate properly formatted UTM links. Paste any URL and fill in the fields to build a tracked link.' },
-                ]}
-                businessTip="Focus on campaigns with the highest visitor-to-conversion ratio, not just traffic volume. A small campaign that converts well is more valuable than a high-traffic one that doesn’t."
-                devTip="UTM data is parsed from query strings on the tracking script and stored in the events table. Query via GET /api/analytics/:siteId/utm. The URL Builder is client-side only."
-            />
+            {!focusMode && (
+                <PageNote
+                    title="What is Acquisition?"
+                    summary="Acquisition shows you exactly how visitors found your website — through paid ads, social media, organic search, direct links, or email campaigns."
+                    details={[
+                        { label: 'Campaigns', text: 'Traffic tagged with UTM parameters (utm_source, utm_medium, utm_campaign). Use this to measure ROI of marketing spend.' },
+                        { label: 'Social Media', text: 'Visits originating from social platforms like Facebook, Twitter, LinkedIn, and Instagram.' },
+                        { label: 'Keywords', text: 'Search keywords that drove visitors to your site. Requires utm_term parameter on your links.' },
+                        { label: 'URL Builder', text: 'A tool to generate properly formatted UTM links. Paste any URL and fill in the fields to build a tracked link.' },
+                    ]}
+                    businessTip="Focus on campaigns with the highest visitor-to-conversion ratio, not just traffic volume. A small campaign that converts well is more valuable than a high-traffic one that doesn’t."
+                    devTip="UTM data is parsed from query strings on the tracking script and stored in the events table. Query via GET /api/analytics/:siteId/utm. The URL Builder is client-side only."
+                />
+            )}
 
             {/* How it works info banner */}
             <div className="flex gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">

@@ -9,6 +9,8 @@ import SiteManager from '../components/ui/SiteManager';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const _raw = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const API_BASE = /^https?:\/\//i.test(_raw) ? _raw : `https://${_raw}`;
@@ -58,6 +60,7 @@ function Section({ icon: Icon, iconColor = 'text-accent', title, subtitle, child
 export default function Settings() {
     const { siteId, sites } = useSiteStore();
     const [tab, setTab] = useState('sites');
+    const { focusMode } = useFocusModeStore();
 
     const activeSite = sites?.find(s => s.id === siteId);
     const trackingSnippet = siteId ? `<script src="${API_BASE}/api/sites/${siteId}/script"></script>` : '';
@@ -71,7 +74,22 @@ export default function Settings() {
 
     return (
         <div className="space-y-6">
-            <PageNote
+            <div className="flex items-start justify-between gap-3">
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-text-primary dark:text-text-primary-dark">Settings</h1>
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
+                            {activeSite
+                                ? <><span className="font-medium text-accent">{activeSite.name}</span> <span className="text-text-muted dark:text-text-muted-dark font-mono text-xs">({activeSite.domain})</span></>
+                                : 'No site selected — add one below to start tracking'}
+                        </p>
+                    </div>
+                )}
+                <FocusToggleButton />
+            </div>
+
+            {!focusMode && (
+                <PageNote
                 title="Settings — Site Management & Tracking"
                 summary="Add and switch between multiple websites, get your tracking snippet, and configure alert thresholds."
                 details={[
@@ -82,19 +100,8 @@ export default function Settings() {
                 ]}
                 businessTip="Add a new site for each domain you want to track. Paste the one-line script into your website's header — no developer needed for most website builders."
                 devTip="The tracking script is dynamically served from /api/sites/:siteId/script. It fingerprints visitors using a hashed localStorage ID — no cookies, no PII. Use window.trackEvent() for custom instrumentation."
-            />
-
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-text-primary dark:text-text-primary-dark">Settings</h1>
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
-                        {activeSite
-                            ? <>Active site: <span className="font-medium text-accent">{activeSite.name}</span> <span className="text-text-muted dark:text-text-muted-dark font-mono text-xs">({activeSite.domain})</span></>
-                            : 'No site selected — add one below to start tracking'}
-                    </p>
-                </div>
-            </div>
+                    />
+            )}
 
             {/* Tab bar */}
             <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit flex-wrap">
@@ -173,21 +180,25 @@ export default function Settings() {
                                 subtitle="Optional — fire these after the tracking script is loaded">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {[
-                                        { label: 'E-commerce purchase', code: `// After successful checkout
+                                        {
+                                            label: 'E-commerce purchase', code: `// After successful checkout
 window.trackPurchase(49.99);
 window.trackEvent('order_complete', {
   order_id: 'ORD-1234',
   items: 3,
   revenue: 49.99
 });` },
-                                        { label: 'Sign-up / lead form', code: `// After form submission
+                                        {
+                                            label: 'Sign-up / lead form', code: `// After form submission
 window.trackEvent('signup', {
   plan: 'free',
   source: 'homepage_hero'
 });` },
-                                        { label: 'Add to cart', code: `// When user clicks Add to Cart
+                                        {
+                                            label: 'Add to cart', code: `// When user clicks Add to Cart
 window.trackAddToCart('Blue Widget', 29.99);` },
-                                        { label: 'Video engagement', code: `// When video reaches 50%
+                                        {
+                                            label: 'Video engagement', code: `// When video reaches 50%
 video.addEventListener('timeupdate', () => {
   if (pct === 50) window.trackEvent('video_50pct', {
     video: 'product-demo'

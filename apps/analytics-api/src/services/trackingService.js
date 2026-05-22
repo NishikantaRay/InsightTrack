@@ -19,7 +19,7 @@ export const trackingService = {
             throw new Error('siteId and userId are required');
         }
 
-        const ALLOWED_TYPES = ['pageview', 'click', 'impression', 'add_to_cart', 'checkout', 'purchase', 'signup', 'custom', 'form_submit', 'lead', 'scroll_depth', 'time_on_page', 'button_click', 'signup_start', 'video_play'];
+        const ALLOWED_TYPES = ['pageview', 'click', 'impression', 'add_to_cart', 'checkout', 'purchase', 'signup', 'custom', 'form_submit', 'lead', 'scroll_depth', 'time_on_page', 'button_click', 'signup_start', 'video_play', 'web_vital', 'js_error'];
         const safeType = ALLOWED_TYPES.includes(type) ? type : 'custom';
         const safeStr = (s, max = 255) => (typeof s === 'string' ? s.slice(0, max) : '');
 

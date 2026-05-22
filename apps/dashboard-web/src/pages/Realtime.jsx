@@ -3,6 +3,8 @@ import { useRealtime, useRealtimeEventStream } from '../hooks/useAnalytics';
 import { formatNumber } from '../utils/formatters';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import PageNote from '../components/ui/PageNote';
+import { useFocusModeStore } from '../store/useFocusModeStore';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
 import VisitorMap from '../components/charts/VisitorMap';
 import EventStream from '../components/realtime/EventStream';
 
@@ -15,28 +17,36 @@ export default function Realtime() {
     const devices = data?.devices || {};
     const countries = data?.countries || [];
     const activeEvents = eventStreamData || [];
+    const { focusMode } = useFocusModeStore();
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Realtime</h1>
-                <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
-                    Live activity on your website
-                </p>
+            <div className="flex items-start justify-between">
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Realtime</h1>
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
+                            Live activity on your website
+                        </p>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
-                title="What is Realtime?"
-                summary="Realtime shows you who is on your website right now. It updates every few seconds and is useful for monitoring the immediate impact of a marketing campaign, product launch, or viral post."
-                details={[
-                    { label: 'Active Visitors', text: 'People who have loaded a page in the last 5 minutes. This updates automatically every 5 seconds.' },
-                    { label: 'Live Visitor Map', text: 'Geographic distribution of current visitors. Location is detected from timezone, not IP address — so no personal data is stored.' },
-                    { label: 'Live Event Stream', text: 'A feed of page loads and events happening right now. Each row shows the page, the country, and the event type.' },
-                    { label: 'Top Pages (Live)', text: 'Which pages are being viewed most right now. Useful during campaigns to see what content is resonating.' },
-                ]}
-                businessTip="Watch the realtime dashboard when you send an email campaign or post on social media. A spike in visitors within minutes confirms your campaign is driving traffic."
-                devTip="Realtime data comes from GET /api/analytics/:siteId/realtime (polls every 5s) and GET /api/analytics/:siteId/realtime/event-stream (Server-Sent Events). Active visitor window = last 5 minutes in PostgreSQL."
-            />
+            {!focusMode && (
+                <PageNote
+                    title="What is Realtime?"
+                    summary="Realtime shows you who is on your website right now. It updates every few seconds and is useful for monitoring the immediate impact of a marketing campaign, product launch, or viral post."
+                    details={[
+                        { label: 'Active Visitors', text: 'People who have loaded a page in the last 5 minutes. This updates automatically every 5 seconds.' },
+                        { label: 'Live Visitor Map', text: 'Geographic distribution of current visitors. Location is detected from timezone, not IP address — so no personal data is stored.' },
+                        { label: 'Live Event Stream', text: 'A feed of page loads and events happening right now. Each row shows the page, the country, and the event type.' },
+                        { label: 'Top Pages (Live)', text: 'Which pages are being viewed most right now. Useful during campaigns to see what content is resonating.' },
+                    ]}
+                    businessTip="Watch the realtime dashboard when you send an email campaign or post on social media. A spike in visitors within minutes confirms your campaign is driving traffic."
+                    devTip="Realtime data comes from GET /api/analytics/:siteId/realtime (polls every 5s) and GET /api/analytics/:siteId/realtime/event-stream (Server-Sent Events). Active visitor window = last 5 minutes in PostgreSQL."
+                />)}
+
 
             {loading ? (
                 <LoadingSkeleton type="page" />

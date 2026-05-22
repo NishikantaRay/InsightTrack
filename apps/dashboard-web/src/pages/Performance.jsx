@@ -3,6 +3,8 @@ import { Gauge, AlertTriangle, Activity, Search, ChevronLeft, ChevronRight, X } 
 import { useAnalytics } from '../hooks/useAnalytics';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const VITAL_THRESHOLDS = {
     LCP: { good: 2500, poor: 4000, unit: 'ms', label: 'Largest Contentful Paint' },
@@ -201,6 +203,7 @@ function ErrorsTab() {
 
 export default function Performance() {
     const [activeTab, setActiveTab] = useState('vitals');
+    const { focusMode } = useFocusModeStore();
 
     const TABS = [
         { key: 'vitals', label: 'Web Vitals', icon: Activity },
@@ -209,29 +212,36 @@ export default function Performance() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-500/10">
-                    <Gauge className="w-6 h-6 text-orange-500" />
-                </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Performance</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Monitor page speed and track JavaScript errors</p>
-                </div>
+            <div className="flex items-center justify-between gap-3">
+                {!focusMode && (
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-orange-500/10">
+                            <Gauge className="w-6 h-6 text-orange-500" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Performance</h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Monitor page speed and track JavaScript errors</p>
+                        </div>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
-                title="What is Performance Monitoring?"
-                summary="Performance tracks the technical health of your website. Slow pages lose visitors. Broken JavaScript costs conversions. This page helps you catch both."
-                details={[
-                    { label: 'LCP (Largest Contentful Paint)', text: 'Time until the largest visible element loads. Under 2.5s is good. Over 4s is poor. Affects SEO rankings.' },
-                    { label: 'FID / INP (Interactivity)', text: 'How quickly the page responds to a user’s first click or tap. Over 200ms feels sluggish. Direct impact on user experience.' },
-                    { label: 'CLS (Layout Shift)', text: 'Measures how much the page visually shifts after loading. Score above 0.1 causes users to misclick and feels unstable.' },
-                    { label: 'TTFB (Time to First Byte)', text: 'How long your server takes to respond. Over 800ms usually points to slow hosting or unoptimised backend queries.' },
-                    { label: 'JS Errors', text: 'Uncaught exceptions from your JavaScript. Each error can silently break features for real users.' },
-                ]}
-                businessTip="LCP directly affects Google search rankings (Core Web Vitals). If your LCP is over 2.5s, fixing it can improve your organic traffic. Rage clicks + JS errors together pinpoint broken user experiences."
-                devTip="Web Vitals are captured via the PerformanceObserver API in the tracking script and sent as events with type=web_vital. JS errors use window.onerror. All stored in the events table with metric_name and metric_value columns."
-            />
+            {!focusMode && (
+                <PageNote
+                    title="What is Performance Monitoring?"
+                    summary="Performance tracks the technical health of your website. Slow pages lose visitors. Broken JavaScript costs conversions. This page helps you catch both."
+                    details={[
+                        { label: 'LCP (Largest Contentful Paint)', text: 'Time until the largest visible element loads. Under 2.5s is good. Over 4s is poor. Affects SEO rankings.' },
+                        { label: 'FID / INP (Interactivity)', text: 'How quickly the page responds to a user’s first click or tap. Over 200ms feels sluggish. Direct impact on user experience.' },
+                        { label: 'CLS (Layout Shift)', text: 'Measures how much the page visually shifts after loading. Score above 0.1 causes users to misclick and feels unstable.' },
+                        { label: 'TTFB (Time to First Byte)', text: 'How long your server takes to respond. Over 800ms usually points to slow hosting or unoptimised backend queries.' },
+                        { label: 'JS Errors', text: 'Uncaught exceptions from your JavaScript. Each error can silently break features for real users.' },
+                    ]}
+                    businessTip="LCP directly affects Google search rankings (Core Web Vitals). If your LCP is over 2.5s, fixing it can improve your organic traffic. Rage clicks + JS errors together pinpoint broken user experiences."
+                    devTip="Web Vitals are captured via the PerformanceObserver API in the tracking script and sent as events with type=web_vital. JS errors use window.onerror. All stored in the events table with metric_name and metric_value columns."
+                />
+            )}
 
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
                 {TABS.map(({ key, label, icon: Icon }) => (

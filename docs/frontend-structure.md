@@ -50,6 +50,16 @@ See `src/components/charts/VisitorMap.jsx` and `src/components/realtime/EventStr
 - `MetricCard` and `ChartCard` accept an `info` prop that renders an `InfoTooltip`.
 - Settings page uses a 4-tab layout: Sites / Tracking / Connection / Alerts.
 
+### Reporting Studio Components (added 2026)
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| **CanvasEngine** | inline in `src/pages/Reporting.jsx` | Freeform pixel drag+resize canvas. Pointer Events + RAF, 8-direction resize handles, ResizeObserver overflow guard, snap-to-grid. |
+| **WidgetConfigPanel** | inline in `src/pages/Reporting.jsx` | Fixed right-side 300px drawer with 3 tabs: Data (source/date/field mapping), Display (toggles), Style (8 color palettes). Live-previews all changes via `patch` callback. |
+| **WidgetRenderer** | inline in `src/pages/Reporting.jsx` | `memo` component. Fetches data via `fetchWidgetData`, renders by `widget.type`: `kpi_card`, `area_chart`, `bar_chart`, `pie_chart`, `data_table`, `text_note`. Uses `inferSchema()` for smart field detection. |
+| **ExportModal** | `src/components/reporting/ExportModal.jsx` | Unified export modal: PDF (PrintLayout portal + `window.print()`), PNG (html2canvas SVG swap pipeline), JSON, CSV. Shows progress bar. Configurable theme, page size, cover/timestamp/branding toggles. |
+| **PrintLayout** | inline in `src/components/reporting/ExportModal.jsx` | React component rendered via `createPortal` into `#insighttrack-print-root`. Cover page, KPI grid, chart section, footer — all inline styles for print stability. Hidden until `@media print`. |
+
 ## Pages
 
 | Page | Route | Description |
@@ -61,7 +71,7 @@ See `src/components/charts/VisitorMap.jsx` and `src/components/realtime/EventStr
 | **Content** | `/content` | Entry pages, exit pages, site search (3 tabs) |
 | **Acquisition** | `/acquisition` | Campaigns, social media, keywords (3 tabs) |
 | **Performance** | `/performance` | Web Vitals with thresholds, JS errors with trends (2 tabs) |
-| **Reporting** | `/reporting` | Annotations, scheduled reports, data export (3 tabs) |
+| **Reporting** | `/reporting` | 4-tab layout: Dashboard Builder (CanvasEngine + WidgetConfigPanel + ExportModal), Annotations, Scheduled Reports, Data Export |
 | **Privacy** | `/privacy` | Privacy features overview, data retention config — dual-audience tabs (Business Owner / Developer) |
 | **Settings** | `/settings` | 4-tab layout: Sites (SiteManager), Tracking (snippet + custom events + platform guides), Connection (API endpoints), Alerts |
 | **Login / Register** | `/login`, `/register` | Authentication pages |

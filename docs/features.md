@@ -574,20 +574,44 @@ Each site card in the Sites tab supports:
 
 ## Export & Reporting
 
-### Data Export Formats
+### Custom Dashboard Builder
 
-Export analytics data from any dashboard page:
+A freeform drag-and-drop canvas for building custom analytics dashboards. Widgets are positioned with pixel precision; layouts are persisted to PostgreSQL.
 
-| Format | Use Case |
-|---|---|
-| **CSV** | Spreadsheet analysis, data import |
-| **JSON** | Programmatic consumption, API integration |
-| **PNG** | Save charts as images for presentations |
-| **Print** | Print-friendly dashboard views |
+**Widget types:** KPI Card, Area Chart, Bar Chart, Pie/Donut Chart, Data Table, Text/Note
+
+**Key capabilities:**
+
+| Feature | Details |
+|---------|---------|
+| **Freeform canvas** | Pixel-based placement — drag widget headers to reposition anywhere |
+| **8-direction resize** | Resize from any corner or edge; per-type minimum size constraints |
+| **Snap to Grid** | Optional 20px snap grid with visual dot-grid overlay |
+| **WidgetConfigPanel** | Right-side drawer with 3 tabs: Data, Display, Style — all changes live-preview instantly |
+| **8 color palettes** | Default, Ocean, Warm, Mono, Forest, Candy, Fire, Purple |
+| **Autosave** | 3-second debounce write on any widget or layout change |
+| **Share link** | Shareable read-only dashboard URL (Base64-encoded JSON in URL hash) |
+| **Per-widget capture** | Camera icon exports any single widget as PNG via html2canvas |
+
+### Export Formats
+
+Export any dashboard as PDF, PNG, JSON, or CSV via the Export modal.
+
+| Format | Use Case | Mechanism |
+|--------|----------|-----------|
+| **PDF** | Board reports, client documents | `PrintLayout` portal + browser `window.print()` |
+| **PNG** | Presentation slides, Slack embeds | `html2canvas` SVG-swap pipeline (retina 2×) |
+| **JSON** | Dashboard backup, re-import | Full widget array download |
+| **CSV** | Spreadsheet analysis | Per-widget data serialized to CSV |
+
+The PDF pipeline renders a dedicated `PrintLayout` (cover page, KPI grid, chart section, footer) into a hidden DOM portal — the live app is hidden during print so no layout artifacts occur.
+
+The PNG pipeline converts all Recharts SVGs to `<img>` elements before `html2canvas` runs, then restores the live SVGs — ensuring chart content is captured correctly.
 
 ### Data Access
 
 - Query any historical date range
+- Preset ranges: Last 7 days, Last 30 days, Last 90 days, All time
 - Custom date ranges in `YYYY-MM-DD` format
 - Comparison mode: current period vs. previous period
 - Daily aggregated rollups for trend analysis

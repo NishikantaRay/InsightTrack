@@ -3,6 +3,8 @@ import { Users, UserCheck, UserPlus, Grid3x3, Filter, BarChart3, Search, Chevron
 import { useAnalytics } from '../hooks/useAnalytics';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 const PAGE_SIZE = 10;
@@ -303,25 +305,33 @@ export default function Audience() {
     const [activeTab, setActiveTab] = useState('new-returning');
     const [filters, setFilters] = useState({});
     const hasFilters = Object.values(filters).some(Boolean);
+    const { focusMode } = useFocusModeStore();
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">Audience</h1>
-                <p className="text-text-muted dark:text-text-muted-dark mt-1">Understand who your visitors are and how they come back</p>
+            <div className="flex items-start justify-between">
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">Audience</h1>
+                        <p className="text-text-muted dark:text-text-muted-dark mt-1">Understand who your visitors are and how they come back</p>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
-                title="What is Audience?"
-                summary="Audience shows you the characteristics of your website visitors — who is new vs returning, how loyal they are over time (cohorts), and how different segments behave."
-                details={[
-                    { label: 'New vs Returning', text: 'Compares first-time visitors against people who have been to your site before. Returning visitors usually convert better.' },
-                    { label: 'Cohort Analysis', text: 'Groups visitors by the week or month they first arrived and tracks what percentage came back on Day 1, 7, 30, etc. High day-30 retention = strong loyalty.' },
-                    { label: 'Segments', text: 'Filter your audience by device, browser, country, or UTM source to compare behaviour across different groups.' },
-                ]}
-                businessTip="A healthy site should see returning visitor rate above 20-30%. If your cohort day-7 retention drops below 10%, focus on email capture or push notifications to bring people back."
-                devTip="New vs returning is determined by a first-seen cookie set by the tracking script. Cohort data is aggregated from the events table grouped by DATE_TRUNC('week', first_seen). Segments apply WHERE clause filters."
-            />
+            {!focusMode && (
+                <PageNote
+                    title="What is Audience?"
+                    summary="Audience shows you the characteristics of your website visitors — who is new vs returning, how loyal they are over time (cohorts), and how different segments behave."
+                    details={[
+                        { label: 'New vs Returning', text: 'Compares first-time visitors against people who have been to your site before. Returning visitors usually convert better.' },
+                        { label: 'Cohort Analysis', text: 'Groups visitors by the week or month they first arrived and tracks what percentage came back on Day 1, 7, 30, etc. High day-30 retention = strong loyalty.' },
+                        { label: 'Segments', text: 'Filter your audience by device, browser, country, or UTM source to compare behaviour across different groups.' },
+                    ]}
+                    businessTip="A healthy site should see returning visitor rate above 20-30%. If your cohort day-7 retention drops below 10%, focus on email capture or push notifications to bring people back."
+                    devTip="New vs returning is determined by a first-seen cookie set by the tracking script. Cohort data is aggregated from the events table grouped by DATE_TRUNC('week', first_seen). Segments apply WHERE clause filters."
+                />
+            )}
 
             {/* Top-level filters */}
             <div className="bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-4">

@@ -4,8 +4,10 @@ import ChartCard from '../components/ui/ChartCard';
 import DataTable from '../components/ui/DataTable';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
 import PageviewsChart from '../components/charts/PageviewsChart';
 import { exportToCSV } from '../utils/exportUtils';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const columns = [
     {
@@ -39,6 +41,7 @@ const columns = [
 
 export default function PagesView() {
     const { data, loading, error } = useAnalytics('getTopPages', { params: { limit: 50 } });
+    const { focusMode } = useFocusModeStore();
 
     const tableData = (data || []).map((d) => {
         const views = Number(d.views || d.pageviews || d.count || 0);
@@ -60,24 +63,31 @@ export default function PagesView() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Pages</h1>
-                <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
-                    Performance of individual pages
-                </p>
+            <div className="flex items-start justify-between">
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Pages</h1>
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
+                            Performance of individual pages
+                        </p>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
 
-            <PageNote
-                title="What is Pages?"
-                summary="The Pages view shows you which pages on your website are getting the most traffic. Use it to identify your most and least visited content."
-                details={[
-                    { label: 'Views', text: 'Total number of times each page was loaded, including repeat visits by the same user.' },
-                    { label: 'Visitors', text: 'Unique people who visited that page in the selected period.' },
-                    { label: '% of Total', text: 'What proportion of your total site traffic this page accounts for. Useful for identifying your most important pages.' },
-                ]}
-                businessTip="Your top 3 pages typically receive 50-70% of all traffic. Make sure those pages have clear calls-to-action and load fast. Any improvements there have outsized impact."
-                devTip="Sourced from GET /api/analytics/:siteId/top-pages with limit=50. Data comes from DuckDB aggregating the pageview events table. Supports ?from= and ?to= query params for date filtering."
-            />
+            {!focusMode && (
+                <PageNote
+                    title="What is Pages?"
+                    summary="The Pages view shows you which pages on your website are getting the most traffic. Use it to identify your most and least visited content."
+                    details={[
+                        { label: 'Views', text: 'Total number of times each page was loaded, including repeat visits by the same user.' },
+                        { label: 'Visitors', text: 'Unique people who visited that page in the selected period.' },
+                        { label: '% of Total', text: 'What proportion of your total site traffic this page accounts for. Useful for identifying your most important pages.' },
+                    ]}
+                    businessTip="Your top 3 pages typically receive 50-70% of all traffic. Make sure those pages have clear calls-to-action and load fast. Any improvements there have outsized impact."
+                    devTip="Sourced from GET /api/analytics/:siteId/top-pages with limit=50. Data comes from DuckDB aggregating the pageview events table. Supports ?from= and ?to= query params for date filtering."
+                />
+            )}
 
             <PageviewsChart />
 

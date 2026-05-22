@@ -9,6 +9,8 @@ import SiteManager from '../components/ui/SiteManager';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import PageNote from '../components/ui/PageNote';
+import FocusToggleButton from '../components/ui/FocusToggleButton';
+import { useFocusModeStore } from '../store/useFocusModeStore';
 
 const _raw = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const API_BASE = /^https?:\/\//i.test(_raw) ? _raw : `https://${_raw}`;
@@ -58,6 +60,7 @@ function Section({ icon: Icon, iconColor = 'text-accent', title, subtitle, child
 export default function Settings() {
     const { siteId, sites } = useSiteStore();
     const [tab, setTab] = useState('sites');
+    const { focusMode } = useFocusModeStore();
 
     const activeSite = sites?.find(s => s.id === siteId);
     const trackingSnippet = siteId ? `<script src="${API_BASE}/api/sites/${siteId}/script"></script>` : '';
@@ -71,30 +74,34 @@ export default function Settings() {
 
     return (
         <div className="space-y-6">
-            <PageNote
-                title="Settings — Site Management & Tracking"
-                summary="Add and switch between multiple websites, get your tracking snippet, and configure alert thresholds."
-                details={[
-                    { label: 'Sites', text: 'Each website you want to track needs its own site entry. Switch between them using the site selector in the top bar.' },
-                    { label: 'Tracking Script', text: 'A one-line script tag that goes in your website\'s <head>. It auto-tracks pageviews, clicks, scroll depth, performance metrics, and errors — no extra code needed.' },
-                    { label: 'Custom Events', text: 'After adding the script, you can fire custom events with window.trackEvent("name", { key: value }). Use these for purchases, sign-ups, or any action you care about.' },
-                    { label: 'Alerts', text: 'Set thresholds for traffic drops or spikes. InsightTrack checks these automatically and flags anomalies on your dashboard.' },
-                ]}
-                businessTip="Add a new site for each domain you want to track. Paste the one-line script into your website's header — no developer needed for most website builders."
-                devTip="The tracking script is dynamically served from /api/sites/:siteId/script. It fingerprints visitors using a hashed localStorage ID — no cookies, no PII. Use window.trackEvent() for custom instrumentation."
-            />
-
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-text-primary dark:text-text-primary-dark">Settings</h1>
-                    <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
-                        {activeSite
-                            ? <>Active site: <span className="font-medium text-accent">{activeSite.name}</span> <span className="text-text-muted dark:text-text-muted-dark font-mono text-xs">({activeSite.domain})</span></>
-                            : 'No site selected — add one below to start tracking'}
-                    </p>
-                </div>
+            <div className="flex items-start justify-between gap-3">
+                {!focusMode && (
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight text-text-primary dark:text-text-primary-dark">Settings</h1>
+                        <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
+                            {activeSite
+                                ? <><span className="font-medium text-accent">{activeSite.name}</span> <span className="text-text-muted dark:text-text-muted-dark font-mono text-xs">({activeSite.domain})</span></>
+                                : 'No site selected — add one below to start tracking'}
+                        </p>
+                    </div>
+                )}
+                <FocusToggleButton />
             </div>
+
+            {!focusMode && (
+                <PageNote
+                    title="Settings — Site Management & Tracking"
+                    summary="Add and switch between multiple websites, get your tracking snippet, and configure alert thresholds."
+                    details={[
+                        { label: 'Sites', text: 'Each website you want to track needs its own site entry. Switch between them using the site selector in the top bar.' },
+                        { label: 'Tracking Script', text: 'A one-line script tag that goes in your website\'s <head>. It auto-tracks pageviews, clicks, scroll depth, performance metrics, and errors — no extra code needed.' },
+                        { label: 'Custom Events', text: 'After adding the script, you can fire custom events with window.trackEvent("name", { key: value }). Use these for purchases, sign-ups, or any action you care about.' },
+                        { label: 'Alerts', text: 'Set thresholds for traffic drops or spikes. InsightTrack checks these automatically and flags anomalies on your dashboard.' },
+                    ]}
+                    businessTip="Add a new site for each domain you want to track. Paste the one-line script into your website's header — no developer needed for most website builders."
+                    devTip="The tracking script is dynamically served from /api/sites/:siteId/script. It fingerprints visitors using a hashed localStorage ID — no cookies, no PII. Use window.trackEvent() for custom instrumentation."
+                />
+            )}
 
             {/* Tab bar */}
             <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit flex-wrap">

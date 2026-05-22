@@ -347,10 +347,15 @@ export async function runSync({ fullSync = false, silent = false } = {}) {
         if (!silent) console.log('② Syncing tables…');
         let totalRows = 0;
         for (const cfg of SYNCABLE_TABLES) {
-            const n = cfg.hotCold
-                ? await syncHotColdTable(cfg, { forceFullSync: fullSync })
-                : await syncTable(cfg, { forceFullSync: fullSync });
-            totalRows += n;
+            try {
+                const n = cfg.hotCold
+                    ? await syncHotColdTable(cfg, { forceFullSync: fullSync })
+                    : await syncTable(cfg, { forceFullSync: fullSync });
+                totalRows += n;
+            } catch (tableErr) {
+                console.error(`  ✗  Failed to sync table "${cfg.table}":`, tableErr.message);
+                // Continue syncing remaining tables
+            }
         }
 
         if (!silent) console.log('③ Evicting cold data from hot tables…');
