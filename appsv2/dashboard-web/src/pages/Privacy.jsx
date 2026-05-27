@@ -85,8 +85,8 @@ function DataRetentionTab() {
                                 {retentionOptions.map(({ value, label }) => (
                                     <button key={value} onClick={() => setDays(value)}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition ${days === value
-                                                ? 'bg-indigo-500 text-white'
-                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                            ? 'bg-indigo-500 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                             }`}>
                                         {label}
                                     </button>
@@ -329,8 +329,8 @@ export default function Privacy() {
                         key={key}
                         onClick={() => setActiveTab(key)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === key
-                                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         <Icon className="w-4 h-4" />

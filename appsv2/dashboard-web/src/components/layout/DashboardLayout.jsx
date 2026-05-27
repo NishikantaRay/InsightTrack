@@ -1,11 +1,24 @@
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu } from 'lucide-react';
+import { useFocusModeStore } from '../../store/useFocusModeStore';
 
 export default function DashboardLayout({ children }) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
+    const { focusMode } = useFocusModeStore();
+    // remember sidebar state before focus mode collapses it
+    const preCollapseRef = useRef(false);
+
+    useEffect(() => {
+        if (focusMode) {
+            preCollapseRef.current = collapsed;
+            setCollapsed(true);
+        } else {
+            setCollapsed(preCollapseRef.current);
+        }
+    }, [focusMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div className="flex min-h-screen">

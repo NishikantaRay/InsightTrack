@@ -229,18 +229,18 @@ export default function Performance() {
 
             {!focusMode && (
                 <PageNote
-                title="What is Performance Monitoring?"
-                summary="Performance tracks the technical health of your website. Slow pages lose visitors. Broken JavaScript costs conversions. This page helps you catch both."
-                details={[
-                    { label: 'LCP (Largest Contentful Paint)', text: 'Time until the largest visible element loads. Under 2.5s is good. Over 4s is poor. Affects SEO rankings.' },
-                    { label: 'FID / INP (Interactivity)', text: 'How quickly the page responds to a user’s first click or tap. Over 200ms feels sluggish. Direct impact on user experience.' },
-                    { label: 'CLS (Layout Shift)', text: 'Measures how much the page visually shifts after loading. Score above 0.1 causes users to misclick and feels unstable.' },
-                    { label: 'TTFB (Time to First Byte)', text: 'How long your server takes to respond. Over 800ms usually points to slow hosting or unoptimised backend queries.' },
-                    { label: 'JS Errors', text: 'Uncaught exceptions from your JavaScript. Each error can silently break features for real users.' },
-                ]}
-                businessTip="LCP directly affects Google search rankings (Core Web Vitals). If your LCP is over 2.5s, fixing it can improve your organic traffic. Rage clicks + JS errors together pinpoint broken user experiences."
-                devTip="Web Vitals are captured via the PerformanceObserver API in the tracking script and sent as events with type=web_vital. JS errors use window.onerror. All stored in the events table with metric_name and metric_value columns."
-                    />
+                    title="What is Performance Monitoring?"
+                    summary="Performance tracks the technical health of your website. Slow pages lose visitors. Broken JavaScript costs conversions. This page helps you catch both."
+                    details={[
+                        { label: 'LCP (Largest Contentful Paint)', text: 'Time until the largest visible element loads. Under 2.5s is good. Over 4s is poor. Affects SEO rankings.' },
+                        { label: 'FID / INP (Interactivity)', text: 'How quickly the page responds to a user’s first click or tap. Over 200ms feels sluggish. Direct impact on user experience.' },
+                        { label: 'CLS (Layout Shift)', text: 'Measures how much the page visually shifts after loading. Score above 0.1 causes users to misclick and feels unstable.' },
+                        { label: 'TTFB (Time to First Byte)', text: 'How long your server takes to respond. Over 800ms usually points to slow hosting or unoptimised backend queries.' },
+                        { label: 'JS Errors', text: 'Uncaught exceptions from your JavaScript. Each error can silently break features for real users.' },
+                    ]}
+                    businessTip="LCP directly affects Google search rankings (Core Web Vitals). If your LCP is over 2.5s, fixing it can improve your organic traffic. Rage clicks + JS errors together pinpoint broken user experiences."
+                    devTip="Web Vitals are captured via the PerformanceObserver API in the tracking script and sent as events with type=web_vital. JS errors use window.onerror. All stored in the events table with metric_name and metric_value columns."
+                />
             )}
 
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">

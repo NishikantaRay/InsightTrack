@@ -260,16 +260,16 @@ export default function Content() {
 
             {!focusMode && (
                 <PageNote
-                        title="What is Content Analytics?"
-                        summary="Content Analytics reveals how visitors move through your website — which pages hook them first, where they leave, and what they search for."
-                        details={[
-                            { label: 'Entry Pages', text: 'The first pages visitors land on. A high-bounce entry page needs better content or a clearer call-to-action.' },
-                            { label: 'Exit Pages', text: 'Pages where visitors leave your site. High exits on checkout or sign-up pages often indicate friction or confusion.' },
-                            { label: 'Site Search', text: 'What visitors type into your on-site search box. These terms reveal exactly what your audience wants but can’t easily find.' },
-                        ]}
-                        businessTip="Your top entry pages are your most important real estate. If those pages have high bounce rates, improving them will have the biggest impact on conversions."
-                        devTip="Entry/exit data is derived from session first/last pageview. Site search captures ?q= or ?search= query params. All sourced from GET /api/analytics/:siteId/top-pages with type filters."
-                    />
+                    title="What is Content Analytics?"
+                    summary="Content Analytics reveals how visitors move through your website — which pages hook them first, where they leave, and what they search for."
+                    details={[
+                        { label: 'Entry Pages', text: 'The first pages visitors land on. A high-bounce entry page needs better content or a clearer call-to-action.' },
+                        { label: 'Exit Pages', text: 'Pages where visitors leave your site. High exits on checkout or sign-up pages often indicate friction or confusion.' },
+                        { label: 'Site Search', text: 'What visitors type into your on-site search box. These terms reveal exactly what your audience wants but can’t easily find.' },
+                    ]}
+                    businessTip="Your top entry pages are your most important real estate. If those pages have high bounce rates, improving them will have the biggest impact on conversions."
+                    devTip="Entry/exit data is derived from session first/last pageview. Site search captures ?q= or ?search= query params. All sourced from GET /api/analytics/:siteId/top-pages with type filters."
+                />
             )}
 
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">

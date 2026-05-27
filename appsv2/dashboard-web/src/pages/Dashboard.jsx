@@ -58,17 +58,17 @@ export default function Dashboard() {
         <div className="space-y-6">
             {!focusMode && (
                 <PageNote
-                title="What is the Dashboard?"
-                summary="Your Dashboard is a real-time summary of everything happening on your website. It shows unique visitors, pageviews, bounce rate, and average session duration — all in one place."
-                details={[
-                    { label: 'Unique Visitors', text: 'The number of distinct people who visited your site in the selected period. Each person is counted once regardless of how many pages they viewed.' },
-                    { label: 'Pageviews', text: 'Total number of individual pages loaded. One visitor can generate many pageviews in a single session.' },
-                    { label: 'Bounce Rate', text: 'Percentage of visitors who left after viewing only one page. A high bounce rate can indicate a mismatch between ad copy and landing page content.' },
-                    { label: 'Avg Session Duration', text: 'How long visitors stay on your site on average. Longer sessions usually mean more engaged audiences.' },
-                ]}
-                businessTip="Focus on the bounce rate and avg session duration together. A low bounce + long session = your audience finds real value in your content."
-                devTip="KPI data comes from GET /api/analytics/:siteId/kpi. Sparklines use /traffic, /bounce-rate-trend, and /avg-session-trend endpoints. All support ?from=&to= date params."
-            />
+                    title="What is the Dashboard?"
+                    summary="Your Dashboard is a real-time summary of everything happening on your website. It shows unique visitors, pageviews, bounce rate, and average session duration — all in one place."
+                    details={[
+                        { label: 'Unique Visitors', text: 'The number of distinct people who visited your site in the selected period. Each person is counted once regardless of how many pages they viewed.' },
+                        { label: 'Pageviews', text: 'Total number of individual pages loaded. One visitor can generate many pageviews in a single session.' },
+                        { label: 'Bounce Rate', text: 'Percentage of visitors who left after viewing only one page. A high bounce rate can indicate a mismatch between ad copy and landing page content.' },
+                        { label: 'Avg Session Duration', text: 'How long visitors stay on your site on average. Longer sessions usually mean more engaged audiences.' },
+                    ]}
+                    businessTip="Focus on the bounce rate and avg session duration together. A low bounce + long session = your audience finds real value in your content."
+                    devTip="KPI data comes from GET /api/analytics/:siteId/kpi. Sparklines use /traffic, /bounce-rate-trend, and /avg-session-trend endpoints. All support ?from=&to= date params."
+                />
             )}
 
             {/* Page header */}

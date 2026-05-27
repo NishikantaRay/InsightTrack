@@ -131,11 +131,10 @@ export default function Navbar() {
                 <button
                     onClick={toggleFocusMode}
                     title={focusMode ? 'Exit focus mode' : 'Enter focus mode — hides page headers'}
-                    className={`p-2 rounded-lg transition-colors ${
-                        focusMode
+                    className={`p-2 rounded-lg transition-colors ${focusMode
                             ? 'text-accent bg-accent/10 dark:bg-accent/20'
                             : 'text-text-muted dark:text-text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5'
-                    }`}
+                        }`}
                 >
                     <Focus className="w-5 h-5" />
                 </button>

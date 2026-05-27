@@ -26,6 +26,7 @@ import {
     FileText, Image, Layers,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { analyticsAPI } from '../../services/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SVG → data URL (inline all attributes so html2canvas sees a proper image)
@@ -141,6 +142,27 @@ function toCSV(rows) {
     const keys = Object.keys(rows[0]);
     const esc = (v) => { const s = String(v ?? ''); return (s.includes(',') || s.includes('"')) ? `"${s.replace(/"/g, '""')}"` : s; };
     return [keys.join(','), ...rows.map(r => keys.map(k => esc(r[k])).join(','))].join('\n');
+}
+
+function normalise(raw) {
+    const d = raw?.data ?? raw;
+    return Array.isArray(d) ? d : (d && typeof d === 'object') ? [d] : [];
+}
+
+async function fetchWidgetData(siteId, widget) {
+    if (!siteId || !widget || widget.type === 'text_note') return [];
+    const source = widget.dataSource || (widget.type === 'kpi_card' ? 'kpi' : 'top_pages');
+    const dateRange = widget.dateRange || '30d';
+    switch (source) {
+        case 'traffic': return normalise(await analyticsAPI.getTraffic(siteId, dateRange));
+        case 'top_pages': return normalise(await analyticsAPI.getTopPages(siteId, dateRange, 20));
+        case 'sources': return normalise(await analyticsAPI.getSources(siteId, dateRange));
+        case 'devices': return normalise(await analyticsAPI.getDevices(siteId, dateRange));
+        case 'countries': return normalise(await analyticsAPI.getCountries(siteId, dateRange, 15));
+        case 'sessions': return normalise(await analyticsAPI.getSessions(siteId, dateRange));
+        case 'kpi': return normalise(await analyticsAPI.getKPIs(siteId, dateRange));
+        default: return [];
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -344,6 +366,7 @@ export default function ExportModal({
     layoutMap,
     dashName,
     isDark,
+    siteId,
     widgetData,   // optional: { [widgetId]: rawDataArray } for CSV export
     onClose,
 }) {
@@ -390,11 +413,13 @@ export default function ExportModal({
         setProgress(0);
         setErrorMsg('');
 
+        const fileBase = (dashName || 'dashboard').replace(/[^\w\-]/g, '-').toLowerCase().replace(/-+/g, '-').replace(/^-|-$/g, '') || 'dashboard';
+
         try {
             // ── JSON export (no snapshot needed) ────────────────────────
             if (format === 'json') {
                 const payload = JSON.stringify({ name: dashName, widgets }, null, 2);
-                dlFile(payload, `${dashName.replace(/\s+/g, '-').toLowerCase()}.dashboard.json`, 'application/json');
+                dlFile(payload, `${fileBase}.dashboard.json`, 'application/json');
                 setStatus('done'); setProgress(100);
                 return;
             }
@@ -402,16 +427,31 @@ export default function ExportModal({
             // ── CSV export (no snapshot needed) ─────────────────────────
             if (format === 'csv') {
                 const lines = [];
-                widgets.forEach(w => {
-                    const data = widgetData?.[w.id];
+                for (const w of widgets) {
+                    let data = widgetData?.[w.id];
+                    if (!data?.length) {
+                        try {
+                            data = await fetchWidgetData(siteId, w);
+                        } catch {
+                            data = [];
+                        }
+                    }
                     if (data?.length) {
                         lines.push(`# ${w.title} (${w.type})`);
                         lines.push(toCSV(data));
                         lines.push('');
                     }
-                });
-                if (!lines.length) { setErrorMsg('No data available to export as CSV.'); setStatus('error'); return; }
-                dlFile(lines.join('\n'), `${dashName.replace(/\s+/g, '-').toLowerCase()}.csv`, 'text/csv');
+                }
+                if (!lines.length) {
+                    // Fallback: export dashboard structure when live data is unavailable
+                    lines.push('# Dashboard Summary');
+                    lines.push('title,type,dataSource,dateRange');
+                    widgets.forEach(w => {
+                        const esc = v => { const s = String(v ?? ''); return s.includes(',') ? `"${s}"` : s; };
+                        lines.push([esc(w.title), esc(w.type), esc(w.dataSource || ''), esc(w.dateRange || '30d')].join(','));
+                    });
+                }
+                dlFile(lines.join('\n'), `${fileBase}.csv`, 'text/csv');
                 setStatus('done'); setProgress(100);
                 return;
             }
@@ -489,7 +529,7 @@ export default function ExportModal({
                         if (!blob) { setErrorMsg('PNG generation failed.'); setStatus('error'); return; }
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
-                        a.href = url; a.download = `${dashName.replace(/\s+/g, '-').toLowerCase()}-dashboard.png`;
+                        a.href = url; a.download = `${fileBase}-dashboard.png`;
                         a.click(); URL.revokeObjectURL(url);
                         setStatus('done'); setProgress(100);
                     }, 'image/png');
@@ -528,7 +568,7 @@ export default function ExportModal({
             setShowPrintTree(false);
         }
     }, [format, exportTheme, pageSize, showCover, showTimestamp, showBranding, pngScale,
-        widgets, layoutMap, dashName, isDark, widgetData]);
+        widgets, layoutMap, dashName, isDark, siteId, widgetData]);
 
     const isRunning = status === 'building' || status === 'printing';
     const isDone = status === 'done';
@@ -588,8 +628,8 @@ export default function ExportModal({
                                         onClick={() => { setFormat(key); setStatus('idle'); }}
                                         title={desc}
                                         className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-xs font-medium transition ${format === key
-                                                ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                                : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                                            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                                            : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
                                             }`}
                                     >
                                         <Icon className="w-5 h-5" />
@@ -612,8 +652,8 @@ export default function ExportModal({
                                                     key={key}
                                                     onClick={() => setExportTheme(key)}
                                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition flex-1 justify-center ${exportTheme === key
-                                                            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                                            : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                                                        ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                                                        : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
                                                         }`}
                                                 >
                                                     <Icon className="w-3.5 h-3.5" /> {label}
@@ -667,8 +707,8 @@ export default function ExportModal({
                                                     <button
                                                         onClick={() => set(v => !v)}
                                                         className={`w-4 h-4 rounded border-2 flex items-center justify-center transition shrink-0 ${val
-                                                                ? 'bg-indigo-500 border-indigo-500'
-                                                                : 'border-gray-300 dark:border-gray-600'
+                                                            ? 'bg-indigo-500 border-indigo-500'
+                                                            : 'border-gray-300 dark:border-gray-600'
                                                             }`}
                                                     >
                                                         {val && <Check className="w-2.5 h-2.5 text-white" />}
@@ -728,8 +768,8 @@ export default function ExportModal({
                             onClick={isDone ? onClose : handleExport}
                             disabled={isRunning}
                             className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${isDone
-                                    ? 'bg-green-500 text-white shadow-green-500/20'
-                                    : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-indigo-500/20'
+                                ? 'bg-green-500 text-white shadow-green-500/20'
+                                : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-indigo-500/20'
                                 }`}
                         >
                             {isRunning && <Loader2 className="w-4 h-4 animate-spin" />}

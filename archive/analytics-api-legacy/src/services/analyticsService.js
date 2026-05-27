@@ -278,6 +278,97 @@ export const analyticsService = {
     }));
   },
 
+  // Traffic by City
+  async getTrafficByCity(siteId, dateRange = '30d', limit = 10) {
+    const { start, end } = getDateRange(dateRange);
+
+    const result = await query(
+      `SELECT
+        CASE WHEN city = '' OR city IS NULL THEN 'Unknown' ELSE city END as city,
+        CASE WHEN country = '' OR country IS NULL THEN 'Unknown' ELSE country END as country,
+        COUNT(DISTINCT user_id) as visitors,
+        COUNT(DISTINCT session_id) as sessions,
+        COUNT(CASE WHEN type = 'pageview' THEN 1 END) as pageviews
+      FROM events
+      WHERE site_id = $1 AND timestamp >= $2 AND timestamp <= $3
+      GROUP BY city, country
+      ORDER BY visitors DESC
+      LIMIT $4`,
+      [siteId, start, end, limit]
+    );
+
+    const data = result.rows;
+    const total = data.reduce((sum, r) => sum + Number(r.visitors), 0);
+    return data.map(row => ({
+      city: row.city,
+      country: row.country,
+      visitors: Number(row.visitors),
+      sessions: Number(row.sessions),
+      pageviews: Number(row.pageviews),
+      percentage: total > 0 ? Math.round((Number(row.visitors) / total) * 100) : 0,
+    }));
+  },
+
+  // Geo Map (city-level for map visualization)
+  async getGeoMap(siteId, dateRange = '30d') {
+    const { start, end } = getDateRange(dateRange);
+
+    const result = await query(
+      `SELECT
+        city,
+        country,
+        COUNT(DISTINCT user_id) as visitors,
+        COUNT(DISTINCT session_id) as sessions
+      FROM events
+      WHERE site_id = $1 AND timestamp >= $2 AND timestamp <= $3
+        AND city IS NOT NULL AND city != ''
+      GROUP BY city, country
+      ORDER BY visitors DESC`,
+      [siteId, start, end]
+    );
+
+    return result.rows.map(row => ({
+      city: row.city,
+      country: row.country,
+      visitors: Number(row.visitors),
+      sessions: Number(row.sessions),
+    }));
+  },
+
+  // Sessions by City
+  async getSessionsByCity(siteId, dateRange = '30d', limit = 10) {
+    const { start, end } = getDateRange(dateRange);
+
+    const result = await query(
+      `SELECT
+        CASE WHEN city = '' OR city IS NULL THEN 'Unknown' ELSE city END as city,
+        CASE WHEN country = '' OR country IS NULL THEN 'Unknown' ELSE country END as country,
+        COUNT(*) as sessions,
+        AVG(duration) as avg_duration,
+        SUM(CASE WHEN is_bounce THEN 1 ELSE 0 END) as bounced,
+        SUM(pageviews) as total_pageviews
+      FROM sessions
+      WHERE site_id = $1 AND started_at >= $2 AND started_at <= $3
+      GROUP BY city, country
+      ORDER BY sessions DESC
+      LIMIT $4`,
+      [siteId, start, end, limit]
+    );
+
+    return result.rows.map(row => {
+      const sessions = Number(row.sessions);
+      const bounced = Number(row.bounced);
+      return {
+        city: row.city,
+        country: row.country,
+        sessions,
+        avgDuration: Math.round(Number(row.avg_duration || 0)),
+        bounceRate: sessions > 0 ? Math.round((bounced / sessions) * 1000) / 10 : 0,
+        avgPageviews: sessions > 0 ? Math.round((Number(row.total_pageviews) / sessions) * 10) / 10 : 0,
+      };
+    });
+  },
+
   // Session Duration Distribution
   async getSessionDuration(siteId, dateRange = '30d') {
     const { start, end } = getDateRange(dateRange);

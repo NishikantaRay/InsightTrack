@@ -380,16 +380,16 @@ export default function Conversions() {
 
             {!focusMode && (
                 <PageNote
-                title="What are Conversions?"
-                summary="Conversions measure the actions that matter most to your business — sign-ups, purchases, button clicks, or time spent. Everything here is tied directly to business outcomes."
-                details={[
-                    { label: 'Goals', text: 'Define what a “conversion” means for you: a page visit, a button click, a custom event, or a minimum time on site. The dashboard then tracks how many visitors complete each goal.' },
-                    { label: 'A/B Tests', text: 'Compare two versions of a page or feature. InsightTrack tracks which variant gets more conversions so you can pick a winner with real data.' },
-                    { label: 'Revenue', text: 'Track purchase events with a value attached. See total revenue, revenue by traffic source, and average order value.' },
-                ]}
-                businessTip="Start with one high-value goal (e.g. sign-up or purchase). Measure it for 2 weeks, then set up an A/B test on your main CTA button to try to improve it."
-                devTip="Goals are stored in the goals table. Conversions fire when the tracking script emits an event matching the goal config. A/B test variants are assigned by the frontend and sent as a custom event. Revenue uses track event with type=purchase and a value field."
-                    />
+                    title="What are Conversions?"
+                    summary="Conversions measure the actions that matter most to your business — sign-ups, purchases, button clicks, or time spent. Everything here is tied directly to business outcomes."
+                    details={[
+                        { label: 'Goals', text: 'Define what a “conversion” means for you: a page visit, a button click, a custom event, or a minimum time on site. The dashboard then tracks how many visitors complete each goal.' },
+                        { label: 'A/B Tests', text: 'Compare two versions of a page or feature. InsightTrack tracks which variant gets more conversions so you can pick a winner with real data.' },
+                        { label: 'Revenue', text: 'Track purchase events with a value attached. See total revenue, revenue by traffic source, and average order value.' },
+                    ]}
+                    businessTip="Start with one high-value goal (e.g. sign-up or purchase). Measure it for 2 weeks, then set up an A/B test on your main CTA button to try to improve it."
+                    devTip="Goals are stored in the goals table. Conversions fire when the tracking script emits an event matching the goal config. A/B test variants are assigned by the frontend and sent as a custom event. Revenue uses track event with type=purchase and a value field."
+                />
             )}
 
             <div className="flex gap-1 bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-1">

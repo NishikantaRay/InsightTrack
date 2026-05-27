@@ -322,25 +322,166 @@ export const sitesService = {
     send('/api/track/session/end', { sessionId: sessionId, duration: duration, exitPage: window.location.pathname }, true);
   }
   
+  var _pageStart = Date.now();
   trackPageview();
-  
+
+  // ── Time on Page ───────────────────────────────────────────────
+  function _sendTimeOnPage() {
+    var secs = Math.round((Date.now() - _pageStart) / 1000);
+    if (secs > 0) send('/api/track/event', {
+      siteId: siteId, userId: userId, sessionId: sessionId, type: 'time_on_page',
+      url: window.location.href, path: window.location.pathname,
+      properties: { seconds: secs }
+    }, true);
+  }
+
   window.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'hidden') endSession();
+    if (document.visibilityState === 'hidden') { endSession(); _sendTimeOnPage(); }
   });
   window.addEventListener('beforeunload', endSession);
 
   document.addEventListener('click', function(e) {
-    var el = e.target.closest('a, [data-track]');
-    if (!el) return;
-    var props = {};
-    if (el.tagName === 'A') { props.href = el.href; props.text = (el.textContent || '').trim().substring(0, 100); }
+    var t = e.target;
+    var el = t.closest('button, a, input[type="submit"], input[type="button"], [role="button"], [data-track]') || t;
+    // Build a short CSS selector: tag#id or tag.class1.class2
+    var sel = el.tagName.toLowerCase();
+    if (el.id) {
+      sel += '#' + el.id;
+    } else if (el.className && typeof el.className === 'string' && el.className.trim()) {
+      sel += '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.');
+    }
+    var text = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim().substring(0, 100);
+    var relX = Math.round((e.clientX / window.innerWidth) * 100);
+    var relY = Math.round((e.clientY / window.innerHeight) * 100);
+    var props = {
+      selector: sel,
+      text: text,
+      tag: el.tagName.toLowerCase(),
+      relX: relX,
+      relY: relY,
+      x: e.clientX,
+      y: e.clientY
+    };
+    if (el.tagName === 'A') props.href = el.href;
     if (el.dataset && el.dataset.track) props.trackId = el.dataset.track;
     send('/api/track/event', {
-      siteId: siteId, userId: userId, sessionId: sessionId, type: 'click',
+      siteId: siteId, userId: userId, sessionId: sessionId, type: 'heatmap_click',
       url: window.location.href, path: window.location.pathname, properties: props
     });
   });
-  
+
+  // ── Rage click detection ────────────────────────────────────────
+  var _rageClicks = {};
+  document.addEventListener('click', function(e) {
+    var t = e.target;
+    var el = t.closest('button, a, input[type="submit"], [role="button"], [data-track]') || t;
+    var sel = el.tagName.toLowerCase();
+    if (el.id) sel += '#' + el.id;
+    else if (el.className && typeof el.className === 'string' && el.className.trim()) sel += '.' + el.className.trim().split(/\s+/)[0];
+    var key = window.location.pathname + '|' + sel;
+    var now = Date.now();
+    if (!_rageClicks[key]) _rageClicks[key] = { times: [], sent: false };
+    var entry = _rageClicks[key];
+    entry.times.push(now);
+    entry.times = entry.times.filter(function(t) { return now - t < 1000; });
+    if (entry.times.length >= 3 && !entry.sent) {
+      entry.sent = true;
+      send('/api/track/event', {
+        siteId: siteId, userId: userId, sessionId: sessionId, type: 'rage_click',
+        url: window.location.href, path: window.location.pathname,
+        properties: { selector: sel, count: entry.times.length }
+      });
+      setTimeout(function() { if (_rageClicks[key]) _rageClicks[key].sent = false; }, 5000);
+    }
+  });
+
+  // ── Scroll depth milestones ─────────────────────────────────────
+  var _scrollMilestones = { 25: false, 50: false, 75: false, 100: false };
+  window.addEventListener('scroll', function() {
+    var el = document.documentElement;
+    var scrolled = el.scrollTop + window.innerHeight;
+    var total = el.scrollHeight;
+    if (total <= window.innerHeight) return;
+    var pct = Math.round((scrolled / total) * 100);
+    [25, 50, 75, 100].forEach(function(m) {
+      if (pct >= m && !_scrollMilestones[m]) {
+        _scrollMilestones[m] = true;
+        send('/api/track/event', {
+          siteId: siteId, userId: userId, sessionId: sessionId, type: 'scroll_depth',
+          url: window.location.href, path: window.location.pathname,
+          properties: { depth: m, milestone: 'true' }
+        });
+      }
+    });
+  }, { passive: true });
+
+  // ── Web Vitals ─────────────────────────────────────────────────
+  try {
+    var nav = performance.getEntriesByType('navigation')[0];
+    if (nav) send('/api/track/event', {
+      siteId: siteId, userId: userId, sessionId: sessionId, type: 'web_vital',
+      url: window.location.href, path: window.location.pathname,
+      properties: { name: 'TTFB', value: Math.round(nav.responseStart), rating: nav.responseStart < 800 ? 'good' : nav.responseStart < 1800 ? 'needs-improvement' : 'poor' }
+    });
+    var clsValue = 0, inpMax = 0;
+    if (window.PerformanceObserver) {
+      new PerformanceObserver(function(list) {
+        var entries = list.getEntries(), last = entries[entries.length - 1];
+        if (last) send('/api/track/event', {
+          siteId: siteId, userId: userId, sessionId: sessionId, type: 'web_vital',
+          url: window.location.href, path: window.location.pathname,
+          properties: { name: 'LCP', value: Math.round(last.startTime), rating: last.startTime < 2500 ? 'good' : last.startTime < 4000 ? 'needs-improvement' : 'poor' }
+        });
+      }).observe({ type: 'largest-contentful-paint', buffered: true });
+      new PerformanceObserver(function(list) {
+        list.getEntries().forEach(function(e) { if (!e.hadRecentInput) clsValue += e.value; });
+      }).observe({ type: 'layout-shift', buffered: true });
+      new PerformanceObserver(function(list) {
+        var e = list.getEntries()[0]; if (!e) return;
+        var fid = e.processingStart - e.startTime;
+        send('/api/track/event', {
+          siteId: siteId, userId: userId, sessionId: sessionId, type: 'web_vital',
+          url: window.location.href, path: window.location.pathname,
+          properties: { name: 'FID', value: Math.round(fid), rating: fid < 100 ? 'good' : fid < 300 ? 'needs-improvement' : 'poor' }
+        });
+      }).observe({ type: 'first-input', buffered: true });
+      try {
+        new PerformanceObserver(function(list) {
+          list.getEntries().forEach(function(e) { var d = e.processingEnd - e.startTime; if (d > inpMax) inpMax = d; });
+        }).observe({ type: 'event', buffered: true, durationThreshold: 16 });
+      } catch(e) {}
+      window.addEventListener('visibilitychange', function() {
+        if (document.visibilityState !== 'hidden') return;
+        if (clsValue > 0) send('/api/track/event', {
+          siteId: siteId, userId: userId, sessionId: sessionId, type: 'web_vital',
+          url: window.location.href, path: window.location.pathname,
+          properties: { name: 'CLS', value: Math.round(clsValue * 1000) / 1000, rating: clsValue < 0.1 ? 'good' : clsValue < 0.25 ? 'needs-improvement' : 'poor' }
+        });
+        if (inpMax > 0) send('/api/track/event', {
+          siteId: siteId, userId: userId, sessionId: sessionId, type: 'web_vital',
+          url: window.location.href, path: window.location.pathname,
+          properties: { name: 'INP', value: Math.round(inpMax), rating: inpMax < 200 ? 'good' : inpMax < 500 ? 'needs-improvement' : 'poor' }
+        });
+      });
+    }
+  } catch(e) {}
+  // ── JS Error tracking ─────────────────────────────────────────
+  window.addEventListener('error', function(evt) {
+    send('/api/track/event', {
+      siteId: siteId, userId: userId, sessionId: sessionId, type: 'js_error',
+      url: window.location.href, path: window.location.pathname,
+      properties: { message: (evt.message || '').substring(0, 200), source: (evt.filename || '').substring(0, 200), line: evt.lineno, col: evt.colno }
+    });
+  });
+  window.addEventListener('unhandledrejection', function(evt) {
+    var msg = evt.reason && evt.reason.message ? evt.reason.message : String(evt.reason);
+    send('/api/track/event', {
+      siteId: siteId, userId: userId, sessionId: sessionId, type: 'js_error',
+      url: window.location.href, path: window.location.pathname,
+      properties: { message: ('Unhandled: ' + msg).substring(0, 200) }
+    });
+  });
+
   var pushState = history.pushState;
   history.pushState = function() {
     pushState.apply(history, arguments);

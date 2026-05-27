@@ -4,7 +4,7 @@ Based on the current state of the project, here are the key areas to improve:
 
 Data & Tracking
 
-IP-based geolocation — Replace timezone-based country detection with a real GeoIP lookup (e.g., MaxMind GeoLite2) for accurate country/city data
+✅ IP-based geolocation — Replace timezone-based country detection with a real GeoIP lookup (e.g., MaxMind GeoLite2) for accurate country/city data
 ✅ UTM parameter tracking — Capture utm_source, utm_medium, utm_campaign from URLs to properly attribute traffic sources
 ✅ Referrer parsing — Classify referrers into categories (Search, Social, Direct, Email, Referral) with expanded provider detection
 Dashboard UI
@@ -75,8 +75,133 @@ Performance & Reliability
   ✅ GDPR consent mode — Automatically respect the browser's Do Not Track setting and provide a consent API so your site can gate tracking behind cookie banners
 
 ── Priority (Quick Wins) ──
-  ⭐ Scroll depth tracking — Minimal backend changes, high user value
-  ⭐ New vs returning visitors — Simple flag on user tracking
-  ⭐ Exit pages — Data already exists in sessions table
-  ⭐ Page load time (Core Web Vitals) — Easy to capture via Performance API
+  ✅ Scroll depth tracking — Minimal backend changes, high user value
+  ✅ New vs returning visitors — Simple flag on user tracking
+  ✅ Exit pages — Data already exists in sessions table
+  ✅ Page load time (Core Web Vitals) — Easy to capture via Performance API
 ✅ Error boundaries — Better error handling in UI when API calls fail (ErrorBoundary components wrap page sections)
+
+═══════════════════════════════════════════════════════
+  POSTHOG FEATURE GAP ANALYSIS
+  Features present in PostHog but missing in InsightTrack
+  Last updated: 2026-05-23
+═══════════════════════════════════════════════════════
+
+── Session Intelligence ──
+  ✗ Session Replay — Full video recordings of user sessions with DOM snapshots,
+    mouse movement, clicks, and network activity. PostHog's flagship feature.
+    Allows jumping from any funnel drop-off or graph segment directly into a
+    relevant recording playlist.
+  ✗ Activity Timeline — Per-user chronological view combining pageviews, events,
+    feature flag evaluations, and session replays into a single timeline.
+
+── Feature Management ──
+  ✗ Feature Flags — Toggle features on/off for specific user segments, cohorts,
+    or percentage rollouts without redeploying. Supports boolean and multivariate
+    flags with instant rollback.
+  ✗ Early Access Features — Let users opt in to beta features themselves via a
+    self-service opt-in widget, with automatic flag association.
+  ✗ Remote Config — Store and serve configuration values (strings, JSON) from
+    feature flags without code changes.
+
+── Experimentation ──
+  ✗ Experiments Platform — Full multivariate A/B testing with automatic
+    statistical significance calculation, confidence intervals, and variant
+    winner detection. Integrates with feature flags and session replays.
+  ✗ No-Code A/B Testing — Visual editor to create experiments by modifying
+    page elements without writing code.
+
+── User Research & Feedback ──
+  ✗ Surveys — In-app survey widgets (NPS, CSAT, open-ended) with targeting
+    rules, response collection, and aggregated results dashboard.
+  ✗ User Interviews — Scheduling tool to recruit users for research sessions
+    based on cohort filters and event history.
+  ✗ Support Tickets — Integrated support ticket system linked to user profiles
+    and session replays.
+
+── Advanced Analytics ──
+  ✗ Lifecycle Analysis — Classify users as New / Returning / Dormant /
+    Resurrected per time period. Essential for understanding growth vs churn
+    dynamics that simple new-vs-returning charts don't capture.
+  ✗ Stickiness Analysis — Measure how many days per period users perform a
+    specific action (e.g., "used search feature 3+ days this week"). Shows
+    habit formation and feature engagement depth.
+  ✗ Correlation Analysis — Automatically surfaces events statistically
+    correlated with conversion or retention. Removes manual guesswork when
+    diagnosing funnel drop-offs.
+  ✗ Formula Mode — Write arithmetic formulas combining multiple metrics
+    (e.g., Revenue / Active Users = ARPU) directly in the trend builder.
+  ✗ Sampling — Configurable event sampling (e.g., analyse 10% of events)
+    to control query costs at very high volumes.
+  ✗ Path Cleaning Rules — Regex-based URL normalization rules to collapse
+    dynamic paths like /user/123 → /user/:id in user path visualizations.
+
+── User Identity & Properties ──
+  ✗ Person Identification (identify()) — API to link anonymous visitor UUIDs
+    to authenticated user IDs, merging pre- and post-login event history into
+    a single person profile.
+  ✗ Person Properties — Store persistent user attributes (plan, company,
+    signup date, custom traits) alongside analytics for rich segmentation.
+  ✗ Group Analytics — Associate events with a Group (team, org, account) for
+    B2B products where the unit of analysis is the company, not the individual.
+  ✗ Cohort Builder — Define reusable cohorts from a combination of event
+    history and person properties (e.g., "users who signed up last month and
+    used feature X").
+
+── Data Platform ──
+  ✅ SQL Editor — Write arbitrary SQL directly against the analytics event
+    tables from inside the dashboard. PostHog exposes a full HogQL/ClickHouse
+    SQL interface.
+  ✗ Notebooks — Infinite canvas for combining multiple charts, SQL queries,
+    and written analysis into a shareable investigation document.
+  ✗ Managed Data Warehouse — Hosted warehouse where all events and person
+    data land; queryable with SQL and usable by BI tools.
+  ✗ External Warehouse Connectors — Sync PostHog data to/from Snowflake,
+    BigQuery, Redshift, S3 without custom ETL pipelines.
+  ✗ Customer Data Platform (CDP) — Event routing pipelines to send raw events
+    to downstream destinations (Slack, HubSpot, Segment, webhooks) based on
+    filter rules.
+  ✗ Reverse ETL — Pull data from external warehouses back into InsightTrack to
+    enrich person profiles and use warehouse data in flags / experiments.
+  ✗ Data Modeling — Define computed columns and transformations on top of raw
+    events without modifying the tracking implementation.
+
+── AI & Developer Tooling ──
+  ✗ Natural Language Queries (AI) — Ask analytics questions in plain English
+    ("What caused the traffic drop last Tuesday?") and get back charts, SQL,
+    and written summaries automatically.
+  ✗ AI Traces & Generations — Track LLM call inputs/outputs, latency, token
+    usage, and costs per request for AI-powered products.
+  ✗ AI Evals — Run automated evaluation pipelines against LLM outputs and
+    monitor quality metrics over time.
+  ✗ Logs Ingestion — Centralized log collection and search tied to session
+    and user context, alongside analytics data.
+  ✗ MCP Server — Model Context Protocol integration so AI coding agents
+    (Cursor, Claude, etc.) can query InsightTrack, build dashboards, and
+    configure flags without leaving the IDE.
+
+── Monetization & Marketing ──
+  ✗ Revenue Analytics Module — Dedicated product for MRR, ARR, LTV, churn
+    rate, and average revenue per user with subscription-aware cohort analysis.
+  ✗ Advertising Analytics — Track ROI of Google Ads and other paid campaigns
+    by joining ad spend data with conversion events inside the platform.
+  ✗ Predictive Insights — AI-powered churn likelihood scores and conversion
+    probability predictions per user cohort.
+
+── Sharing & Collaboration ──
+  ✗ Dashboard Subscriptions — Subscribe to receive a dashboard snapshot by
+    email on a schedule (daily/weekly). Separate from one-off CSV exports.
+  ✗ Public Sharing & Embedding — Generate a public URL or iframe embed code
+    for any chart or dashboard to share with stakeholders without logins.
+  ✗ Color Themes — Customizable chart color palettes per dashboard for
+    brand-consistent reporting.
+
+── Priority Gaps (Highest Impact) ──
+  ⭐ Session Replay          — Differentiating feature; most requested by SaaS teams
+  ⭐ Feature Flags           — Table-stakes for modern SaaS; enables safe deploys
+  ⭐ Person Identification   — Blocks meaningful retention & cohort analysis
+  ⭐ Lifecycle Analysis      — Critical for growth accounting (new/returning/churned)
+  ⭐ Group Analytics         — Required for any B2B use case
+  ⭐ SQL Editor              — Power-user escape hatch; avoids dashboard limitations
+  ⭐ Surveys / NPS           — Closes the qualitative feedback loop
+  ⭐ Experiments Platform    — Real statistical A/B testing (not just traffic splits)

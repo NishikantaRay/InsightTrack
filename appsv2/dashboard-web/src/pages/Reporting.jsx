@@ -8,7 +8,7 @@ import {
     LayoutGrid, LayoutDashboard, StickyNote, Share2, AlignLeft,
     AlignCenter, AlignRight, Camera, GripHorizontal, ArrowUp, ArrowDown,
     Copy, AlertCircle, RefreshCw, ChevronDown, Loader2,
-    Save,
+    Save, Layers, FileText, FileSpreadsheet, Globe,
 } from 'lucide-react';
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -1303,7 +1303,22 @@ function DashboardBuilderTab() {
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    const parseWidgets = (w) => Array.isArray(w) ? w : (typeof w === 'string' ? JSON.parse(w) : []);
+    const parseWidgets = (w) => {
+        if (Array.isArray(w)) return w;
+        if (typeof w === 'string') {
+            try {
+                const parsed = JSON.parse(w);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+        return [];
+    };
+
+    const withLayout = useCallback((wgs, lm = layoutMap) =>
+        (wgs || []).map((w) => (lm?.[w.id] ? { ...w, px: lm[w.id] } : w)),
+        [layoutMap]);
 
     const startCreate = () => {
         setCurrent(null); setIsShared(false);
@@ -1325,6 +1340,7 @@ function DashboardBuilderTab() {
 
     const startView = (dash) => {
         setCurrent(dash); setIsShared(false);
+        setDashName(dash.name || 'My Dashboard');
         const ws = parseWidgets(dash.widgets);
         setWidgets(ws);
         setLayoutMap(buildPixelLayout(ws, {}, 900));
@@ -1458,8 +1474,8 @@ function DashboardBuilderTab() {
     };
 
     // ── share / export ───────────────────────────────────────────────────────
-    const handleShare = (name, wgs) => {
-        const token = encodeSharePayload(name, wgs);
+    const handleShare = (name, wgs, lm) => {
+        const token = encodeSharePayload(name, withLayout(wgs, lm));
         const url = `${window.location.origin}${window.location.pathname}?dash=${token}`;
         if (navigator.clipboard) {
             navigator.clipboard.writeText(url).then(() => toast.success('Share link copied to clipboard!'));
@@ -1468,8 +1484,8 @@ function DashboardBuilderTab() {
         }
     };
 
-    const handleExportJSON = (name, wgs) => {
-        dlFile(JSON.stringify({ name, widgets: wgs }, null, 2), `${name.replace(/\s+/g, '-').toLowerCase()}.dashboard.json`, 'application/json');
+    const handleExportJSON = (name, wgs, lm) => {
+        dlFile(JSON.stringify({ name, widgets: withLayout(wgs, lm) }, null, 2), `${name.replace(/\s+/g, '-').toLowerCase()}.dashboard.json`, 'application/json');
         toast.success('Dashboard exported as JSON');
     };
 
@@ -1585,7 +1601,7 @@ function DashboardBuilderTab() {
                 <input value={dashName} onChange={(e) => setDashName(e.target.value)} placeholder="Dashboard name"
                     className="flex-1 min-w-0 text-lg font-semibold bg-transparent border-0 border-b-2 border-gray-200 dark:border-gray-700 focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none text-gray-900 dark:text-white pb-1 transition" />
                 <div className="flex gap-2 shrink-0">
-                    <button onClick={() => handleShare(dashName, widgets)} title="Copy share link"
+                    <button onClick={() => handleShare(dashName, widgets, layoutMap)} title="Copy share link"
                         className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:border-green-400 hover:text-green-600 transition">
                         <Share2 className="w-3.5 h-3.5" /> Share
                     </button>
@@ -1715,7 +1731,7 @@ function DashboardBuilderTab() {
 
                     {/* ── Secondary actions ── */}
                     <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-0.5">
-                        <button onClick={() => handleShare(dashName, widgets)} title="Copy share link"
+                        <button onClick={() => handleShare(dashName, widgets, layoutMap)} title="Copy share link"
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-green-600 dark:hover:text-green-400 text-xs font-medium transition">
                             <Share2 className="w-3.5 h-3.5" /> Share
                         </button>
@@ -1743,7 +1759,7 @@ function DashboardBuilderTab() {
                                 clearTimeout(autosaveRef.current);
                                 try {
                                     // Always embed current layoutMap positions before saving
-                                    const widgetsToSave = widgets.map(w => layoutMap[w.id] ? { ...w, px: layoutMap[w.id] } : w);
+                                    const widgetsToSave = withLayout(widgets, layoutMap);
                                     await reportingAPI.updateDashboard(siteId, current.id, { name: dashName, widgets: widgetsToSave });
                                     setWidgets(widgetsToSave);
                                     setIsDirty(false);
@@ -1820,6 +1836,7 @@ function DashboardBuilderTab() {
                     layoutMap={layoutMap}
                     dashName={dashName}
                     isDark={isDark}
+                    siteId={siteId}
                     onClose={() => setShowExportModal(false)}
                 />
             )}
@@ -2204,10 +2221,10 @@ export default function Reporting() {
                 </button>
             </div>
 
-            {activeTab === 'builder' && <DashboardBuilderTab />}
-            {activeTab === 'annotations' && <AnnotationsTab />}
-            {activeTab === 'reports' && <ScheduledReportsTab />}
-            {activeTab === 'export' && <DataExportTab />}
+            <div className={activeTab === 'builder' ? '' : 'hidden'}><DashboardBuilderTab /></div>
+            <div className={activeTab === 'annotations' ? '' : 'hidden'}><AnnotationsTab /></div>
+            <div className={activeTab === 'reports' ? '' : 'hidden'}><ScheduledReportsTab /></div>
+            <div className={activeTab === 'export' ? '' : 'hidden'}><DataExportTab /></div>
         </div>
     );
 }

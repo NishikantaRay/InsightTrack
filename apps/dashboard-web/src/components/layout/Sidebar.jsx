@@ -17,10 +17,13 @@ import {
     Gauge,
     LayoutDashboard,
     Shield,
+    Terminal,
+    Map,
 } from 'lucide-react';
 const navItems = [
     { to: '/', icon: BarChart3, label: 'Dashboard' },
     { to: '/pages', icon: FileText, label: 'Pages' },
+    { to: '/heatmap', icon: Map, label: 'Heatmap' },
     { to: '/funnels', icon: Layers, label: 'Funnels' },
     { to: '/conversions', icon: Target, label: 'Conversions' },
     { to: '/audience', icon: Users, label: 'Audience' },
@@ -31,6 +34,7 @@ const navItems = [
     { to: '/user-flow', icon: GitBranch, label: 'User Flow' },
     { to: '/engagement', icon: MousePointerClick, label: 'Engagement' },
     { to: '/reporting', icon: LayoutDashboard, label: 'Reporting' },
+    { to: '/sql-editor', icon: Terminal, label: 'SQL Editor' },
     { to: '/privacy', icon: Shield, label: 'Privacy' },
     { to: '/settings', icon: Settings, label: 'Settings' },
     { to: '/docs', icon: BookOpen, label: 'Docs' },

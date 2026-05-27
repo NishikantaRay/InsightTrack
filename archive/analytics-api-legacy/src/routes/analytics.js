@@ -153,6 +153,42 @@ router.get('/:siteId/countries', validateSiteId, async (req, res) => {
   }
 });
 
+// GET /api/analytics/:siteId/cities - Traffic by city
+router.get('/:siteId/cities', validateSiteId, async (req, res) => {
+  try {
+    const { dateRange = '30d', limit = 10 } = req.query;
+    const data = await analyticsService.getTrafficByCity(req.siteId, dateRange, parseInt(limit));
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    res.status(500).json({ success: false, error: safeError(error) });
+  }
+});
+
+// GET /api/analytics/:siteId/geo-map - Geo coordinates for map visualization
+router.get('/:siteId/geo-map', validateSiteId, async (req, res) => {
+  try {
+    const { dateRange = '30d' } = req.query;
+    const data = await analyticsService.getGeoMap(req.siteId, dateRange);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching geo map:', error);
+    res.status(500).json({ success: false, error: safeError(error) });
+  }
+});
+
+// GET /api/analytics/:siteId/sessions/geo - Sessions by city
+router.get('/:siteId/sessions/geo', validateSiteId, async (req, res) => {
+  try {
+    const { dateRange = '30d', limit = 10 } = req.query;
+    const data = await analyticsService.getSessionsByCity(req.siteId, dateRange, parseInt(limit));
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching sessions by city:', error);
+    res.status(500).json({ success: false, error: safeError(error) });
+  }
+});
+
 // GET /api/analytics/:siteId/sessions - Session duration
 router.get('/:siteId/sessions', validateSiteId, async (req, res) => {
   try {

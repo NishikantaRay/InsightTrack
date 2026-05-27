@@ -201,8 +201,8 @@ router.post('/:siteId/utm-links', async (req, res) => {
             `INSERT INTO utm_links (id, site_id, label, url, utm_source, utm_medium, utm_campaign, utm_term, utm_content, built_url)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
             [id, req.params.siteId, label, url,
-             utm_source || '', utm_medium || '', utm_campaign || '',
-             utm_term || '', utm_content || '', built_url]
+                utm_source || '', utm_medium || '', utm_campaign || '',
+                utm_term || '', utm_content || '', built_url]
         );
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (error) {

@@ -356,6 +356,92 @@ export async function getCountries(siteId, dateRange = '30d', limit = 10) {
     }));
 }
 
+/** GET /api/analytics/:siteId/cities - Traffic by city */
+export async function getTrafficByCity(siteId, dateRange = '30d', limit = 10) {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT
+       CASE WHEN city = '' OR city IS NULL THEN 'Unknown' ELSE city END AS city,
+       CASE WHEN country = '' OR country IS NULL THEN 'Unknown' ELSE country END AS country,
+       COUNT(DISTINCT user_id) AS visitors,
+       COUNT(DISTINCT session_id) AS sessions,
+       COUNT(CASE WHEN type = 'pageview' THEN 1 END) AS pageviews,
+       AVG(CASE WHEN type = 'pageview' THEN 1 ELSE 0 END) * 100 AS engagement_rate
+     FROM events
+     WHERE site_id = ? AND timestamp >= ? AND timestamp <= ?
+     GROUP BY city, country
+     ORDER BY visitors DESC
+     LIMIT ?`,
+        [siteId, start, end, limit],
+    );
+    const total = rows.reduce((s, r) => s + Number(r.visitors), 0);
+    return rows.map(r => ({
+        city: r.city,
+        country: r.country,
+        visitors: Number(r.visitors),
+        sessions: Number(r.sessions),
+        pageviews: Number(r.pageviews),
+        engagementRate: Math.round(Number(r.engagement_rate || 0) * 10) / 10,
+        percentage: total > 0 ? Math.round((Number(r.visitors) / total) * 100) : 0,
+    }));
+}
+
+/** GET /api/analytics/:siteId/geo-map - Geo coordinates for map visualization */
+export async function getGeoMap(siteId, dateRange = '30d') {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT
+       city,
+       country,
+       COUNT(DISTINCT user_id) AS visitors,
+       COUNT(DISTINCT session_id) AS sessions
+     FROM events
+     WHERE site_id = ? AND timestamp >= ? AND timestamp <= ?
+       AND city IS NOT NULL AND city != ''
+     GROUP BY city, country
+     ORDER BY visitors DESC`,
+        [siteId, start, end],
+    );
+    return rows.map(r => ({
+        city: r.city,
+        country: r.country,
+        visitors: Number(r.visitors),
+        sessions: Number(r.sessions),
+    }));
+}
+
+/** Session-level geo breakdown */
+export async function getSessionsByCity(siteId, dateRange = '30d', limit = 10) {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT
+       CASE WHEN city = '' OR city IS NULL THEN 'Unknown' ELSE city END AS city,
+       CASE WHEN country = '' OR country IS NULL THEN 'Unknown' ELSE country END AS country,
+       COUNT(*) AS sessions,
+       AVG(duration) AS avg_duration,
+       SUM(CASE WHEN is_bounce THEN 1 ELSE 0 END) AS bounced,
+       SUM(pageviews) AS total_pageviews
+     FROM sessions
+     WHERE site_id = ? AND started_at >= ? AND started_at <= ?
+     GROUP BY city, country
+     ORDER BY sessions DESC
+     LIMIT ?`,
+        [siteId, start, end, limit],
+    );
+    return rows.map(r => {
+        const sessions = Number(r.sessions);
+        const bounced = Number(r.bounced);
+        return {
+            city: r.city,
+            country: r.country,
+            sessions,
+            avgDuration: Math.round(Number(r.avg_duration || 0)),
+            bounceRate: sessions > 0 ? Math.round((bounced / sessions) * 1000) / 10 : 0,
+            avgPageviews: sessions > 0 ? Math.round((Number(r.total_pageviews) / sessions) * 10) / 10 : 0,
+        };
+    });
+}
+
 /** GET /api/analytics/:siteId/sessions */
 export async function getSessionDuration(siteId, dateRange = '30d') {
     const { start, end } = getDateRange(dateRange);
@@ -998,7 +1084,7 @@ export async function getScrollDepth(siteId, dateRange = '30d') {
      FROM events
      WHERE site_id = ? AND type = 'scroll_depth'
        AND timestamp >= ? AND timestamp <= ?
-       AND json_extract(properties, '$.milestone') = 'true'
+       AND json_extract_string(properties, '$.milestone') = 'true'
      GROUP BY path
      ORDER BY total_events DESC
      LIMIT 20`,
@@ -1065,6 +1151,34 @@ export async function getHeatmapSummary(siteId, dateRange = '30d') {
         path: r.path,
         selector: r.selector || '',
         clicks: Number(r.clicks),
+    }));
+}
+
+/** GET /api/analytics/:siteId/page-actions — Top clicked elements on a specific page */
+export async function getPageActions(siteId, path = '/', dateRange = '30d', limit = 30) {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT
+       json_extract_string(properties, '$.text') AS text,
+       json_extract_string(properties, '$.selector') AS selector,
+       json_extract_string(properties, '$.tag') AS tag,
+       COUNT(*) AS clicks,
+       COUNT(DISTINCT user_id) AS unique_users
+     FROM events
+     WHERE site_id = ? AND type = 'heatmap_click'
+       AND path = ?
+       AND timestamp >= ? AND timestamp <= ?
+     GROUP BY text, selector, tag
+     ORDER BY clicks DESC
+     LIMIT ?`,
+        [siteId, path, start, end, limit],
+    );
+    return rows.map(r => ({
+        text: r.text || '(no text)',
+        selector: r.selector || '',
+        tag: r.tag || '',
+        clicks: Number(r.clicks),
+        uniqueUsers: Number(r.unique_users),
     }));
 }
 
@@ -1775,7 +1889,7 @@ export async function getWebVitals(siteId, dateRange = '30d') {
     const rows = await duckAll(
         `SELECT
        path,
-       json_extract_string(properties, '$.metric') AS metric,
+       json_extract_string(properties, '$.name') AS metric,
        ROUND(AVG(CAST(json_extract(properties, '$.value') AS DOUBLE)), 2) AS avg_value,
        ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY CAST(json_extract(properties, '$.value') AS DOUBLE)), 2) AS p75_value,
        COUNT(*) AS samples
@@ -1810,7 +1924,7 @@ export async function getWebVitalsOverview(siteId, dateRange = '30d') {
     const { start, end } = getDateRange(dateRange);
     const rows = await duckAll(
         `SELECT
-       json_extract_string(properties, '$.metric') AS metric,
+       json_extract_string(properties, '$.name') AS metric,
        ROUND(AVG(CAST(json_extract(properties, '$.value') AS DOUBLE)), 2) AS avg_value,
        ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY CAST(json_extract(properties, '$.value') AS DOUBLE)), 2) AS p75_value,
        COUNT(*) AS samples

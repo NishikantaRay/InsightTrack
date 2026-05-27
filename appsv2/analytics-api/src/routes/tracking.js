@@ -1,5 +1,6 @@
 import express from 'express';
 import trackingService from '../services/trackingService.js';
+import { geoipService } from '../services/geoipService.js';
 import { analyticsCache } from '../services/cache.js';
 import { runSync } from '../sync/sync.js';
 
@@ -32,7 +33,18 @@ function invalidateSiteCache(siteId) {
 // POST /api/track/event
 router.post('/event', async (req, res) => {
     try {
-        const result = await trackingService.trackEvent(req.body);
+        const eventData = req.body;
+
+        // Get location from client IP if not provided
+        if (!eventData.country || !eventData.city) {
+            const geo = geoipService.getLocationFromRequest(req);
+            if (geo.country) {
+                eventData.country = eventData.country || geo.country;
+                eventData.city = eventData.city || geo.city;
+            }
+        }
+
+        const result = await trackingService.trackEvent(eventData);
         invalidateSiteCache(req.body.siteId);
         triggerSync();
         res.status(201).json(result);
@@ -45,7 +57,18 @@ router.post('/event', async (req, res) => {
 // POST /api/track/pageview
 router.post('/pageview', async (req, res) => {
     try {
-        const result = await trackingService.trackEvent({ ...req.body, type: 'pageview' });
+        const eventData = { ...req.body, type: 'pageview' };
+
+        // Get location from client IP if not provided
+        if (!eventData.country || !eventData.city) {
+            const geo = geoipService.getLocationFromRequest(req);
+            if (geo.country) {
+                eventData.country = eventData.country || geo.country;
+                eventData.city = eventData.city || geo.city;
+            }
+        }
+
+        const result = await trackingService.trackEvent(eventData);
         invalidateSiteCache(req.body.siteId);
         triggerSync();
         res.status(201).json(result);
@@ -58,7 +81,18 @@ router.post('/pageview', async (req, res) => {
 // POST /api/track/session
 router.post('/session', async (req, res) => {
     try {
-        const result = await trackingService.upsertSession(req.body);
+        const sessionData = req.body;
+
+        // Get location from client IP if not provided
+        if (!sessionData.country) {
+            const geo = geoipService.getLocationFromRequest(req);
+            if (geo.country) {
+                sessionData.country = sessionData.country || geo.country;
+                sessionData.city = sessionData.city || geo.city;
+            }
+        }
+
+        const result = await trackingService.upsertSession(sessionData);
         res.status(200).json(result);
     } catch (error) {
         console.error('Error updating session:', error);
@@ -88,7 +122,16 @@ router.post('/batch', async (req, res) => {
         if (!Array.isArray(events) || events.length === 0) {
             return res.status(400).json({ error: 'events array is required' });
         }
-        const result = await trackingService.trackBatch(events);
+
+        // Enrich events with GeoIP data if not provided
+        const geo = geoipService.getLocationFromRequest(req);
+        const enrichedEvents = events.map(event => ({
+            ...event,
+            country: event.country || geo.country,
+            city: event.city || geo.city,
+        }));
+
+        const result = await trackingService.trackBatch(enrichedEvents);
         // Invalidate cache for all unique site IDs in the batch
         const siteIds = [...new Set(events.map(e => e.siteId).filter(Boolean))];
         siteIds.forEach(invalidateSiteCache);
@@ -129,7 +172,18 @@ router.get('/pixel.gif', async (req, res) => {
 // POST /api/track/
 router.post('/', async (req, res) => {
     try {
-        const result = await trackingService.trackEvent(req.body);
+        const eventData = req.body;
+
+        // Get location from client IP if not provided
+        if (!eventData.country || !eventData.city) {
+            const geo = geoipService.getLocationFromRequest(req);
+            if (geo.country) {
+                eventData.country = eventData.country || geo.country;
+                eventData.city = eventData.city || geo.city;
+            }
+        }
+
+        const result = await trackingService.trackEvent(eventData);
         res.status(201).json(result);
     } catch (error) {
         console.error('Error tracking:', error);

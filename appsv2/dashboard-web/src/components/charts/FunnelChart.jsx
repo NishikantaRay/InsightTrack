@@ -24,7 +24,6 @@ function FunnelChart({ steps }) {
 
     const maxCount = Math.max(...funnelSteps.map((s) => s.count), 1);
 
-    // Safe arithmetic helpers — never produce NaN or Infinity
     const safeDropoff = (prev, curr) => {
         if (!prev || prev === 0) return 0;
         return Math.max(0, ((prev - curr) / prev) * 100);
@@ -77,8 +76,6 @@ function FunnelChart({ steps }) {
                                     )}
                                 </div>
                             </div>
-
-                            {/* Bar */}
                             <div className="h-9 bg-gray-50 dark:bg-white/[0.03] rounded-lg overflow-hidden relative">
                                 {hasData ? (
                                     <div
@@ -101,8 +98,6 @@ function FunnelChart({ steps }) {
                                     </div>
                                 )}
                             </div>
-
-                            {/* Connector arrow between steps */}
                             {idx < funnelSteps.length - 1 && (
                                 <div className="flex justify-center mt-1">
                                     <span className="text-text-muted/30 dark:text-text-muted-dark/30 text-xs">↓</span>
@@ -111,8 +106,6 @@ function FunnelChart({ steps }) {
                         </div>
                     );
                 })}
-
-                {/* Summary row */}
                 {funnelSteps.length >= 2 && funnelSteps[0].count > 0 && (
                     <div className="mt-2 pt-4 border-t border-border dark:border-border-dark flex items-center justify-between">
                         <span className="text-xs text-text-muted dark:text-text-muted-dark">Overall conversion</span>

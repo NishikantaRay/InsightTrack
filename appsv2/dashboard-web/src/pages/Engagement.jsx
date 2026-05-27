@@ -162,16 +162,16 @@ export default function Engagement() {
                 <>
                     {/* Page Header */}
                     <PageNote
-                title="What is Engagement?"
-                summary="Engagement measures the quality of visitor interactions — how far they scroll, where they click, whether they click the same element in frustration, and how long they spend on each page."
-                details={[
-                    { label: 'Scroll Depth', text: 'Tracks how far down each page visitors scroll. If most visitors only see 25% of your page, everything below the fold is invisible to them.' },
-                    { label: 'Click Heatmap', text: 'Shows which elements get the most clicks. Helps identify what visitors find interesting and whether important buttons are being ignored.' },
-                    { label: 'Rage Clicks', text: 'Detects when a visitor clicks the same element rapidly — a sign of frustration, usually caused by a broken link, unresponsive button, or confusing UI.' },
-                    { label: 'Time on Page', text: 'Measures how long visitors spend on individual pages. Low time on a long article suggests your content isn’t compelling enough.' },
-                ]}
-                businessTip="Rage clicks are your fastest wins. Each one points to a broken or confusing element. Fix those first, then use scroll depth to decide where to put your most important calls-to-action."
-                devTip="Scroll events fire at 25/50/75/100% thresholds via IntersectionObserver in the tracking script. Click coordinates are captured on document click and stored as events with type=click. Rage = 3+ clicks in 500ms."
+                        title="What is Engagement?"
+                        summary="Engagement measures the quality of visitor interactions — how far they scroll, where they click, whether they click the same element in frustration, and how long they spend on each page."
+                        details={[
+                            { label: 'Scroll Depth', text: 'Tracks how far down each page visitors scroll. If most visitors only see 25% of your page, everything below the fold is invisible to them.' },
+                            { label: 'Click Heatmap', text: 'Shows which elements get the most clicks. Helps identify what visitors find interesting and whether important buttons are being ignored.' },
+                            { label: 'Rage Clicks', text: 'Detects when a visitor clicks the same element rapidly — a sign of frustration, usually caused by a broken link, unresponsive button, or confusing UI.' },
+                            { label: 'Time on Page', text: 'Measures how long visitors spend on individual pages. Low time on a long article suggests your content isn’t compelling enough.' },
+                        ]}
+                        businessTip="Rage clicks are your fastest wins. Each one points to a broken or confusing element. Fix those first, then use scroll depth to decide where to put your most important calls-to-action."
+                        devTip="Scroll events fire at 25/50/75/100% thresholds via IntersectionObserver in the tracking script. Click coordinates are captured on document click and stored as events with type=click. Rage = 3+ clicks in 500ms."
                     />
                 </>
             )}

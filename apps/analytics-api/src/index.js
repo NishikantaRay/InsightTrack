@@ -11,6 +11,7 @@ import trackingRoutes from './routes/tracking.js';
 import authRoutes from './routes/auth.js';
 import goalsRoutes from './routes/goals.js';
 import reportingRoutes from './routes/reporting.js';
+import sqlEditorRoutes from './routes/sqlEditor.js';
 import { closeDuck } from './db/duckdb.js';
 import { closeConnection } from './db/postgres.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -86,6 +87,7 @@ app.use('/api/track', trackingRoutes);
 app.use('/api/auth', privateCors, authRoutes);
 app.use('/api/goals', privateCors, goalsRoutes);
 app.use('/api/reporting', privateCors, reportingRoutes);
+app.use('/api/sql-editor', privateCors, sqlEditorRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

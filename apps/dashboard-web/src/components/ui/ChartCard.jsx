@@ -5,7 +5,7 @@ import LoadingSkeleton from './LoadingSkeleton';
 import EmptyState from './EmptyState';
 import InfoTooltip from './InfoTooltip';
 
-function ChartCard({ title, subtitle, children, loading, error, empty, onExport, className = '', info }) {
+function ChartCard({ title, subtitle, children, loading, error, empty, onExport, className = '', info, headerActions }) {
     const chartRef = useRef(null);
 
     const handleExportPNG = () => {
@@ -27,6 +27,7 @@ function ChartCard({ title, subtitle, children, loading, error, empty, onExport,
                     )}
                 </div>
                 <div className="flex items-center gap-1">
+                    {headerActions}
                     {onExport && (
                         <button
                             onClick={onExport}

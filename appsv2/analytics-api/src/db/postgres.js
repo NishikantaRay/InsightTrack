@@ -293,6 +293,42 @@ export async function initializeDatabase() {
     await query(`CREATE INDEX IF NOT EXISTS idx_utm_links_site ON utm_links(site_id)`);
     console.log('  ✓ utm_links');
 
+    // SQL editor saved queries table
+    await query(`
+    CREATE TABLE IF NOT EXISTS sql_saved_queries (
+      id UUID PRIMARY KEY,
+      site_id VARCHAR(64) NOT NULL,
+      user_id VARCHAR(64) NOT NULL,
+      name VARCHAR(120) NOT NULL,
+      query TEXT NOT NULL,
+      tags TEXT[] DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_sql_saved_queries_user_site ON sql_saved_queries(user_id, site_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_sql_saved_queries_updated_at ON sql_saved_queries(updated_at DESC)`);
+    console.log('  ✓ sql_saved_queries');
+
+    // SQL editor query audit table
+    await query(`
+    CREATE TABLE IF NOT EXISTS sql_query_audits (
+      id UUID PRIMARY KEY,
+      request_id UUID NOT NULL,
+      user_id VARCHAR(64) NOT NULL,
+      site_id VARCHAR(64) NOT NULL,
+      query_text TEXT NOT NULL,
+      duration_ms INTEGER,
+      row_count INTEGER,
+      status VARCHAR(20) NOT NULL,
+      error_message TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_sql_query_audits_site_created ON sql_query_audits(site_id, created_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_sql_query_audits_user_created ON sql_query_audits(user_id, created_at DESC)`);
+    console.log('  ✓ sql_query_audits');
+
     console.log('✅ All PostgreSQL tables initialized');
 }
 

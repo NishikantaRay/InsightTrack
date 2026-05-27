@@ -119,6 +119,45 @@ A privacy-friendly, self-hosted web analytics platform. Track visitors, pageview
 
 ---
 
+### Engagement Analytics
+
+![Engagement Full](screenshots/27-engagement-full.png)
+
+**Engagement** — Deep behavioural analytics for every tracked site: scroll depth milestones, rage click detection, time-on-page heatmap, and click distribution table.
+
+| | |
+|---|---|
+| ![Scroll Depth](screenshots/28-engagement-scroll-depth.png) | ![Rage Clicks](screenshots/29-engagement-rage-clicks.png) |
+| **Scroll Depth** — Bar chart showing what % of visitors reached the 25 / 50 / 75 / 100 % scroll milestone on each page. Identifies content that users never see. | **Rage Clicks** — Table of elements that received 3+ rapid clicks within 1 second, ranked by incident count. A rage click = user frustration — the element likely looks interactive but isn't responding. |
+
+---
+
+### Visual Heatmap
+
+![Heatmap Full](screenshots/30-heatmap-full.png)
+
+**Visual Heatmap** — Overlay coloured click-density dots on a live iframe preview of any tracked page. Dots scale from indigo (rarely clicked) through green → yellow → orange → red (hottest spot). A Click Distribution table below ranks every element by click count and unique users.
+
+| | |
+|---|---|
+| ![Heatmap How It Works](screenshots/31-heatmap-how-it-works.png) | |
+| **How It Works panel** — Collapsible PageNote explains click recording, dot colour scale, iframe preview behaviour, and the distribution table — with a business tip and developer tip. | |
+
+---
+
+### Performance & Web Vitals
+
+![Performance Full](screenshots/32-performance-full.png)
+
+**Performance** — Core Web Vitals dashboard (LCP, FID, CLS, INP, TTFB) captured via the tracking script's `PerformanceObserver` and shown as scored gauge cards. Includes a JS Error log table with message, source file, line/col, and a trend chart of errors over time.
+
+| | |
+|---|---|
+| ![Web Vitals](screenshots/33-performance-web-vitals.png) | ![JS Errors](screenshots/34-performance-js-errors.png) |
+| **Web Vitals** — Each metric is scored Good / Needs Improvement / Poor against Google's thresholds (e.g. LCP < 2.5 s = Good). P75 values shown. | **JS Errors** — Every `window.error` and unhandled Promise rejection from your tracked pages is logged with full context. |
+
+---
+
 ### Navigation Components
 
 | ![Sidebar](screenshots/23-sidebar.png) | ![Navbar](screenshots/24-navbar.png) |
@@ -136,6 +175,9 @@ A privacy-friendly, self-hosted web analytics platform. Track visitors, pageview
 - **Conversion Funnels** — Define multi-step funnels and track drop-off
 - **User Flow** — Visualize how visitors navigate between pages
 - **Real-time** — Live visitor count, active pages, interactive world map
+- **Visual Heatmap** — Click-density dots overlaid on live page preview; element click distribution table
+- **Engagement Analytics** — Scroll depth milestones (25/50/75/100%), rage click detection, time-on-page
+- **Performance & Web Vitals** — LCP, FID, CLS, INP, TTFB scored against Google thresholds; JS error log
 - **Traffic Alerts** — Automatic anomaly detection for spikes and drops
 - **Multi-site** — Manage multiple websites from one dashboard
 - **Dark Mode** — System preference detection + manual toggle
@@ -388,10 +430,12 @@ The grouped structure above is the canonical project layout. Use those paths for
 ## API Overview
 
 | Group | Key Endpoints | Database |
-|-------|---------------|----------|
+|-------|---------------|---------|
 | **Auth** | `POST /api/auth/register`, `/login`, `GET /api/auth/me` | PostgreSQL |
 | **Sites** | `GET /api/sites`, `POST /api/sites`, `GET /api/sites/:id/script` | PostgreSQL |
 | **Analytics** | `/api/analytics/:siteId/kpi`, `/traffic`, `/top-pages`, `/sources`, `/devices`, `/countries`, `/realtime`, `/user-flow`, `/funnel`, `/alerts`, `/comparison`, `/all` | DuckDB |
+| **Engagement** | `/api/analytics/:siteId/engagement/scroll-depth`, `/rage-clicks`, `/heatmap`, `/heatmap-summary`, `/time-on-page` | DuckDB |
+| **Performance** | `/api/analytics/:siteId/performance/web-vitals`, `/web-vitals-overview`, `/errors`, `/errors-over-time` | DuckDB |
 | **Tracking** | `POST /api/track/event`, `/pageview`, `/session`, `/batch`, `GET /api/track/pixel.gif` | PostgreSQL |
 
 All analytics endpoints accept `?dateRange=today|7d|30d|90d|custom:YYYY-MM-DD:YYYY-MM-DD`.
@@ -428,6 +472,9 @@ npm test
 | [Docker Setup](docs/docker-setup.md) | Docker & PostgreSQL container management |
 | [DuckDB Guide](docs/duckdb-guide.md) | DuckDB analytics engine, sync, queries |
 | [Deployment](docs/deployment.md) | Production deployment with Docker, Nginx, SSL |
+| [Visual Heatmap](docs/heatmap.md) | Heatmap feature guide — click recording, API, testing, troubleshooting |
+| [Hot+Cold Architecture](docs/hot-cold-analytics-architecture.md) | DuckDB hot (30d) + cold (Parquet) data layer |
+| [PG→DuckDB Sync](docs/pg-duckdb-sync.md) | PostgreSQL to DuckDB sync pipeline |
 
 ## License
 

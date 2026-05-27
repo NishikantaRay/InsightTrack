@@ -305,17 +305,17 @@ export default function Acquisition() {
 
             {!focusMode && (
                 <PageNote
-                title="What is Acquisition?"
-                summary="Acquisition shows you exactly how visitors found your website — through paid ads, social media, organic search, direct links, or email campaigns."
-                details={[
-                    { label: 'Campaigns', text: 'Traffic tagged with UTM parameters (utm_source, utm_medium, utm_campaign). Use this to measure ROI of marketing spend.' },
-                    { label: 'Social Media', text: 'Visits originating from social platforms like Facebook, Twitter, LinkedIn, and Instagram.' },
-                    { label: 'Keywords', text: 'Search keywords that drove visitors to your site. Requires utm_term parameter on your links.' },
-                    { label: 'URL Builder', text: 'A tool to generate properly formatted UTM links. Paste any URL and fill in the fields to build a tracked link.' },
-                ]}
-                businessTip="Focus on campaigns with the highest visitor-to-conversion ratio, not just traffic volume. A small campaign that converts well is more valuable than a high-traffic one that doesn’t."
-                devTip="UTM data is parsed from query strings on the tracking script and stored in the events table. Query via GET /api/analytics/:siteId/utm. The URL Builder is client-side only."
-                    />
+                    title="What is Acquisition?"
+                    summary="Acquisition shows you exactly how visitors found your website — through paid ads, social media, organic search, direct links, or email campaigns."
+                    details={[
+                        { label: 'Campaigns', text: 'Traffic tagged with UTM parameters (utm_source, utm_medium, utm_campaign). Use this to measure ROI of marketing spend.' },
+                        { label: 'Social Media', text: 'Visits originating from social platforms like Facebook, Twitter, LinkedIn, and Instagram.' },
+                        { label: 'Keywords', text: 'Search keywords that drove visitors to your site. Requires utm_term parameter on your links.' },
+                        { label: 'URL Builder', text: 'A tool to generate properly formatted UTM links. Paste any URL and fill in the fields to build a tracked link.' },
+                    ]}
+                    businessTip="Focus on campaigns with the highest visitor-to-conversion ratio, not just traffic volume. A small campaign that converts well is more valuable than a high-traffic one that doesn’t."
+                    devTip="UTM data is parsed from query strings on the tracking script and stored in the events table. Query via GET /api/analytics/:siteId/utm. The URL Builder is client-side only."
+                />
             )}
 
             {/* How it works info banner */}

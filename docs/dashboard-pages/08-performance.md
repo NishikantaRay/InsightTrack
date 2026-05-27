@@ -27,8 +27,9 @@ Only `web_vital` events are used.
 
 Each event stores:
 
-- `properties.metric`
-- `properties.value`
+- `properties.name` — the metric identifier (one of: `TTFB`, `LCP`, `FID`, `CLS`, `INP`)
+- `properties.value` — the measured value (milliseconds for timing metrics, unitless for CLS)
+- `properties.rating` — pre-classified by the tracking script as `good`, `needs-improvement`, or `poor`
 - page path
 
 ### Overview cards
@@ -46,7 +47,7 @@ The overview query groups by metric only.
 The page-level query groups by:
 
 - `path`
-- metric name
+- `properties.name` (the metric identifier)
 
 For each metric on each page it calculates:
 
@@ -99,7 +100,23 @@ The trend chart groups `js_error` events by day and returns:
 - total errors per day
 - distinct affected users per day
 
+## Term Glossary
+
+| Term | Definition |
+|------|------------|
+| **LCP** (Largest Contentful Paint) | Time until the largest image or text block in the viewport is rendered. Measures perceived load speed. |
+| **FID** (First Input Delay) | Delay between a user's first interaction (click, keypress) and the browser's response. Measures interactivity. |
+| **CLS** (Cumulative Layout Shift) | Total unexpected layout shift during the page lifecycle. Measures visual stability. Score is unitless (0 = perfect). |
+| **INP** (Interaction to Next Paint) | Worst interaction latency recorded during the visit. Replaces FID as the primary responsiveness metric. |
+| **TTFB** (Time to First Byte) | Time from the navigation request until the first byte of the response arrives. Measures server/network speed. |
+| **p75** | 75th percentile value. Core Web Vitals are graded at p75 — it reflects what a typical slower user experiences, not just the average. |
+| **Good / Needs Work / Poor** | Color-coded status labels based on Google's CWV thresholds. Green = good, yellow = needs improvement, red = poor. |
+| **Affected Users** | Count of distinct `user_id` values that triggered a given JS error. Helps triage impact. |
+| **Occurrences** | Total count of a given JS error event, including repeated triggers by the same user. |
+
 ## Notes
 
 - Performance is based on real tracked client events, not synthetic lab testing.
+- The tracking script fires web vitals on page load (TTFB, LCP) and on page hide (CLS, INP via `visibilitychange`). FID fires on first user interaction.
+- `properties.name` (not `properties.metric`) is the field used to identify the vital type — this matches the tracking script output.
 - If no web vitals or errors are visible, it usually means the tracking script has not yet collected those event types for the selected site/date range.

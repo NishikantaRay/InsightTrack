@@ -20,6 +20,7 @@ InsightTrack — self-hosted web analytics platform with a dual-database archite
 5. **ES modules only.** Use `import/export`, never `require()`.
 6. **All new UI must support dark mode** via Tailwind `dark:` variants.
 7. **Use `useAnalytics` hook for data fetching** in React components, not raw `useEffect` + axios.
+8. **Update `docs/` after completing any feature.** If a feature has a doc file in `docs/` (e.g. `docs/sql-editor.md`, `docs/custom-dashboards.md`), update it to reflect the current implementation state. If no doc exists for a significant new feature, create one.
 
 ## Package Structure
 
@@ -66,3 +67,12 @@ Detailed skill files are in `.claude/skills/`:
 - `debugging.md` — Debugging decision trees and commands
 - `feature-development.md` — Feature development workflow
 - `testing.md` — Testing conventions and examples
+
+## Feature Docs
+
+Implementation guides are in `docs/`:
+- `docs/sql-editor.md` — SQL Editor feature guide (API, security model, schema)
+- `docs/custom-dashboards.md` — Custom Dashboard builder (data model, widget catalogue, grid layout)
+- `docs/reporting-studio.md` — Reporting Studio & export architecture
+- `docs/hot-cold-analytics-architecture.md` — DuckDB hot+cold data layer
+- `docs/pg-duckdb-sync.md` — PostgreSQL → DuckDB sync pipeline

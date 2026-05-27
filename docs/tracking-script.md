@@ -143,3 +143,93 @@ The tracking script intercepts form submissions that contain search inputs and s
 Detection works by finding `<input>` elements with `type="search"` or `name="q"` / `name="s"` / `name="search"` / `name="query"` inside submitted forms.
 
 View search data on the **Content → Site Search** tab.
+
+---
+
+## Click Heatmap Tracking
+
+Every click anywhere on the page fires a `heatmap_click` event. The tracking script captures:
+
+- **CSS selector** — `tag#id` or `tag.class1.class2` of the clicked element
+- **Text** — visible label / `aria-label` (truncated to 100 chars)
+- **relX / relY** — click position as percentage of viewport width/height (makes dots resolution-independent)
+- **x / y** — raw pixel coordinates
+
+```json
+{
+  "type": "heatmap_click",
+  "props": {
+    "selector": "button.btn-primary",
+    "text": "Get Started",
+    "tag": "button",
+    "relX": 52,
+    "relY": 34,
+    "x": 668,
+    "y": 246
+  }
+}
+```
+
+View on the **Visual Heatmap** page. Dots are overlaid on a live iframe of the page, coloured indigo → green → yellow → orange → red by relative click density.
+
+---
+
+## Rage Click Detection
+
+A rage click is 3 or more rapid clicks on the same element within 1 second — a strong signal of user frustration (element looks interactive but isn't responding).
+
+```json
+{
+  "type": "rage_click",
+  "props": {
+    "selector": "div.submit-btn",
+    "count": 4
+  }
+}
+```
+
+Each element has a 5-second cooldown after a rage click is fired, preventing duplicate events. View on the **Engagement → Rage Clicks** tab.
+
+---
+
+## Scroll Depth Tracking
+
+The tracking script fires a `scroll_depth` event when the user reaches the 25%, 50%, 75%, and 100% scroll milestones on any page. Each milestone fires only once per page load. Pages that fit entirely in the viewport (no scroll needed) are skipped.
+
+```json
+{
+  "type": "scroll_depth",
+  "props": {
+    "depth": 75,
+    "milestone": "true"
+  }
+}
+```
+
+View on the **Engagement → Scroll Depth** tab. The bar chart shows what percentage of visitors reached each milestone per page — content below a low-engagement milestone is likely never seen.
+
+---
+
+## Time on Page Tracking
+
+The tracking script records how long a visitor spent on each page. A `time_on_page` event fires when the page becomes hidden (`visibilitychange` → hidden state) — this covers tab switching, navigating away, and closing the browser.
+
+```json
+{
+  "type": "time_on_page",
+  "props": {
+    "seconds": 47
+  }
+}
+```
+
+**How it works:**
+
+- `_pageStart = Date.now()` is recorded when the script initialises
+- On `visibilitychange` (hidden), elapsed time is calculated as `Math.round((Date.now() - _pageStart) / 1000)`
+- The event is only sent if `seconds > 0`
+- The backend filters out values ≥ 3600 s (1 hour) as outliers
+
+**Limitations:** If the user closes the browser without triggering `visibilitychange` (rare on mobile), the event may not fire. The `beforeunload` event does not send `time_on_page` to avoid duplicate counts since `visibilitychange` fires first in all modern browsers.
+
+View on the **Engagement → Time on Page** tab, which shows average, median, min, and max time per page along with sample count.

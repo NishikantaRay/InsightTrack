@@ -90,17 +90,17 @@ export default function Settings() {
 
             {!focusMode && (
                 <PageNote
-                title="Settings — Site Management & Tracking"
-                summary="Add and switch between multiple websites, get your tracking snippet, and configure alert thresholds."
-                details={[
-                    { label: 'Sites', text: 'Each website you want to track needs its own site entry. Switch between them using the site selector in the top bar.' },
-                    { label: 'Tracking Script', text: 'A one-line script tag that goes in your website\'s <head>. It auto-tracks pageviews, clicks, scroll depth, performance metrics, and errors — no extra code needed.' },
-                    { label: 'Custom Events', text: 'After adding the script, you can fire custom events with window.trackEvent("name", { key: value }). Use these for purchases, sign-ups, or any action you care about.' },
-                    { label: 'Alerts', text: 'Set thresholds for traffic drops or spikes. InsightTrack checks these automatically and flags anomalies on your dashboard.' },
-                ]}
-                businessTip="Add a new site for each domain you want to track. Paste the one-line script into your website's header — no developer needed for most website builders."
-                devTip="The tracking script is dynamically served from /api/sites/:siteId/script. It fingerprints visitors using a hashed localStorage ID — no cookies, no PII. Use window.trackEvent() for custom instrumentation."
-                    />
+                    title="Settings — Site Management & Tracking"
+                    summary="Add and switch between multiple websites, get your tracking snippet, and configure alert thresholds."
+                    details={[
+                        { label: 'Sites', text: 'Each website you want to track needs its own site entry. Switch between them using the site selector in the top bar.' },
+                        { label: 'Tracking Script', text: 'A one-line script tag that goes in your website\'s <head>. It auto-tracks pageviews, clicks, scroll depth, performance metrics, and errors — no extra code needed.' },
+                        { label: 'Custom Events', text: 'After adding the script, you can fire custom events with window.trackEvent("name", { key: value }). Use these for purchases, sign-ups, or any action you care about.' },
+                        { label: 'Alerts', text: 'Set thresholds for traffic drops or spikes. InsightTrack checks these automatically and flags anomalies on your dashboard.' },
+                    ]}
+                    businessTip="Add a new site for each domain you want to track. Paste the one-line script into your website's header — no developer needed for most website builders."
+                    devTip="The tracking script is dynamically served from /api/sites/:siteId/script. It fingerprints visitors using a hashed localStorage ID — no cookies, no PII. Use window.trackEvent() for custom instrumentation."
+                />
             )}
 
             {/* Tab bar */}

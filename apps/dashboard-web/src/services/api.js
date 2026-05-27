@@ -29,8 +29,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response.data,
     (error) => {
-        const message = error.response?.data?.error || error.message || 'Request failed';
-        return Promise.reject(new Error(message));
+        const payload = error.response?.data || {};
+        const message = payload.error || error.message || 'Request failed';
+        const enriched = new Error(message);
+        if (payload.diagnostics) enriched.diagnostics = payload.diagnostics;
+        if (payload.requestId) enriched.requestId = payload.requestId;
+        if (error.code === 'ERR_CANCELED') enriched.code = 'ERR_CANCELED';
+        return Promise.reject(enriched);
     }
 );
 
@@ -110,6 +115,9 @@ export const analyticsAPI = {
 
     getHeatmapSummary: (siteId, dateRange) =>
         api.get(`/analytics/${siteId}/engagement/heatmap-summary`, { params: { dateRange } }),
+
+    getPageActions: (siteId, dateRange, path = '/') =>
+        api.get(`/analytics/${siteId}/page-actions`, { params: { dateRange, path } }),
 
     getRageClicks: (siteId, dateRange) =>
         api.get(`/analytics/${siteId}/engagement/rage-clicks`, { params: { dateRange } }),
@@ -228,6 +236,21 @@ export const authAPI = {
     login: (data) => api.post('/auth/login', data),
     me: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/me', data),
+};
+
+// SQL Editor endpoints
+export const sqlEditorAPI = {
+    getSchema: (siteId) => api.get(`/sql-editor/${siteId}/schema`),
+    runQuery: (siteId, payload, options = {}) => {
+        const body = typeof payload === 'string' ? { query: payload } : payload;
+        return api.post(`/sql-editor/${siteId}/run`, body, {
+            signal: options.signal,
+        });
+    },
+    listSavedQueries: (siteId) => api.get(`/sql-editor/${siteId}/saved`),
+    createSavedQuery: (siteId, data) => api.post(`/sql-editor/${siteId}/saved`, data),
+    updateSavedQuery: (siteId, savedId, data) => api.put(`/sql-editor/${siteId}/saved/${savedId}`, data),
+    deleteSavedQuery: (siteId, savedId) => api.delete(`/sql-editor/${siteId}/saved/${savedId}`),
 };
 
 export default api;

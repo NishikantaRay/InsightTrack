@@ -13,11 +13,10 @@ export default function FocusToggleButton() {
         <button
             onClick={toggleFocusMode}
             title={focusMode ? 'Show page headers and info panels' : 'Focus mode — hide headers for more space'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all shrink-0 ${
-                focusMode
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all shrink-0 ${focusMode
                     ? 'bg-accent border-accent text-white hover:bg-accent/90'
                     : 'border-border dark:border-border-dark text-text-muted dark:text-text-muted-dark bg-card dark:bg-card-dark hover:border-accent hover:text-accent'
-            }`}
+                }`}
         >
             {focusMode
                 ? <><Minimize2 className="w-3.5 h-3.5" /> Show</>

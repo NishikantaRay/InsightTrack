@@ -11,12 +11,11 @@ import trackingRoutes from './routes/tracking.js';
 import authRoutes from './routes/auth.js';
 import goalsRoutes from './routes/goals.js';
 import reportingRoutes from './routes/reporting.js';
-import syncRoutes from './routes/sync.js';
+import sqlEditorRoutes from './routes/sqlEditor.js';
 import { closeDuck } from './db/duckdb.js';
 import { closeConnection } from './db/postgres.js';
 import { authMiddleware } from './middleware/auth.js';
 import { runSync } from './sync/sync.js';
-import { refreshAnalyticsViews } from './queries/queries.js';
 
 dotenv.config();
 
@@ -88,7 +87,7 @@ app.use('/api/track', trackingRoutes);
 app.use('/api/auth', privateCors, authRoutes);
 app.use('/api/goals', privateCors, goalsRoutes);
 app.use('/api/reporting', privateCors, reportingRoutes);
-app.use('/api/sync', privateCors, syncRoutes);
+app.use('/api/sql-editor', privateCors, sqlEditorRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -128,12 +127,9 @@ async function start() {
         // Auto-sync PG → DuckDB on startup
         try {
             await runSync({ silent: false });
-            await refreshAnalyticsViews();
-            console.log('✅ DuckDB synced from PostgreSQL (hot+cold views refreshed)');
+            console.log('✅ DuckDB synced from PostgreSQL');
         } catch (syncErr) {
             console.warn('⚠  Initial DuckDB sync failed (analytics may be stale):', syncErr.message);
-            // Still try to set up views even if sync fails
-            try { await refreshAnalyticsViews(); } catch (_) { /* ignore */ }
         }
 
         // Periodic sync every 60 seconds (silent — only logs errors)
@@ -141,7 +137,6 @@ async function start() {
         setInterval(async () => {
             try {
                 await runSync({ silent: true });
-                await refreshAnalyticsViews();
             } catch (err) {
                 console.warn('⚠  Periodic sync failed:', err.message);
             }
@@ -149,9 +144,9 @@ async function start() {
 
         app.listen(PORT, () => {
             console.log(`\n🚀 InsightTrack server running on http://localhost:${PORT}`);
-            console.log(`   Hot+Cold Analytics: DuckDB hot tables + Parquet cold store`);
+            console.log(`   Analytics queries powered by DuckDB`);
             console.log(`   Writes (tracking, auth, sites) → PostgreSQL`);
-            console.log(`   Auto-sync: PG → DuckDB+Parquet every ${SYNC_INTERVAL / 1000}s\n`);
+            console.log(`   Auto-sync: PG → DuckDB every ${SYNC_INTERVAL / 1000}s\n`);
         });
     } catch (error) {
         console.error('❌ Failed to start server:', error);

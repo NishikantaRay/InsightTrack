@@ -150,6 +150,42 @@ router.get('/:siteId/countries', validateSiteId, async (req, res) => {
     }
 });
 
+// GET /api/analytics/:siteId/cities - Traffic by city
+router.get('/:siteId/cities', validateSiteId, async (req, res) => {
+    try {
+        const { dateRange = '30d', limit = 10 } = req.query;
+        const data = await queries.getTrafficByCity(req.siteId, dateRange, parseInt(limit));
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching cities:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// GET /api/analytics/:siteId/geo-map - Geo coordinates for map visualization
+router.get('/:siteId/geo-map', validateSiteId, async (req, res) => {
+    try {
+        const { dateRange = '30d' } = req.query;
+        const data = await queries.getGeoMap(req.siteId, dateRange);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching geo map:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// GET /api/analytics/:siteId/sessions/geo - Sessions by city
+router.get('/:siteId/sessions/geo', validateSiteId, async (req, res) => {
+    try {
+        const { dateRange = '30d', limit = 10 } = req.query;
+        const data = await queries.getSessionsByCity(req.siteId, dateRange, parseInt(limit));
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching sessions by city:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
 // GET /api/analytics/:siteId/sessions
 router.get('/:siteId/sessions', validateSiteId, async (req, res) => {
     try {
@@ -296,6 +332,18 @@ router.get('/:siteId/alerts', validateSiteId, async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error fetching alerts:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// GET /api/analytics/:siteId/page-actions?path=/some-page
+router.get('/:siteId/page-actions', validateSiteId, async (req, res) => {
+    try {
+        const { dateRange = '30d', path = '/' } = req.query;
+        const data = await queries.getPageActions(req.siteId, path, dateRange);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching page actions:', error);
         res.status(500).json({ success: false, error: safeError(error) });
     }
 });

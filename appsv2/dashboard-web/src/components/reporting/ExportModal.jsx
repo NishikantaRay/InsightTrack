@@ -26,6 +26,7 @@ import {
     FileText, Image, Layers,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { analyticsAPI } from '../../services/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SVG → data URL (inline all attributes so html2canvas sees a proper image)
@@ -143,16 +144,37 @@ function toCSV(rows) {
     return [keys.join(','), ...rows.map(r => keys.map(k => esc(r[k])).join(','))].join('\n');
 }
 
+function normalise(raw) {
+    const d = raw?.data ?? raw;
+    return Array.isArray(d) ? d : (d && typeof d === 'object') ? [d] : [];
+}
+
+async function fetchWidgetData(siteId, widget) {
+    if (!siteId || !widget || widget.type === 'text_note') return [];
+    const source = widget.dataSource || (widget.type === 'kpi_card' ? 'kpi' : 'top_pages');
+    const dateRange = widget.dateRange || '30d';
+    switch (source) {
+        case 'traffic': return normalise(await analyticsAPI.getTraffic(siteId, dateRange));
+        case 'top_pages': return normalise(await analyticsAPI.getTopPages(siteId, dateRange, 20));
+        case 'sources': return normalise(await analyticsAPI.getSources(siteId, dateRange));
+        case 'devices': return normalise(await analyticsAPI.getDevices(siteId, dateRange));
+        case 'countries': return normalise(await analyticsAPI.getCountries(siteId, dateRange, 15));
+        case 'sessions': return normalise(await analyticsAPI.getSessions(siteId, dateRange));
+        case 'kpi': return normalise(await analyticsAPI.getKPIs(siteId, dateRange));
+        default: return [];
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PrintLayout — the dedicated print DOM tree
 // Rendered into a portal at #insighttrack-print-root.
 // CSS: @media print { #root { display:none } #insighttrack-print-root { display:block } }
 // ─────────────────────────────────────────────────────────────────────────────
 const PAGE_SIZES = {
-    a4:        { label: 'A4 Portrait',    width: '210mm', aspect: 1.414 },
-    a4l:       { label: 'A4 Landscape',   width: '297mm', aspect: 0.707 },
-    letter:    { label: 'Letter Portrait', width: '216mm', aspect: 1.294 },
-    wide:      { label: 'Widescreen 16:9', width: '297mm', aspect: 0.5625 },
+    a4: { label: 'A4 Portrait', width: '210mm', aspect: 1.414 },
+    a4l: { label: 'A4 Landscape', width: '297mm', aspect: 0.707 },
+    letter: { label: 'Letter Portrait', width: '216mm', aspect: 1.294 },
+    wide: { label: 'Widescreen 16:9', width: '297mm', aspect: 0.5625 },
 };
 
 function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pageSize, showCover, showTimestamp, showBranding }) {
@@ -162,12 +184,12 @@ function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pag
     });
     const isLight = exportTheme !== 'dark';
 
-    const bg      = isLight ? '#f8fafc'  : '#0f172a';
-    const surface = isLight ? '#ffffff'  : '#1e293b';
-    const border  = isLight ? '#e5e7eb'  : '#334155';
-    const text     = isLight ? '#111827'  : '#f1f5f9';
-    const muted    = isLight ? '#6b7280'  : '#94a3b8';
-    const accent   = '#6366f1';
+    const bg = isLight ? '#f8fafc' : '#0f172a';
+    const surface = isLight ? '#ffffff' : '#1e293b';
+    const border = isLight ? '#e5e7eb' : '#334155';
+    const text = isLight ? '#111827' : '#f1f5f9';
+    const muted = isLight ? '#6b7280' : '#94a3b8';
+    const accent = '#6366f1';
 
     // Sort by Y then X from layoutMap
     const sorted = [...widgets].sort((a, b) => {
@@ -179,8 +201,8 @@ function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pag
     });
 
     // Split KPI cards into groups of 4, others go full width or half width
-    const kpis  = sorted.filter(w => w.type === 'kpi_card');
-    const rest  = sorted.filter(w => w.type !== 'kpi_card');
+    const kpis = sorted.filter(w => w.type === 'kpi_card');
+    const rest = sorted.filter(w => w.type !== 'kpi_card');
 
     return (
         <div style={{ background: bg, minHeight: '100%', fontFamily: 'Inter,-apple-system,BlinkMacSystemFont,sans-serif', color: text }}>
@@ -254,7 +276,7 @@ function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pag
                                         : <div style={{ padding: 20 }}>
                                             <p style={{ fontSize: 11, color: muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{w.title}</p>
                                             <p style={{ fontSize: 28, fontWeight: 700, color: text }}>—</p>
-                                          </div>
+                                        </div>
                                     }
                                 </div>
                             );
@@ -328,15 +350,15 @@ function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pag
 // ExportModal — the main UI component
 // ─────────────────────────────────────────────────────────────────────────────
 const FORMATS = [
-    { key: 'pdf',  label: 'PDF',  icon: FileText,       desc: 'Browser print dialog → Save as PDF' },
-    { key: 'png',  label: 'PNG',  icon: Image,          desc: 'High-resolution dashboard image' },
-    { key: 'json', label: 'JSON', icon: FileJson,        desc: 'Raw dashboard configuration' },
-    { key: 'csv',  label: 'CSV',  icon: FileSpreadsheet, desc: 'Widget data as spreadsheet' },
+    { key: 'pdf', label: 'PDF', icon: FileText, desc: 'Browser print dialog → Save as PDF' },
+    { key: 'png', label: 'PNG', icon: Image, desc: 'High-resolution dashboard image' },
+    { key: 'json', label: 'JSON', icon: FileJson, desc: 'Raw dashboard configuration' },
+    { key: 'csv', label: 'CSV', icon: FileSpreadsheet, desc: 'Widget data as spreadsheet' },
 ];
 
 const THEMES = [
-    { key: 'light', label: 'Light',  icon: Sun },
-    { key: 'dark',  label: 'Dark',   icon: Moon },
+    { key: 'light', label: 'Light', icon: Sun },
+    { key: 'dark', label: 'Dark', icon: Moon },
 ];
 
 export default function ExportModal({
@@ -344,23 +366,24 @@ export default function ExportModal({
     layoutMap,
     dashName,
     isDark,
+    siteId,
     widgetData,   // optional: { [widgetId]: rawDataArray } for CSV export
     onClose,
 }) {
-    const [format,       setFormat]       = useState('pdf');
-    const [exportTheme,  setExportTheme]  = useState(isDark ? 'dark' : 'light');
-    const [pageSize,     setPageSize]     = useState('a4');
-    const [showCover,    setShowCover]    = useState(true);
+    const [format, setFormat] = useState('pdf');
+    const [exportTheme, setExportTheme] = useState(isDark ? 'dark' : 'light');
+    const [pageSize, setPageSize] = useState('a4');
+    const [showCover, setShowCover] = useState(true);
     const [showTimestamp, setShowTimestamp] = useState(true);
     const [showBranding, setShowBranding] = useState(true);
-    const [pngScale,     setPngScale]     = useState('2');
-    const [status,       setStatus]       = useState('idle');  // idle | building | printing | done | error
-    const [progress,     setProgress]     = useState(0);
-    const [errorMsg,     setErrorMsg]     = useState('');
+    const [pngScale, setPngScale] = useState('2');
+    const [status, setStatus] = useState('idle');  // idle | building | printing | done | error
+    const [progress, setProgress] = useState(0);
+    const [errorMsg, setErrorMsg] = useState('');
 
     // Print portal state
     const [printSnapshots, setPrintSnapshots] = useState(null);
-    const [showPrintTree,  setShowPrintTree]  = useState(false);
+    const [showPrintTree, setShowPrintTree] = useState(false);
     const printRootRef = useRef(null);
     const cancelRef = useRef(false);
 
@@ -390,11 +413,13 @@ export default function ExportModal({
         setProgress(0);
         setErrorMsg('');
 
+        const fileBase = (dashName || 'dashboard').replace(/[^\w\-]/g, '-').toLowerCase().replace(/-+/g, '-').replace(/^-|-$/g, '') || 'dashboard';
+
         try {
             // ── JSON export (no snapshot needed) ────────────────────────
             if (format === 'json') {
                 const payload = JSON.stringify({ name: dashName, widgets }, null, 2);
-                dlFile(payload, `${dashName.replace(/\s+/g, '-').toLowerCase()}.dashboard.json`, 'application/json');
+                dlFile(payload, `${fileBase}.dashboard.json`, 'application/json');
                 setStatus('done'); setProgress(100);
                 return;
             }
@@ -402,16 +427,31 @@ export default function ExportModal({
             // ── CSV export (no snapshot needed) ─────────────────────────
             if (format === 'csv') {
                 const lines = [];
-                widgets.forEach(w => {
-                    const data = widgetData?.[w.id];
+                for (const w of widgets) {
+                    let data = widgetData?.[w.id];
+                    if (!data?.length) {
+                        try {
+                            data = await fetchWidgetData(siteId, w);
+                        } catch {
+                            data = [];
+                        }
+                    }
                     if (data?.length) {
                         lines.push(`# ${w.title} (${w.type})`);
                         lines.push(toCSV(data));
                         lines.push('');
                     }
-                });
-                if (!lines.length) { setErrorMsg('No data available to export as CSV.'); setStatus('error'); return; }
-                dlFile(lines.join('\n'), `${dashName.replace(/\s+/g, '-').toLowerCase()}.csv`, 'text/csv');
+                }
+                if (!lines.length) {
+                    // Fallback: export dashboard structure when live data is unavailable
+                    lines.push('# Dashboard Summary');
+                    lines.push('title,type,dataSource,dateRange');
+                    widgets.forEach(w => {
+                        const esc = v => { const s = String(v ?? ''); return s.includes(',') ? `"${s}"` : s; };
+                        lines.push([esc(w.title), esc(w.type), esc(w.dataSource || ''), esc(w.dateRange || '30d')].join(','));
+                    });
+                }
+                dlFile(lines.join('\n'), `${fileBase}.csv`, 'text/csv');
                 setStatus('done'); setProgress(100);
                 return;
             }
@@ -444,12 +484,12 @@ export default function ExportModal({
                 const sorted = [...widgets].sort((a, b) => {
                     const la = layoutMap[a.id] || a.px || {};
                     const lb = layoutMap[b.id] || b.px || {};
-                    return (la.y||0) !== (lb.y||0) ? (la.y||0)-(lb.y||0) : (la.x||0)-(lb.x||0);
+                    return (la.y || 0) !== (lb.y || 0) ? (la.y || 0) - (lb.y || 0) : (la.x || 0) - (lb.x || 0);
                 });
                 // Header
                 const hdr = document.createElement('div');
-                hdr.style.cssText = `margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid ${exportTheme==='dark'?'#334155':'#e5e7eb'}`;
-                hdr.innerHTML = `<h1 style="margin:0;font-size:22px;font-weight:700;color:${exportTheme==='dark'?'#f1f5f9':'#111827'}">${dashName}</h1>
+                hdr.style.cssText = `margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid ${exportTheme === 'dark' ? '#334155' : '#e5e7eb'}`;
+                hdr.innerHTML = `<h1 style="margin:0;font-size:22px;font-weight:700;color:${exportTheme === 'dark' ? '#f1f5f9' : '#111827'}">${dashName}</h1>
                     ${showTimestamp ? `<p style="margin:4px 0 0;font-size:12px;color:#6b7280">Generated ${new Date().toLocaleString()}</p>` : ''}`;
                 comp.appendChild(hdr);
                 // Widgets grid
@@ -459,9 +499,9 @@ export default function ExportModal({
                     const snap = snapshots[w.id];
                     if (!snap) return;
                     const card = document.createElement('div');
-                    card.style.cssText = `background:${exportTheme==='dark'?'#1e293b':'#fff'};border-radius:10px;overflow:hidden;border:1px solid ${exportTheme==='dark'?'#334155':'#e5e7eb'}`;
+                    card.style.cssText = `background:${exportTheme === 'dark' ? '#1e293b' : '#fff'};border-radius:10px;overflow:hidden;border:1px solid ${exportTheme === 'dark' ? '#334155' : '#e5e7eb'}`;
                     const title = document.createElement('p');
-                    title.style.cssText = `margin:0;padding:10px 14px 8px;font-size:11px;font-weight:600;color:${exportTheme==='dark'?'#94a3b8':'#6b7280'};text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ${exportTheme==='dark'?'#334155':'#f3f4f6'}`;
+                    title.style.cssText = `margin:0;padding:10px 14px 8px;font-size:11px;font-weight:600;color:${exportTheme === 'dark' ? '#94a3b8' : '#6b7280'};text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid ${exportTheme === 'dark' ? '#334155' : '#f3f4f6'}`;
                     title.textContent = w.title;
                     const img = document.createElement('img');
                     img.src = snap;
@@ -489,7 +529,7 @@ export default function ExportModal({
                         if (!blob) { setErrorMsg('PNG generation failed.'); setStatus('error'); return; }
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
-                        a.href = url; a.download = `${dashName.replace(/\s+/g, '-').toLowerCase()}-dashboard.png`;
+                        a.href = url; a.download = `${fileBase}-dashboard.png`;
                         a.click(); URL.revokeObjectURL(url);
                         setStatus('done'); setProgress(100);
                     }, 'image/png');
@@ -528,11 +568,11 @@ export default function ExportModal({
             setShowPrintTree(false);
         }
     }, [format, exportTheme, pageSize, showCover, showTimestamp, showBranding, pngScale,
-        widgets, layoutMap, dashName, isDark, widgetData]);
+        widgets, layoutMap, dashName, isDark, siteId, widgetData]);
 
     const isRunning = status === 'building' || status === 'printing';
-    const isDone    = status === 'done';
-    const isError   = status === 'error';
+    const isDone = status === 'done';
+    const isError = status === 'error';
 
     return (
         <>
@@ -587,11 +627,10 @@ export default function ExportModal({
                                         key={key}
                                         onClick={() => { setFormat(key); setStatus('idle'); }}
                                         title={desc}
-                                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-xs font-medium transition ${
-                                            format === key
-                                                ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                                : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-                                        }`}
+                                        className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-xs font-medium transition ${format === key
+                                            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                                            : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                                            }`}
                                     >
                                         <Icon className="w-5 h-5" />
                                         {label}
@@ -612,11 +651,10 @@ export default function ExportModal({
                                                 <button
                                                     key={key}
                                                     onClick={() => setExportTheme(key)}
-                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition flex-1 justify-center ${
-                                                        exportTheme === key
-                                                            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                                            : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
-                                                    }`}
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition flex-1 justify-center ${exportTheme === key
+                                                        ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                                                        : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                                                        }`}
                                                 >
                                                     <Icon className="w-3.5 h-3.5" /> {label}
                                                 </button>
@@ -661,18 +699,17 @@ export default function ExportModal({
                                         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Options</p>
                                         <div className="space-y-2.5">
                                             {[
-                                                [showCover,     setShowCover,     'Include cover page'],
+                                                [showCover, setShowCover, 'Include cover page'],
                                                 [showTimestamp, setShowTimestamp, 'Include generated timestamp'],
-                                                [showBranding,  setShowBranding,  'Include InsightTrack branding'],
+                                                [showBranding, setShowBranding, 'Include InsightTrack branding'],
                                             ].map(([val, set, label]) => (
                                                 <label key={label} className="flex items-center gap-2.5 cursor-pointer">
                                                     <button
                                                         onClick={() => set(v => !v)}
-                                                        className={`w-4 h-4 rounded border-2 flex items-center justify-center transition shrink-0 ${
-                                                            val
-                                                                ? 'bg-indigo-500 border-indigo-500'
-                                                                : 'border-gray-300 dark:border-gray-600'
-                                                        }`}
+                                                        className={`w-4 h-4 rounded border-2 flex items-center justify-center transition shrink-0 ${val
+                                                            ? 'bg-indigo-500 border-indigo-500'
+                                                            : 'border-gray-300 dark:border-gray-600'
+                                                            }`}
                                                     >
                                                         {val && <Check className="w-2.5 h-2.5 text-white" />}
                                                     </button>
@@ -730,11 +767,10 @@ export default function ExportModal({
                         <button
                             onClick={isDone ? onClose : handleExport}
                             disabled={isRunning}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                                isDone
-                                    ? 'bg-green-500 text-white shadow-green-500/20'
-                                    : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-indigo-500/20'
-                            }`}
+                            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${isDone
+                                ? 'bg-green-500 text-white shadow-green-500/20'
+                                : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-indigo-500/20'
+                                }`}
                         >
                             {isRunning && <Loader2 className="w-4 h-4 animate-spin" />}
                             {isDone && <Check className="w-4 h-4" />}
@@ -742,10 +778,10 @@ export default function ExportModal({
                             {isRunning
                                 ? status === 'printing' ? 'Printing…' : 'Processing…'
                                 : isDone ? 'Done'
-                                : format === 'pdf' ? 'Export as PDF'
-                                : format === 'png' ? 'Export as PNG'
-                                : format === 'json' ? 'Download JSON'
-                                : 'Download CSV'}
+                                    : format === 'pdf' ? 'Export as PDF'
+                                        : format === 'png' ? 'Export as PNG'
+                                            : format === 'json' ? 'Download JSON'
+                                                : 'Download CSV'}
                         </button>
                     </div>
                 </div>

@@ -214,28 +214,28 @@ export default function Funnels() {
                     <FocusToggleButton />
                     <button
                         onClick={handleAutoDetect}
-                    disabled={stepsLoading || (eventTypes.length === 0 && topPaths.length === 0)}
-                    title="Auto-detect steps from your real tracked data"
-                    className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-500/20 transition-colors text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                    <Sparkles className="w-4 h-4" />
-                    {stepsLoading ? 'Detecting…' : 'Auto-detect'}
-                </button>
+                        disabled={stepsLoading || (eventTypes.length === 0 && topPaths.length === 0)}
+                        title="Auto-detect steps from your real tracked data"
+                        className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-500/20 transition-colors text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <Sparkles className="w-4 h-4" />
+                        {stepsLoading ? 'Detecting…' : 'Auto-detect'}
+                    </button>
                 </div>
             </div>
 
             {!focusMode && (
                 <PageNote
-                title="What is Funnel Analysis?"
-                summary="A funnel shows how many visitors complete each step in a multi-step process — like visiting a product page, adding to cart, and then purchasing. Drop-offs between steps reveal where you lose people."
-                details={[
-                    { label: 'Steps', text: 'Each step is either a pageview (visitor loaded a specific URL) or an event (visitor triggered a tracked action like add_to_cart or purchase).' },
-                    { label: 'Drop-off Rate', text: 'The percentage of visitors who did not proceed to the next step. High drop-off at the checkout step usually means friction (confusing form, unexpected shipping costs, etc.).' },
-                    { label: 'Auto-detect', text: 'InsightTrack can automatically suggest funnel steps based on your most visited pages and most common tracked events. Edit the steps to match your exact customer journey.' },
-                    { label: 'Save & Share', text: 'Saved funnels appear on your main Dashboard for quick access without needing to rebuild them each time.' },
-                ]}
-                businessTip="Build a funnel for your most important customer journey first (e.g. Homepage → Pricing → Sign-up). Even a 5% improvement in the worst drop-off step can significantly increase your conversion rate."
-                devTip="Funnel data is queried from DuckDB using CTEs that join ordered session events. Each step checks for a matching pageview or event type in the session. Served from GET /api/analytics/:siteId/funnel with steps[] in the query params."
+                    title="What is Funnel Analysis?"
+                    summary="A funnel shows how many visitors complete each step in a multi-step process — like visiting a product page, adding to cart, and then purchasing. Drop-offs between steps reveal where you lose people."
+                    details={[
+                        { label: 'Steps', text: 'Each step is either a pageview (visitor loaded a specific URL) or an event (visitor triggered a tracked action like add_to_cart or purchase).' },
+                        { label: 'Drop-off Rate', text: 'The percentage of visitors who did not proceed to the next step. High drop-off at the checkout step usually means friction (confusing form, unexpected shipping costs, etc.).' },
+                        { label: 'Auto-detect', text: 'InsightTrack can automatically suggest funnel steps based on your most visited pages and most common tracked events. Edit the steps to match your exact customer journey.' },
+                        { label: 'Save & Share', text: 'Saved funnels appear on your main Dashboard for quick access without needing to rebuild them each time.' },
+                    ]}
+                    businessTip="Build a funnel for your most important customer journey first (e.g. Homepage → Pricing → Sign-up). Even a 5% improvement in the worst drop-off step can significantly increase your conversion rate."
+                    devTip="Funnel data is queried from DuckDB using CTEs that join ordered session events. Each step checks for a matching pageview or event type in the session. Served from GET /api/analytics/:siteId/funnel with steps[] in the query params."
                 />
             )}
 

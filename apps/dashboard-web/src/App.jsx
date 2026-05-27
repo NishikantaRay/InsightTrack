@@ -29,6 +29,8 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Documentation = lazy(() => import('./pages/Documentation'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const SqlEditor = lazy(() => import('./pages/SqlEditor'));
+const Heatmap = lazy(() => import('./pages/Heatmap'));
 
 function ProtectedRoute({ children }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -178,6 +180,8 @@ function AppContent() {
                                                         <Route path="/settings" element={<Settings />} />
                                                         <Route path="/profile" element={<Profile />} />
                                                         <Route path="/docs" element={<Documentation />} />
+                                                        <Route path="/sql-editor" element={<SqlEditor />} />
+                                                        <Route path="/heatmap" element={<Heatmap />} />
                                                         <Route path="*" element={<Navigate to="/" replace />} />
                                                     </Routes>
                                                 </Suspense>
