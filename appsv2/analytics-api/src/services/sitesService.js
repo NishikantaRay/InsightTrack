@@ -486,8 +486,54 @@ export const sitesService = {
   history.pushState = function() {
     pushState.apply(history, arguments);
     trackPageview();
+    detectSiteSearch();
   };
-  window.addEventListener('popstate', function() { trackPageview(); });
+  window.addEventListener('popstate', function() { trackPageview(); detectSiteSearch(); });
+
+  // ── Site Search detection ──────────────────────────────────────────────────
+  // 1) Detect search query params in the current URL on every page load/navigation
+  // 2) Intercept form submissions that contain a search input
+  var _searchParams = ['q', 'query', 'search', 's', 'keyword', 'keywords', 'term', 'text', 'find'];
+  var _lastSearchUrl = null;
+
+  function detectSiteSearch() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      for (var i = 0; i < _searchParams.length; i++) {
+        var val = params.get(_searchParams[i]);
+        if (val && val.trim()) {
+          var key = window.location.pathname + '?' + _searchParams[i] + '=' + val.trim().toLowerCase();
+          if (key === _lastSearchUrl) return;
+          _lastSearchUrl = key;
+          send('/api/track/event', {
+            siteId: siteId, userId: userId, sessionId: sessionId, type: 'site_search',
+            url: window.location.href, path: window.location.pathname,
+            properties: { query: val.trim(), param: _searchParams[i] }
+          });
+          return;
+        }
+      }
+    } catch(e) {}
+  }
+
+  document.addEventListener('submit', function(e) {
+    try {
+      var form = e.target;
+      if (!form || form.tagName !== 'FORM') return;
+      var input = form.querySelector(
+        'input[type="search"], input[name="q"], input[name="query"], input[name="search"], input[name="s"], input[name="keyword"], input[name="keywords"], input[name="term"]'
+      );
+      if (!input || !input.value.trim()) return;
+      send('/api/track/event', {
+        siteId: siteId, userId: userId, sessionId: sessionId, type: 'site_search',
+        url: window.location.href, path: window.location.pathname,
+        properties: { query: input.value.trim(), param: input.name || 'q' }
+      });
+    } catch(e) {}
+  });
+
+  detectSiteSearch();
+  // ──────────────────────────────────────────────────────────────────────────
   
   window.analytics = {
     track: function(eventName, props) {

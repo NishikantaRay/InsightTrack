@@ -141,19 +141,24 @@ function NewVsReturningSection() {
                         <p className="text-sm text-text-muted dark:text-text-muted-dark">Returning ({summary.returningPercentage || 0}%)</p>
                     </div>
                 </div>
-                <div className="bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-5 flex items-center justify-center">
+                <div className="bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-5 flex flex-col gap-3">
+                    <p className="text-sm font-medium text-text-muted dark:text-text-muted-dark text-center">Visitor Split</p>
                     {pieData.some(d => d.value > 0) ? (
-                        <ResponsiveContainer width="100%" height={120}>
+                        <ResponsiveContainer width="100%" height={140}>
                             <PieChart>
-                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={5} dataKey="value">
+                                <Pie data={pieData} cx="50%" cy="45%" innerRadius={32} outerRadius={54} paddingAngle={5} dataKey="value">
                                     <Cell fill="#6366F1" />
                                     <Cell fill="#10B981" />
                                 </Pie>
-                                <Legend iconSize={10} wrapperStyle={{ fontSize: '12px' }} />
+                                <Tooltip
+                                    formatter={(value, name) => [value.toLocaleString(), name]}
+                                    contentStyle={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }}
+                                />
+                                <Legend iconSize={10} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
                             </PieChart>
                         </ResponsiveContainer>
                     ) : (
-                        <p className="text-sm text-text-muted dark:text-text-muted-dark">No data yet</p>
+                        <p className="text-sm text-text-muted dark:text-text-muted-dark text-center py-8">No data yet</p>
                     )}
                 </div>
             </div>

@@ -108,7 +108,7 @@ function EntryPagesTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-6">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Top Entry Pages</h3>
                 {chartData.length > 0 && (
                     <div className="h-64 mb-6">
@@ -117,7 +117,7 @@ function EntryPagesTab() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
                                 <XAxis type="number" tick={{ fontSize: 12 }} />
                                 <YAxis type="category" dataKey="page" tick={{ fontSize: 11 }} width={110} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: 8, color: '#F9FAFB' }} />
+                                <Tooltip contentStyle={{ backgroundColor: 'var(--color-card, #1F2937)', border: '1px solid var(--color-border, #374151)', borderRadius: 8 }} />
                                 <Bar dataKey="entries" fill="#6366F1" radius={[0, 4, 4, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -135,7 +135,7 @@ function ExitPagesTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-6">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Top Exit Pages</h3>
                 {chartData.length > 0 && (
                     <div className="h-64 mb-6">
@@ -144,7 +144,7 @@ function ExitPagesTab() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
                                 <XAxis type="number" tick={{ fontSize: 12 }} />
                                 <YAxis type="category" dataKey="page" tick={{ fontSize: 11 }} width={110} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: 8, color: '#F9FAFB' }} />
+                                <Tooltip contentStyle={{ backgroundColor: 'var(--color-card, #1F2937)', border: '1px solid var(--color-border, #374151)', borderRadius: 8 }} />
                                 <Bar dataKey="exits" fill="#EF4444" radius={[0, 4, 4, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -160,11 +160,13 @@ function SearchQueriesTable({ data }) {
     const [query, setQuery] = useState('');
     const [page, setPage] = useState(1);
 
+    const safeData = data || [];
+
     const filtered = useMemo(() => {
-        if (!query.trim()) return data;
+        if (!query.trim()) return safeData;
         const q = query.toLowerCase();
-        return data.filter((r) => r.query?.toLowerCase().includes(q) || r.page?.toLowerCase().includes(q));
-    }, [data, query]);
+        return safeData.filter((r) => r.query?.toLowerCase().includes(q) || r.page?.toLowerCase().includes(q));
+    }, [safeData, query]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const safePage = Math.min(page, totalPages);
@@ -213,7 +215,7 @@ function SearchQueriesTable({ data }) {
                     </tbody>
                 </table>
             </div>
-            <TablePagination page={safePage} totalPages={totalPages} onPrev={() => setPage((p) => Math.max(1, p - 1))} onNext={() => setPage((p) => Math.min(totalPages, p + 1))} totalRows={data.length} filteredRows={filtered.length} query={query} />
+            <TablePagination page={safePage} totalPages={totalPages} onPrev={() => setPage((p) => Math.max(1, p - 1))} onNext={() => setPage((p) => Math.min(totalPages, p + 1))} totalRows={safeData.length} filteredRows={filtered.length} query={query} />
         </div>
     );
 }
@@ -223,11 +225,15 @@ function SiteSearchTab() {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+            <div className="bg-card dark:bg-card-dark rounded-xl border border-border dark:border-border-dark p-6">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Search Queries</h3>
                 {loading && <div className="animate-pulse h-64 bg-gray-100 dark:bg-gray-800 rounded-lg" />}
                 {!loading && (!data?.length) && (
-                    <p className="text-gray-500 dark:text-gray-400 py-8 text-center">No site search data yet. Search tracking captures form submissions with search inputs.</p>
+                    <div className="flex flex-col items-center justify-center py-12 gap-3">
+                        <Search className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">No site search data yet.</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 text-center max-w-sm">Search tracking captures form submissions containing search inputs (e.g. <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">?q=</code> or <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">?search=</code> query params).</p>
+                    </div>
                 )}
                 {!loading && data?.length > 0 && (
                     <SearchQueriesTable data={data} />
