@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import DashboardLayout from './components/layout/DashboardLayout';
 import LoadingSkeleton from './components/ui/LoadingSkeleton';
 import ErrorBoundary from './components/ui/ErrorBoundary';
@@ -31,6 +32,7 @@ const Documentation = lazy(() => import('./pages/Documentation'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const SqlEditor = lazy(() => import('./pages/SqlEditor'));
 const Heatmap = lazy(() => import('./pages/Heatmap'));
+const SharedDashboard = lazy(() => import('./pages/SharedDashboard'));
 
 function ProtectedRoute({ children }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -121,6 +123,18 @@ function SiteGate({ children }) {
 function AppContent() {
     const theme = useThemeStore((s) => s.theme);
 
+    // Show a toast when the API interceptor auto-logs the user out on 401.
+    useEffect(() => {
+        const handler = () => {
+            toast.error('Your session has expired. Please log in again.', {
+                duration: 5000,
+                id: 'session-expired',
+            });
+        };
+        window.addEventListener('auth:logout', handler);
+        return () => window.removeEventListener('auth:logout', handler);
+    }, []);
+
     return (
         <div className={theme === 'dark' ? 'dark' : ''}>
             <div className="min-h-screen bg-bg dark:bg-bg-dark text-text-primary dark:text-text-primary-dark">
@@ -142,6 +156,9 @@ function AppContent() {
                 <BrowserRouter>
                     <Suspense fallback={<LoadingSkeleton type="page" />}>
                         <Routes>
+                            {/* Public shared dashboard — no auth, no sidebar */}
+                            <Route path="/share" element={<SharedDashboard />} />
+
                             {/* Public landing page */}
                             <Route path="/landing" element={<GuestRoute><Landing /></GuestRoute>} />
 

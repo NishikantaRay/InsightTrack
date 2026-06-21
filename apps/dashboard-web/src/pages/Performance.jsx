@@ -142,9 +142,29 @@ function WebVitalsOverviewTab() {
     );
 }
 
+const ERROR_PAGE_SIZES = [5, 10, 25, 50];
+
 function ErrorsTab() {
     const { data: errors, loading: errLoading } = useAnalytics('getJSErrors');
     const { data: trend, loading: trendLoading } = useAnalytics('getJSErrorsOverTime');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [query, setQuery] = useState('');
+
+    const filtered = useMemo(() => {
+        if (!errors?.length) return [];
+        if (!query.trim()) return errors;
+        const q = query.toLowerCase();
+        return errors.filter(e =>
+            e.message?.toLowerCase().includes(q) ||
+            e.page?.toLowerCase().includes(q) ||
+            e.sourceFile?.toLowerCase().includes(q)
+        );
+    }, [errors, query]);
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const safePage = Math.min(page, totalPages);
+    const pageErrors = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
     return (
         <div className="space-y-6">
@@ -168,33 +188,99 @@ function ErrorsTab() {
                 {!trendLoading && !trend?.length && <p className="text-gray-500 dark:text-gray-400 text-center py-4">No errors recorded</p>}
             </div>
 
-            {/* Error List */}
+            {/* Error List with Pagination */}
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Top Errors</h3>
+                <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+                    <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">JS Errors</h3>
+                        {!errLoading && errors?.length > 0 && (
+                            <p className="text-xs text-gray-400 mt-0.5">{filtered.length} of {errors.length} errors</p>
+                        )}
+                    </div>
+                    {!errLoading && errors?.length > 0 && (
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={query}
+                                    onChange={e => { setQuery(e.target.value); setPage(1); }}
+                                    placeholder="Search errors…"
+                                    className="pl-8 pr-7 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-red-400 w-48"
+                                />
+                                {query && (
+                                    <button onClick={() => { setQuery(''); setPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
+                            </div>
+                            <select
+                                value={pageSize}
+                                onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                                className="py-1.5 px-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none"
+                            >
+                                {ERROR_PAGE_SIZES.map(s => <option key={s} value={s}>{s} per page</option>)}
+                            </select>
+                        </div>
+                    )}
+                </div>
                 {errLoading && <div className="animate-pulse h-64 bg-gray-100 dark:bg-gray-800 rounded-lg" />}
-                {!errLoading && (!errors?.length) && <p className="text-gray-500 dark:text-gray-400 py-8 text-center">No JavaScript errors detected.</p>}
-                {!errLoading && errors?.length > 0 && (
-                    <div className="space-y-3">
-                        {errors.map((err, i) => (
-                            <div key={i} className="p-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                        <p className="font-mono text-sm text-red-700 dark:text-red-400 break-all">{err.message}</p>
-                                        {err.sourceFile && <p className="text-xs text-gray-500 mt-1 truncate">{err.sourceFile}</p>}
-                                        <p className="text-xs text-gray-400 mt-1">on {err.page}</p>
+                {!errLoading && (!errors?.length) && (
+                    <div className="flex flex-col items-center py-12 text-gray-400">
+                        <AlertTriangle className="w-10 h-10 mb-3 opacity-30" />
+                        <p className="text-sm">No JavaScript errors detected.</p>
+                        <p className="text-xs mt-1 opacity-70">Errors are captured automatically when your tracking script is installed.</p>
+                    </div>
+                )}
+                {!errLoading && errors?.length > 0 && filtered.length === 0 && (
+                    <p className="text-gray-400 text-sm py-8 text-center">No errors match &ldquo;{query}&rdquo;</p>
+                )}
+                {!errLoading && pageErrors.length > 0 && (
+                    <>
+                        <div className="space-y-3">
+                            {pageErrors.map((err, i) => (
+                                <div key={i} className="p-4 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <p className="font-mono text-sm text-red-700 dark:text-red-400 break-all">{err.message}</p>
+                                            {err.sourceFile && <p className="text-xs text-gray-500 mt-1 truncate">{err.sourceFile}</p>}
+                                            <p className="text-xs text-gray-400 mt-1">on {err.page}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <div className="text-lg font-bold text-red-600 dark:text-red-400">{err.occurrences}</div>
+                                            <div className="text-xs text-gray-500">{err.affectedUsers} users</div>
+                                        </div>
                                     </div>
-                                    <div className="text-right shrink-0">
-                                        <div className="text-lg font-bold text-red-600 dark:text-red-400">{err.occurrences}</div>
-                                        <div className="text-xs text-gray-500">{err.affectedUsers} users</div>
+                                    <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                                        <span>First: {err.firstSeen ? new Date(err.firstSeen).toLocaleDateString() : '-'}</span>
+                                        <span>Last: {err.lastSeen ? new Date(err.lastSeen).toLocaleDateString() : '-'}</span>
                                     </div>
                                 </div>
-                                <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                                    <span>First: {err.firstSeen ? new Date(err.firstSeen).toLocaleDateString() : '-'}</span>
-                                    <span>Last: {err.lastSeen ? new Date(err.lastSeen).toLocaleDateString() : '-'}</span>
+                            ))}
+                        </div>
+
+                        {/* Pagination controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)} of {filtered.length}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button onClick={() => setPage(1)} disabled={safePage === 1} title="First page" className="px-1.5 py-1 rounded text-xs hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">«</button>
+                                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums px-2">
+                                        Page {safePage} of {totalPages}
+                                    </span>
+                                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => setPage(totalPages)} disabled={safePage === totalPages} title="Last page" className="px-1.5 py-1 rounded text-xs hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">»</button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>

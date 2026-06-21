@@ -50,13 +50,20 @@ const WIDGET_PX = {
 };
 const RH_DIRS = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 function snapV(v, on) { return on ? Math.round(v / SNAP_PX) * SNAP_PX : v; }
+function isValidPx(px) {
+    return px && typeof px.x === 'number' && typeof px.y === 'number' &&
+        typeof px.w === 'number' && typeof px.h === 'number' &&
+        px.w > 0 && px.h > 0;
+}
+
 function buildPixelLayout(widgets, existing = {}, canvasW = 900) {
     const PAD = 16, GAP = 16;
     let cx = PAD, cy = PAD, rowH = 0;
     const result = {};
     for (const w of widgets) {
-        if (existing[w.id]) { result[w.id] = existing[w.id]; continue; }
-        if (w.px) { result[w.id] = w.px; continue; }
+        if (existing[w.id] && isValidPx(existing[w.id])) { result[w.id] = existing[w.id]; continue; }
+        // Only trust w.px if it has valid numeric dimensions — malformed records fall through to auto-layout
+        if (isValidPx(w.px)) { result[w.id] = w.px; continue; }
         const meta = WIDGET_PX[w.type] || WIDGET_PX.area_chart;
         const ww = Math.min(meta.defaultW, canvasW - PAD * 2);
         if (cx + ww > canvasW - PAD && cx > PAD) { cx = PAD; cy += rowH + GAP; rowH = 0; }
@@ -342,6 +349,18 @@ const DATA_SOURCES = [
     { key: 'devices', label: 'Devices', xKey: 'device', metrics: ['count'] },
     { key: 'countries', label: 'Countries', xKey: 'country', metrics: ['visitors'] },
     { key: 'sessions', label: 'Sessions', xKey: 'date', metrics: ['sessions', 'pageviews'] },
+    { key: 'referrers', label: 'Referrers', xKey: 'referrer', metrics: ['visitors'] },
+    { key: 'utm', label: 'UTM Campaigns', xKey: 'campaign', metrics: ['visits', 'conversions'] },
+    { key: 'entry_pages', label: 'Entry Pages', xKey: 'page', metrics: ['entries'] },
+    { key: 'exit_pages', label: 'Exit Pages', xKey: 'page', metrics: ['exits'] },
+    { key: 'browsers', label: 'Browsers', xKey: 'device', metrics: ['visitors'] },
+    { key: 'os', label: 'Operating Systems', xKey: 'device', metrics: ['visitors'] },
+    { key: 'bounce_rate', label: 'Bounce Rate Trend', xKey: 'date', metrics: ['bounceRate'] },
+    { key: 'avg_session', label: 'Avg Session Duration', xKey: 'date', metrics: ['avgDuration'] },
+    { key: 'conversions', label: 'Conversions / Goals', xKey: 'goal', metrics: ['conversions', 'revenue'] },
+    { key: 'new_vs_returning', label: 'New vs Returning', xKey: 'type', metrics: ['visitors'] },
+    { key: 'revenue', label: 'Revenue', xKey: 'date', metrics: ['revenue', 'orders'] },
+    { key: 'web_vitals', label: 'Performance Metrics', xKey: 'metric', metrics: ['p75'] },
 ];
 
 const KPI_METRICS = [
@@ -382,9 +401,11 @@ function encodeSharePayload(name, widgets) {
     return btoa(encodeURIComponent(JSON.stringify({ name, widgets })));
 }
 
-function decodeSharePayload(token) {
+export function decodeSharePayload(token) {
     try { return JSON.parse(decodeURIComponent(atob(token))); } catch { return null; }
 }
+
+export { isValidPx, buildPixelLayout };
 
 // infer column types from first data row
 function inferSchema(data) {
@@ -426,26 +447,57 @@ async function fetchWidgetData(siteId, dataSource, dateRange) {
         case 'countries': return normalise(await analyticsAPI.getCountries(siteId, dateRange, 15));
         case 'sessions': return normalise(await analyticsAPI.getSessions(siteId, dateRange));
         case 'kpi': return normalise(await analyticsAPI.getKPIs(siteId, dateRange));
+        case 'referrers': {
+            const raw = normalise(await analyticsAPI.getSources(siteId, dateRange));
+            // getSources returns { source, visitors, percentage }
+            return raw.map(r => ({ referrer: r.source || r.referrer || 'direct', visitors: r.visitors || 0 }));
+        }
+        case 'utm': return normalise(await analyticsAPI.getUTM(siteId, dateRange));
+        case 'entry_pages': return normalise(await analyticsAPI.getEntryPages(siteId, dateRange));
+        case 'exit_pages': return normalise(await analyticsAPI.getExitPages(siteId, dateRange));
+        case 'browsers':
+        case 'os':
+            // getDevices returns { device, visitors, percentage } — browser and OS
+            // breakdowns are not available as separate backend dimensions yet.
+            // Both widget types use the device breakdown as the closest proxy.
+            return normalise(await analyticsAPI.getDevices(siteId, dateRange));
+        case 'bounce_rate': return normalise(await analyticsAPI.getBounceRateTrend(siteId, dateRange));
+        case 'avg_session': return normalise(await analyticsAPI.getAvgSessionTrend(siteId, dateRange));
+        case 'conversions': {
+            const raw = normalise(await analyticsAPI.getGoalConversions(siteId, dateRange));
+            return raw.map(r => ({ goal: r.goal_name || r.name || 'Goal', conversions: r.conversions || r.count || 0, revenue: r.revenue || 0 }));
+        }
+        case 'new_vs_returning': {
+            const raw = normalise(await analyticsAPI.getNewVsReturning(siteId, dateRange));
+            return raw;
+        }
+        case 'revenue': return normalise(await analyticsAPI.getRevenue(siteId, dateRange));
+        case 'web_vitals': {
+            const raw = await analyticsAPI.getWebVitalsOverview(siteId, dateRange);
+            const overview = raw?.data ?? raw ?? {};
+            return Object.entries(overview).map(([metric, v]) => ({ metric, p75: v?.p75 ?? 0 }));
+        }
         default: return [];
     }
 }
 
 // ── widget renderer ───────────────────────────────────────────────────────────
 
-const WidgetRenderer = memo(function WidgetRenderer({ widget, siteId, isDark }) {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(widget.type !== 'text_note');
+export const WidgetRenderer = memo(function WidgetRenderer({ widget, siteId, isDark, staticData }) {
+    const [data, setData] = useState(staticData ?? null);
+    const [loading, setLoading] = useState(!staticData && widget.type !== 'text_note');
     const [error, setError] = useState(false);
 
     useEffect(() => {
-        if (widget.type === 'text_note') return;
+        // If static snapshot data was provided (shared view), skip the API call entirely
+        if (staticData !== undefined || widget.type === 'text_note') return;
         setLoading(true);
         setError(false);
         fetchWidgetData(siteId, widget.dataSource, widget.dateRange || '30d')
             .then(setData)
             .catch(() => { setData([]); setError(true); })
             .finally(() => setLoading(false));
-    }, [siteId, widget.dataSource, widget.dateRange, widget.type]);
+    }, [siteId, widget.dataSource, widget.dateRange, widget.type, staticData]);
 
     // Text / Note widget — no data needed
     if (widget.type === 'text_note') {
@@ -522,7 +574,9 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, siteId, isDark }) 
         <div className="flex flex-col items-center justify-center h-full gap-2 text-center p-4 min-h-[80px]">
             <BarChart3 className="w-8 h-8 text-gray-200 dark:text-gray-700" />
             <p className="text-sm text-gray-400">No data for this period</p>
-            <p className="text-xs text-gray-300 dark:text-gray-600">Try a wider date range</p>
+            <p className="text-xs text-gray-300 dark:text-gray-600">
+                {staticData !== undefined ? 'No data was available when this dashboard was shared' : 'Try a wider date range'}
+            </p>
         </div>
     );
 
@@ -719,7 +773,8 @@ const WidgetRenderer = memo(function WidgetRenderer({ widget, siteId, isDark }) 
     prev.widget.stripedRows === next.widget.stripedRows &&
     prev.widget.colorPalette === next.widget.colorPalette &&
     prev.siteId === next.siteId &&
-    prev.isDark === next.isDark
+    prev.isDark === next.isDark &&
+    prev.staticData === next.staticData
 );
 
 // ── right-side widget configuration panel ────────────────────────────────────────────
@@ -1262,7 +1317,9 @@ function DashboardBuilderTab() {
                 const cur = widgetsRef.current;
                 const lm = layoutMapRef.current;
                 const name = dashNameRef.current;
-                const widgetsToSave = cur.map(w => lm[w.id] ? { ...w, px: lm[w.id] } : w);
+                // Use buildPixelLayout so every widget gets a valid px — never skip
+                const fullLayout = buildPixelLayout(cur, lm, 900);
+                const widgetsToSave = cur.map(w => ({ ...w, px: fullLayout[w.id] || w.px }));
                 await reportingAPI.updateDashboard(current.siteId || siteId, current.id, { name, widgets: widgetsToSave });
                 setIsDirty(false);
                 toast.success('Auto-saved', { duration: 1800, icon: '💾', position: 'bottom-right' });
@@ -1282,9 +1339,12 @@ function DashboardBuilderTab() {
         if (tok) {
             const parsed = decodeSharePayload(tok);
             if (parsed?.widgets) {
+                const ws = parsed.widgets;
+                const savedLayout = {};
+                for (const w of ws) { if (isValidPx(w.px)) savedLayout[w.id] = w.px; }
                 setDashName(parsed.name || 'Shared Dashboard');
-                setWidgets(parsed.widgets);
-                setLayoutMap(buildPixelLayout(parsed.widgets, {}, 900));
+                setWidgets(ws);
+                setLayoutMap(buildPixelLayout(ws, savedLayout, 900));
                 setIsShared(true);
                 setView('view');
             }
@@ -1329,12 +1389,21 @@ function DashboardBuilderTab() {
         setView('edit');
     };
 
+    const extractSavedLayout = (ws) => {
+        const saved = {};
+        for (const w of ws) {
+            if (isValidPx(w.px)) saved[w.id] = w.px;
+        }
+        return saved;
+    };
+
     const startEdit = (dash) => {
         setCurrent(dash); setIsShared(false);
         setDashName(dash.name);
         const ws = parseWidgets(dash.widgets);
         setWidgets(ws);
-        setLayoutMap(buildPixelLayout(ws, {}, 900));
+        const savedLayout = extractSavedLayout(ws);
+        setLayoutMap(buildPixelLayout(ws, savedLayout, 900));
         setView('edit');
     };
 
@@ -1343,7 +1412,8 @@ function DashboardBuilderTab() {
         setDashName(dash.name || 'My Dashboard');
         const ws = parseWidgets(dash.widgets);
         setWidgets(ws);
-        setLayoutMap(buildPixelLayout(ws, {}, 900));
+        const savedLayout = extractSavedLayout(ws);
+        setLayoutMap(buildPixelLayout(ws, savedLayout, 900));
         setView('view');
     };
 
@@ -1456,11 +1526,21 @@ function DashboardBuilderTab() {
         if (!widgets.length) return toast.error('Add at least one widget');
         setSaving(true);
         try {
+            // Build a complete layoutMap that covers every widget:
+            // - Existing layoutMap entries (from drag/resize in view mode) take priority
+            // - Widgets that already carry valid px positions use those
+            // - Remaining widgets get auto-placed by buildPixelLayout
+            const fullLayout = buildPixelLayout(widgets, layoutMapRef.current, 900);
+            const widgetsToSave = widgets.map(w => ({ ...w, px: fullLayout[w.id] || w.px }));
+
             if (current?.id) {
-                await reportingAPI.updateDashboard(siteId, current.id, { name: dashName, widgets });
+                await reportingAPI.updateDashboard(siteId, current.id, { name: dashName, widgets: widgetsToSave });
                 toast.success('Dashboard updated');
             } else {
-                await reportingAPI.createDashboard(siteId, { name: dashName, widgets });
+                const res = await reportingAPI.createDashboard(siteId, { name: dashName, widgets: widgetsToSave });
+                if (res?.data?.id || res?.id) {
+                    setCurrent(res?.data || res);
+                }
                 toast.success('Dashboard created');
             }
             loadList(); setView('list');
@@ -1474,13 +1554,44 @@ function DashboardBuilderTab() {
     };
 
     // ── share / export ───────────────────────────────────────────────────────
-    const handleShare = (name, wgs, lm) => {
-        const token = encodeSharePayload(name, withLayout(wgs, lm));
-        const url = `${window.location.origin}${window.location.pathname}?dash=${token}`;
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(url).then(() => toast.success('Share link copied to clipboard!'));
-        } else {
-            prompt('Copy this link:', url);
+    const handleShare = async (name, wgs, lm) => {
+        const toastId = toast.loading('Preparing share link…');
+        try {
+            // Embed full layout positions
+            const fullLayout = buildPixelLayout(wgs, lm, 900);
+            // Fetch a data snapshot for every data widget so the shared view shows
+            // real charts without needing auth (API calls would 401 in incognito)
+            const widgetsWithSnapshot = await Promise.all(
+                wgs.map(async (w) => {
+                    const base = { ...w, px: fullLayout[w.id] || w.px };
+                    if (w.type === 'text_note') return base;
+                    try {
+                        // Use widget's own dateRange for the snapshot.
+                        // Fall back to 'all' so shared views always show available data
+                        // even if the widget's period has no events yet.
+                        let snap = await fetchWidgetData(siteId, w.dataSource, w.dateRange || '30d');
+                        if (!snap?.length) {
+                            snap = await fetchWidgetData(siteId, w.dataSource, 'all');
+                        }
+                        return { ...base, _data: snap };
+                    } catch (err) {
+                        console.warn('Share snapshot failed for widget', w.id, err?.message);
+                        return { ...base, _data: [] };
+                    }
+                })
+            );
+            const token = encodeSharePayload(name, widgetsWithSnapshot);
+            // /share is a public route — no auth required, works in incognito
+            const url = `${window.location.origin}/share?dash=${token}`;
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(url);
+                toast.success('Share link copied! Opens without login.', { id: toastId });
+            } else {
+                toast.dismiss(toastId);
+                prompt('Copy this link:', url);
+            }
+        } catch {
+            toast.error('Failed to generate share link', { id: toastId });
         }
     };
 
@@ -1758,9 +1869,12 @@ function DashboardBuilderTab() {
                                 setSaving(true);
                                 clearTimeout(autosaveRef.current);
                                 try {
-                                    // Always embed current layoutMap positions before saving
-                                    const widgetsToSave = withLayout(widgets, layoutMap);
-                                    await reportingAPI.updateDashboard(siteId, current.id, { name: dashName, widgets: widgetsToSave });
+                                    // Use refs to guarantee we read the latest layout, not stale closure values
+                                    const lm = layoutMapRef.current;
+                                    const cur = widgetsRef.current;
+                                    const fullLayout = buildPixelLayout(cur, lm, 900);
+                                    const widgetsToSave = cur.map(w => ({ ...w, px: fullLayout[w.id] || w.px }));
+                                    await reportingAPI.updateDashboard(siteId, current.id, { name: dashNameRef.current, widgets: widgetsToSave });
                                     setWidgets(widgetsToSave);
                                     setIsDirty(false);
                                     toast.success('Layout saved');

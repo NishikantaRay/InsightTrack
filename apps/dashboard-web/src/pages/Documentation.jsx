@@ -34,8 +34,24 @@ const apiEndpoints = [
             { method: 'GET', path: '/all', desc: 'All analytics in one call' },
             { method: 'GET', path: '/engagement/summary', desc: 'Scroll depth, clicks, time-on-page KPIs' },
             { method: 'GET', path: '/engagement/scroll-depth', desc: 'Per-page scroll depth milestones' },
-            { method: 'GET', path: '/engagement/heatmap', desc: 'Click coordinates for a specific page' },
-            { method: 'GET', path: '/engagement/heatmap-summary', desc: 'Top clicked elements across all pages' },
+            { method: 'GET', path: '/engagement/heatmap', desc: 'Click coordinates for a specific page (relX, relY, clicks, selector)' },
+            { method: 'GET', path: '/engagement/heatmap-summary', desc: 'Pages with click data — used for page picker dropdown' },
+            { method: 'GET', path: '/engagement/rage-clicks', desc: 'Elements with 3+ rapid clicks within 1 second' },
+            { method: 'GET', path: '/engagement/time-on-page', desc: 'Average time spent per page' },
+            { method: 'GET', path: '/page-actions', desc: 'Top clicked elements on a specific page (Event Explorer)' },
+            { method: 'GET', path: '/performance/web-vitals', desc: 'Core Web Vitals (LCP/FID/CLS/INP/TTFB) per page' },
+            { method: 'GET', path: '/performance/web-vitals-overview', desc: 'Aggregated p75 Web Vitals across all pages' },
+            { method: 'GET', path: '/performance/errors', desc: 'Grouped JS errors with occurrences, affected users, first/last seen' },
+            { method: 'GET', path: '/performance/errors-over-time', desc: 'Daily JS error counts for trend chart' },
+            { method: 'GET', path: '/audience/new-vs-returning', desc: 'New vs returning visitor split' },
+            { method: 'GET', path: '/audience/cohorts', desc: 'Cohort retention heatmap data' },
+            { method: 'GET', path: '/content/entry-pages', desc: 'Pages where sessions start' },
+            { method: 'GET', path: '/content/exit-pages', desc: 'Pages where sessions end' },
+            { method: 'GET', path: '/content/site-search', desc: 'Search queries captured from site search forms' },
+            { method: 'GET', path: '/acquisition/campaigns', desc: 'UTM campaign performance breakdown' },
+            { method: 'GET', path: '/acquisition/social', desc: 'Social media traffic sources' },
+            { method: 'GET', path: '/goals/conversions', desc: 'Goal conversion counts and revenue' },
+            { method: 'GET', path: '/revenue', desc: 'Revenue events over time' },
         ],
     },
     {
@@ -151,20 +167,21 @@ const trackingEvents = [
 ];
 
 const dashboardPages = [
-    { icon: BarChart3, name: 'Dashboard', path: '/', desc: 'KPI cards with sparklines, traffic + pageview charts, bounce rate trend, period comparison' },
-    { icon: FileText, name: 'Pages', path: '/pages', desc: 'Top pages table with pageview counts, unique visitors, % of traffic, configurable limit' },
+    { icon: BarChart3, name: 'Dashboard', path: '/', desc: 'KPI cards with sparklines, traffic + pageview charts, bounce rate trend, period comparison, saved funnel widget, visitor map' },
+    { icon: FileText, name: 'Pages', path: '/pages', desc: 'Top pages table with pageview counts, unique visitors, % of traffic, click event explorer per page' },
     { icon: Activity, name: 'Realtime', path: '/realtime', desc: 'Live active visitors, world map, live pages list, device breakdown, event stream' },
     { icon: Eye, name: 'Engagement', path: '/engagement', desc: 'Scroll depth milestones, click heatmaps, rage click detection, time-on-page stats' },
+    { icon: Map, name: 'Heatmap', path: '/heatmap', desc: 'Visual click heatmap overlaid on live page iframe. Dot clustering, device filter (all/desktop/mobile), page picker, hover tooltips, summary stats, paginated click distribution table, CSV export' },
     { icon: Users, name: 'Audience', path: '/audience', desc: 'New vs returning, cohort retention heatmap, visitor segments by device/browser/OS/country' },
     { icon: BookOpen, name: 'Content', path: '/content', desc: 'Entry pages, exit pages, site search queries with frequency counts' },
     { icon: Megaphone, name: 'Acquisition', path: '/acquisition', desc: 'UTM campaign dashboard, social media traffic breakdown, search keywords' },
-    { icon: Gauge, name: 'Performance', path: '/performance', desc: 'Core Web Vitals (LCP/FID/CLS/INP/TTFB) with color-coded thresholds, JS error tracking' },
+    { icon: Gauge, name: 'Performance', path: '/performance', desc: 'Core Web Vitals (LCP/FID/CLS/INP/TTFB) with color-coded thresholds, JS error tracking with pagination and search' },
     { icon: Layers, name: 'Funnels', path: '/funnels', desc: 'Multi-step conversion funnel with per-stage drop-off rates and visual narrowing chart' },
     { icon: GitBranch, name: 'User Flow', path: '/user-flow', desc: 'Sankey-style page navigation diagram with entry/transition/exit nodes' },
     { icon: Target, name: 'Conversions', path: '/conversions', desc: 'Goal tracking, A/B test management and results, revenue attribution' },
-    { icon: TrendingUp, name: 'Reporting', path: '/reporting', desc: 'Timeline annotations, scheduled reports, custom dashboards, JSON data export' },
+    { icon: TrendingUp, name: 'Reporting', path: '/reporting', desc: 'Custom dashboards (freeform pixel canvas, 18 data sources, layout persistence, share/export), annotations, scheduled reports, CSV/JSON data export' },
     { icon: Lock, name: 'Privacy', path: '/privacy', desc: 'DNT/GPC status, data retention policy config, manual cleanup trigger' },
-    { icon: SettingsIcon, name: 'Settings', path: '/settings', desc: 'Site management (add/edit/delete), tracking snippet, site selector' },
+    { icon: SettingsIcon, name: 'Settings', path: '/settings', desc: 'Site management (add/edit/delete), tracking snippet, alerts panel with pagination and search' },
     { icon: Users, name: 'Profile', path: '/profile', desc: 'User account name, email, password update' },
 ];
 
@@ -1234,6 +1251,120 @@ window.trackPurchase(29.99);`}</CodeBlock>
                                     <div className="font-medium text-text-primary dark:text-text-primary-dark">{r.feature}</div>
                                     <div className="text-text-secondary dark:text-text-secondary-dark">{r.detail}</div>
                                 </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </Collapsible>
+
+            {/* Heatmap */}
+            <Collapsible title="Visual Heatmap" icon={Map} color="text-accent">
+                <div className="space-y-3 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>The Heatmap page (<code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">/heatmap</code>) overlays click-density dots on a live iframe preview of any page on your tracked site.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { label: 'Dot clustering', detail: 'Nearby dots (within 3% radius) are merged to reduce visual noise. Toggle off for raw positions.' },
+                            { label: 'Device filter', detail: 'Filter dots by All / Desktop / Mobile to compare click patterns across device types.' },
+                            { label: 'Page picker', detail: 'Dropdown lists all pages that have click data with click counts. Includes search filter.' },
+                            { label: 'Hover tooltips', detail: 'Hovering a dot shows its click count and CSS selector.' },
+                            { label: 'Summary stats', detail: 'Total clicks, unique elements, top element selector, and max clicks shown as cards.' },
+                            { label: 'Click distribution table', detail: 'Paginated table (20 rows/page) of all elements sorted by clicks, with % share bar.' },
+                            { label: 'CSV export', detail: 'Downloads current filtered click data as a CSV file for offline analysis.' },
+                            { label: 'Colour scale', detail: 'Indigo (< 20%) → green → yellow → orange → red (> 80% of max clicks).' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <CodeBlock label="API — heatmap dots">{`GET /api/analytics/:siteId/engagement/heatmap?path=/about&dateRange=30d
+// Response: [{ relX: 52, relY: 38, clicks: 47, selector: "button.cta" }]`}</CodeBlock>
+                </div>
+            </Collapsible>
+
+            {/* JS Errors */}
+            <Collapsible title="JS Error Tracking" icon={AlertCircle} color="text-red-500">
+                <div className="space-y-3 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>JS errors are captured automatically via <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">window.onerror</code> and <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">window.onunhandledrejection</code> in the tracking script. They appear in <strong className="text-text-primary dark:text-text-primary-dark">Performance → JS Errors</strong>.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { label: 'Error trend chart', detail: 'Area chart of daily JS error counts. Shows regressions after deploys.' },
+                            { label: 'Pagination', detail: 'Configurable page size: 5 / 10 / 25 / 50 errors per page.' },
+                            { label: 'Search', detail: 'Filter by error message, page path, or source file. Row count updates in header.' },
+                            { label: 'Per-error info', detail: 'Message, source file, page, occurrences, affected users, first/last seen dates.' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <CodeBlock label="API">{`GET /api/analytics/:siteId/performance/errors?dateRange=30d
+GET /api/analytics/:siteId/performance/errors-over-time?dateRange=30d`}</CodeBlock>
+                </div>
+            </Collapsible>
+
+            {/* Alerts */}
+            <Collapsible title="Traffic Alerts" icon={Activity} color="text-amber-500">
+                <div className="space-y-3 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>Traffic alerts are auto-detected at query time by comparing each day's visitor count against the rolling 7-day average. They appear in <strong className="text-text-primary dark:text-text-primary-dark">Settings → Alerts</strong>.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { label: 'Spike alert', detail: 'Visitors significantly above rolling average. Shows amber TrendingUp icon.' },
+                            { label: 'Drop alert', detail: 'Visitors significantly below rolling average. Shows red TrendingDown icon.' },
+                            { label: 'Pagination', detail: 'Default 10 alerts per page with prev/next controls.' },
+                            { label: 'Search', detail: 'Filter alerts by message text, type (spike/drop), or date.' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <CodeBlock label="API">{`GET /api/analytics/:siteId/alerts?dateRange=30d
+// Response: [{ type: "spike"|"drop", date, message, change: %, average: n }]`}</CodeBlock>
+                </div>
+            </Collapsible>
+
+            {/* Dashboard Builder */}
+            <Collapsible title="Custom Dashboard Builder" icon={SettingsIcon} color="text-purple-500">
+                <div className="space-y-3 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>The Dashboard Builder is in <strong className="text-text-primary dark:text-text-primary-dark">Reporting → Dashboard Builder</strong>. It renders widgets on a freeform pixel canvas with drag, resize, and persistent layout saving.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { label: 'Layout persistence fix', detail: 'Widget px positions are saved per widget in the JSONB widgets column. On load, saved positions are restored exactly — no re-layout on refresh, logout, or revisit.' },
+                            { label: 'Widget types', detail: 'KPI Card, Area Chart, Bar Chart, Pie Chart, Data Table, Text/Note.' },
+                            { label: '18 data sources', detail: 'Traffic, Top Pages, Sources, Devices, Countries, Sessions, Referrers, UTM, Entry Pages, Exit Pages, Browsers, OS, Bounce Rate, Avg Session, Conversions, New vs Returning, Revenue, Web Vitals.' },
+                            { label: 'Auto-save', detail: '3s debounce after any drag/resize. Manual "Save Layout" button also available.' },
+                            { label: 'Snap to grid', detail: 'Toggle 20px grid snapping on/off. Grid dots shown as background.' },
+                            { label: 'Share link', detail: 'Encodes full dashboard config as base64 in ?dash= URL param. Read-only shared view, no login needed.' },
+                            { label: 'Per-widget capture', detail: 'Camera button on each widget saves it as a PNG via html2canvas.' },
+                            { label: 'Export / Print', detail: 'Exports the full canvas as PDF via browser print dialog or PNG via html2canvas.' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </Collapsible>
+
+            {/* Focus Mode */}
+            <Collapsible title="Focus Mode" icon={Eye} color="text-indigo-500">
+                <div className="space-y-3 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>Focus Mode hides page headers, titles, and PageNote info panels so charts and data use the full available width. Available on every analytics page via the Focus button in the top-right corner.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { label: 'Toggle', detail: 'Click the "Focus" button top-right on any page. Label toggles between "Focus" (off) and "Show" (on).' },
+                            { label: 'What is hidden', detail: 'Page title, subtitle, PageNote panels. Charts, tables, filters, and controls stay visible.' },
+                            { label: 'State management', detail: 'Stored in Zustand useFocusModeStore. Persists within session, resets on page refresh.' },
+                            { label: 'Usage in components', detail: 'const { focusMode } = useFocusModeStore(); — wrap header content in {!focusMode && ...}' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
                             </div>
                         ))}
                     </div>

@@ -29,9 +29,19 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response.data,
     (error) => {
+        // Auto-logout on 401 — token expired or invalidated server-side.
+        // Import is deferred to avoid a circular dependency at module init time.
+        if (error.response?.status === 401) {
+            // Clear auth state and redirect to login without a full page reload.
+            // We use a custom event so the Zustand store (loaded separately) can react.
+            localStorage.removeItem('analytics-token');
+            localStorage.removeItem('analytics-user-profile');
+            window.dispatchEvent(new CustomEvent('auth:logout', { detail: { reason: 'session_expired' } }));
+        }
         const payload = error.response?.data || {};
         const message = payload.error || error.message || 'Request failed';
         const enriched = new Error(message);
+        enriched.status = error.response?.status;
         if (payload.diagnostics) enriched.diagnostics = payload.diagnostics;
         if (payload.requestId) enriched.requestId = payload.requestId;
         if (error.code === 'ERR_CANCELED') enriched.code = 'ERR_CANCELED';
