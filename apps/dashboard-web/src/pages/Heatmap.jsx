@@ -155,6 +155,14 @@ export default function Heatmap() {
         ? `custom:${customStart}:${customEnd}`
         : dateRange;
 
+    // Keep stable refs so useEffect dependency arrays don't re-fire on every render
+    const siteIdRef = useRef(siteId);
+    const effectiveDateRangeRef = useRef(effectiveDateRange);
+    const pathRef = useRef(path);
+    useEffect(() => { siteIdRef.current = siteId; }, [siteId]);
+    useEffect(() => { effectiveDateRangeRef.current = effectiveDateRange; }, [effectiveDateRange]);
+    useEffect(() => { pathRef.current = path; }, [path]);
+
     // Pre-fill site URL from site domain
     useEffect(() => {
         if (sites && sites.length > 0) {
@@ -167,34 +175,45 @@ export default function Heatmap() {
         }
     }, [sites, siteId]);
 
-    // Fetch heatmap summary for page picker
+    // Fetch heatmap summary for page picker — stable deps, no loop risk
     useEffect(() => {
         if (!siteId) return;
+        let cancelled = false;
         analyticsAPI.getHeatmapSummary(siteId, effectiveDateRange)
-            .then(res => setPageList(res?.data || []))
-            .catch(() => setPageList([]));
+            .then(res => { if (!cancelled) setPageList(res?.data || []); })
+            .catch(() => { if (!cancelled) setPageList([]); });
+        return () => { cancelled = true; };
     }, [siteId, effectiveDateRange]);
 
-    const fetchHeatmap = useCallback(() => {
+    // Core heatmap fetch — AbortController cancels in-flight requests on rapid re-fires
+    useEffect(() => {
         if (!siteId) return;
+        const controller = new AbortController();
         setLoading(true);
         analyticsAPI.getHeatmap(siteId, effectiveDateRange, path)
-            .then(res => setHeatmapData(res?.data || []))
-            .catch(() => setHeatmapData([]))
-            .finally(() => setLoading(false));
+            .then(res => {
+                if (!controller.signal.aborted) setHeatmapData(res?.data || []);
+            })
+            .catch(() => {
+                if (!controller.signal.aborted) setHeatmapData([]);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setLoading(false);
+            });
+        return () => controller.abort();
+    // Only depend on the three values that actually change the query — not a callback ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [siteId, effectiveDateRange, path]);
-
-    useEffect(() => {
-        fetchHeatmap();
-    }, [fetchHeatmap]);
 
     const handleApply = (e) => {
         e.preventDefault();
-        setPath(pathInput.startsWith('/') ? pathInput : '/' + pathInput);
+        const newPath = pathInput.startsWith('/') ? pathInput : '/' + pathInput;
         setSiteUrl(siteUrlInput);
         setIframeLoaded(false);
         setIframeError(false);
         setTablePage(1);
+        // Only update path if it changed — avoids re-triggering the fetch effect needlessly
+        setPath(prev => prev === newPath ? prev : newPath);
     };
 
     // ── Filtered and clustered data ────────────────────────────────────────────
