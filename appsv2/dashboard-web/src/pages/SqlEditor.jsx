@@ -539,16 +539,16 @@ LIMIT 20`,
 
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] gap-0 -m-4 md:-m-6">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border dark:border-border-dark bg-card dark:bg-card-dark shrink-0">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border dark:border-border-dark bg-card dark:bg-card-dark shrink-0 overflow-x-auto">
                 <Database className="w-4 h-4 text-accent shrink-0" />
-                <h1 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">SQL Editor</h1>
-                <span className="ml-1 text-xs text-text-muted dark:text-text-muted-dark">DuckDB · read-only</span>
+                <h1 className="text-sm font-semibold text-text-primary dark:text-text-primary-dark shrink-0">SQL Editor</h1>
+                <span className="ml-1 text-xs text-text-muted dark:text-text-muted-dark shrink-0 hidden sm:inline">DuckDB · read-only</span>
 
-                <div className="flex-1" />
+                <div className="flex-1 min-w-[8px]" />
 
                 <button
                     onClick={() => setExplainMode((v) => !v)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border ${explainMode
+                    className={`shrink-0 px-3 py-1.5 text-xs rounded-lg border ${explainMode
                             ? 'bg-accent/10 border-accent/30 text-accent'
                             : 'border-border dark:border-border-dark text-text-secondary dark:text-text-secondary-dark'
                         }`}
@@ -556,7 +556,7 @@ LIMIT 20`,
                     EXPLAIN
                 </button>
 
-                <div className="relative">
+                <div className="relative shrink-0">
                     <button
                         onClick={() => {
                             setShowExamples((v) => !v);
@@ -568,7 +568,7 @@ LIMIT 20`,
                         Examples
                     </button>
                     {showExamples && (
-                        <div className="absolute right-0 top-full mt-1 z-30 w-72 rounded-xl shadow-lg border border-border dark:border-border-dark bg-card dark:bg-card-dark overflow-hidden max-h-80 overflow-y-auto">
+                        <div className="absolute right-0 top-full mt-1 z-30 w-[min(18rem,calc(100vw-2rem))] rounded-xl shadow-lg border border-border dark:border-border-dark bg-card dark:bg-card-dark overflow-hidden max-h-80 overflow-y-auto">
                             {EXAMPLE_QUERIES.map((ex) => (
                                 <button
                                     key={ex.label}
@@ -585,7 +585,7 @@ LIMIT 20`,
                     )}
                 </div>
 
-                <div className="relative">
+                <div className="relative shrink-0">
                     <button
                         onClick={() => {
                             setShowHistory((v) => !v);
@@ -597,7 +597,7 @@ LIMIT 20`,
                         History
                     </button>
                     {showHistory && (
-                        <div className="absolute right-0 top-full mt-1 z-30 w-96 max-h-80 flex flex-col rounded-xl shadow-lg border border-border dark:border-border-dark bg-card dark:bg-card-dark overflow-hidden">
+                        <div className="absolute right-0 top-full mt-1 z-30 w-[min(24rem,calc(100vw-2rem))] max-h-80 flex flex-col rounded-xl shadow-lg border border-border dark:border-border-dark bg-card dark:bg-card-dark overflow-hidden">
                             <div className="flex items-center justify-between px-3 py-2 border-b border-border dark:border-border-dark shrink-0">
                                 <span className="text-xs font-medium text-text-primary dark:text-text-primary-dark">Local History</span>
                                 <button
@@ -892,7 +892,7 @@ LIMIT 20`,
                                     <>
                                         <div className="px-4 py-2 border-b border-border dark:border-border-dark bg-card dark:bg-card-dark flex items-center gap-2">
                                             <Filter className="w-3.5 h-3.5 text-text-muted dark:text-text-muted-dark" />
-                                            <div className="relative">
+                                            <div className="relative shrink-0">
                                                 <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-text-muted dark:text-text-muted-dark" />
                                                 <input
                                                     value={gridFilter}

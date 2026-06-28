@@ -91,7 +91,8 @@ export default function Navbar() {
                     </button>
 
                     {showNotifications && (
-                        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-80 max-h-96 overflow-y-auto rounded-xl shadow-xl
+                        <div className="fixed left-3 right-3 top-[4.25rem] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2
+                            sm:w-80 max-h-[70vh] sm:max-h-96 overflow-y-auto rounded-xl shadow-xl
                             bg-card dark:bg-card-dark border border-border dark:border-border-dark z-50">
                             <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-border-dark">
                                 <h3 className="text-sm font-semibold">Notifications</h3>

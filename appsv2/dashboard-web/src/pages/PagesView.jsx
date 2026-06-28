@@ -145,6 +145,7 @@ export default function PagesView() {
                 error={error}
                 empty={!tableData.length}
                 onExport={() => exportToCSV(tableData, 'pages.csv')}
+                noPng
             >
                 <DataTable columns={columns} data={tableData} />
             </ChartCard>
@@ -183,6 +184,7 @@ export default function PagesView() {
                         </div>
                     }
                     onExport={() => exportToCSV(actionsData, `actions-${selectedPage.replace(/\//g, '-')}.csv`)}
+                    noPng
                 >
                     <PageActionsTable
                         data={actionsData}

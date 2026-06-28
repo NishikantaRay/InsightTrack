@@ -1,16 +1,27 @@
-import { useRef, memo } from 'react';
+import { useRef, useState, useEffect, memo } from 'react';
 import { Download, Image } from 'lucide-react';
 import { exportChartToPNG } from '../../utils/exportUtils';
 import LoadingSkeleton from './LoadingSkeleton';
 import EmptyState from './EmptyState';
 import InfoTooltip from './InfoTooltip';
 
-function ChartCard({ title, subtitle, children, loading, error, empty, onExport, className = '', info, headerActions }) {
+function ChartCard({ title, subtitle, children, loading, error, empty, onExport, noPng = false, className = '', info, headerActions }) {
     const chartRef = useRef(null);
 
     const handleExportPNG = () => {
         exportChartToPNG(chartRef, `${title.toLowerCase().replace(/\s+/g, '-')}.png`);
     };
+
+    // Only offer PNG export when the card actually contains a chart (an <svg>).
+    // Table-only cards (e.g. "All Pages") have no SVG, so the PNG button would
+    // silently do nothing. Respect an explicit `noPng`, and otherwise auto-detect
+    // the presence of an <svg> after render so dead buttons never appear.
+    const [hasSvg, setHasSvg] = useState(false);
+    useEffect(() => {
+        if (noPng) return;
+        setHasSvg(!!chartRef.current?.querySelector('svg'));
+    }, [noPng, loading, error, empty, children]);
+    const showPng = !noPng && hasSvg;
 
     return (
         <div className={`card ${className}`}>
@@ -38,14 +49,16 @@ function ChartCard({ title, subtitle, children, loading, error, empty, onExport,
                             <Download className="w-3.5 h-3.5" />
                         </button>
                     )}
-                    <button
-                        onClick={handleExportPNG}
-                        className="p-1.5 rounded-md text-text-muted dark:text-text-muted-dark
+                    {showPng && (
+                        <button
+                            onClick={handleExportPNG}
+                            className="p-1.5 rounded-md text-text-muted dark:text-text-muted-dark
               hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-                        title="Export PNG"
-                    >
-                        <Image className="w-3.5 h-3.5" />
-                    </button>
+                            title="Export PNG"
+                        >
+                            <Image className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                 </div>
             </div>
 
