@@ -42,9 +42,14 @@ api.interceptors.response.use(
         const message = payload.error || error.message || 'Request failed';
         const enriched = new Error(message);
         enriched.status = error.response?.status;
+        // SQL editor diagnostics are intentional developer-facing details (line/col info)
+        // Only attach them when the response explicitly includes them — not for all errors
         if (payload.diagnostics) enriched.diagnostics = payload.diagnostics;
-        if (payload.requestId) enriched.requestId = payload.requestId;
+        if (payload.requestId)   enriched.requestId   = payload.requestId;
         if (error.code === 'ERR_CANCELED') enriched.code = 'ERR_CANCELED';
+        // Never forward raw stack traces, file paths, or env var names to the UI
+        // (The backend's safeError utility ensures these aren't sent, but double-check)
+        delete enriched.stack;
         return Promise.reject(enriched);
     }
 );
@@ -261,6 +266,28 @@ export const sqlEditorAPI = {
     createSavedQuery: (siteId, data) => api.post(`/sql-editor/${siteId}/saved`, data),
     updateSavedQuery: (siteId, savedId, data) => api.put(`/sql-editor/${siteId}/saved/${savedId}`, data),
     deleteSavedQuery: (siteId, savedId) => api.delete(`/sql-editor/${siteId}/saved/${savedId}`),
+};
+
+// Team management endpoints
+export const teamAPI = {
+    listMembers:      (siteId)                               => api.get(`/team/${siteId}/members`),
+    invite:           (siteId, email, role)                  => api.post(`/team/${siteId}/invite`, { email, role }),
+    changeRole:       (siteId, userId, role)                 => api.put(`/team/${siteId}/members/${userId}`, { role }),
+    removeMember:     (siteId, userId)                       => api.delete(`/team/${siteId}/members/${userId}`),
+    cancelInvite:     (token)                                => api.delete(`/invite/${token}`),
+    getInviteInfo:    (token)                                => api.get(`/invite/${token}`),
+    acceptInvite:     (token)                                => api.post(`/invite/${token}/accept`),
+    // Custom roles
+    listRoles:        (siteId)                               => api.get(`/team/${siteId}/roles`),
+    createRole:       (siteId, data)                         => api.post(`/team/${siteId}/roles`, data),
+    updateRole:       (siteId, roleId, data)                 => api.put(`/team/${siteId}/roles/${roleId}`, data),
+    deleteRole:       (siteId, roleId)                       => api.delete(`/team/${siteId}/roles/${roleId}`),
+    assignCustomRole: (siteId, userId, customRoleId)         => api.put(`/team/${siteId}/members/${userId}/custom-role`, { customRoleId }),
+};
+
+// Demo — grant the current user access to the public demo site
+export const demoAPI = {
+    join: () => api.post('/demo/join'),
 };
 
 export default api;

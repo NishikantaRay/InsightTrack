@@ -78,7 +78,7 @@ const EVENT_TYPES = ['pageview', 'pageview', 'pageview', 'pageview', 'click', 'f
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
     console.log('╔══════════════════════════════════════════════════════════╗');
-    console.log('║  InsightTrack v2 — Hot+Cold Stress-Test Seed             ║');
+    console.log('║  InsightsTrack v2 — Hot+Cold Stress-Test Seed             ║');
     console.log('╚══════════════════════════════════════════════════════════╝');
     console.log(`  Site     : ${SITE_ID}`);
     console.log(`  Days     : ${DAYS}  (hot window = last ${HOT_DAYS} days)`);
@@ -89,7 +89,7 @@ async function main() {
     await pool.query(
         `INSERT INTO sites (id, name, domain, created_at)
          VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING`,
-        [SITE_ID, 'Demo Website v2', 'demo-v2.insighttrack.dev', new Date()]
+        [SITE_ID, 'Demo Website v2', 'demo-v2.insightstrack.dev', new Date()]
     );
     console.log(`✅  Site ${SITE_ID} ready`);
 
@@ -143,7 +143,7 @@ async function main() {
                 const evType = pg2 === 0 ? 'pageview' : weightedRandom(EVENT_TYPES, [4, 4, 4, 4, 1, 1, 1, 1, 1]);
                 evBatch.push([
                     SITE_ID, userId, sessionId, evType,
-                    `https://demo-v2.insighttrack.dev${evPage}`, evPage,
+                    `https://demo-v2.insightstrack.dev${evPage}`, evPage,
                     pg2 === 0 ? referrer : null,
                     device, country, evTime.toISOString(),
                     JSON.stringify({ page_title: evPage.slice(1) || 'home' }),
@@ -232,7 +232,7 @@ async function main() {
 
     console.log('\n══════════════════════════════════════════════════════════');
     console.log('  Login credentials for manual verification:');
-    console.log('  Email    : demo@insighttrack.dev');
+    console.log('  Email    : demo@insightstrack.dev');
     console.log('  Password : Demo@2024!');
     console.log(`  Dashboard: http://localhost:4173`);
     console.log(`  Site ID  : ${SITE_ID}`);

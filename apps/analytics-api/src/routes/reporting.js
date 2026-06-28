@@ -3,14 +3,10 @@ import { randomUUID } from 'crypto';
 import { reportingService } from '../services/reportingService.js';
 import { query } from '../db/postgres.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { safeMsg } from '../utils/safeError.js';
 
 const router = express.Router();
 router.use(authMiddleware);
-
-const safeError = (error) => {
-    if (process.env.NODE_ENV === 'development') return error.message;
-    return 'An internal error occurred';
-};
 
 // ─── Annotations ─────────────────────────────────
 
@@ -21,7 +17,7 @@ router.get('/:siteId/annotations', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error listing annotations:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -34,7 +30,7 @@ router.post('/:siteId/annotations', async (req, res) => {
         res.status(201).json({ success: true, data });
     } catch (error) {
         console.error('Error creating annotation:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -44,7 +40,7 @@ router.delete('/:siteId/annotations/:annotationId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting annotation:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -56,7 +52,7 @@ router.get('/:siteId/reports', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error listing reports:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -69,7 +65,7 @@ router.post('/:siteId/reports', async (req, res) => {
         res.status(201).json({ success: true, data });
     } catch (error) {
         console.error('Error creating report schedule:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -80,7 +76,7 @@ router.put('/:siteId/reports/:reportId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating report:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -90,7 +86,7 @@ router.delete('/:siteId/reports/:reportId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting report:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -102,7 +98,7 @@ router.get('/:siteId/dashboards', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error listing dashboards:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -115,7 +111,7 @@ router.post('/:siteId/dashboards', async (req, res) => {
         res.status(201).json({ success: true, data });
     } catch (error) {
         console.error('Error creating dashboard:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -126,7 +122,7 @@ router.put('/:siteId/dashboards/:dashboardId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating dashboard:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -136,7 +132,7 @@ router.delete('/:siteId/dashboards/:dashboardId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting dashboard:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -148,7 +144,7 @@ router.get('/:siteId/retention', async (req, res) => {
         res.json({ success: true, data: data || { retentionDays: 365, enabled: false } });
     } catch (error) {
         console.error('Error getting retention policy:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -161,7 +157,7 @@ router.put('/:siteId/retention', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error updating retention policy:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -171,7 +167,7 @@ router.post('/:siteId/retention/cleanup', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error running retention cleanup:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -186,7 +182,7 @@ router.get('/:siteId/utm-links', async (req, res) => {
         res.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Error listing UTM links:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -207,7 +203,7 @@ router.post('/:siteId/utm-links', async (req, res) => {
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (error) {
         console.error('Error creating UTM link:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -220,7 +216,7 @@ router.delete('/:siteId/utm-links/:linkId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting UTM link:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 

@@ -23,7 +23,7 @@ const CANVAS_CSS = `
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   body { margin: 0 !important; padding: 0 !important; }
   #root { display: none !important; }
-  #insighttrack-print-root { display: block !important; }
+  #insightstrack-print-root { display: block !important; }
   .no-print { display: none !important; }
 }
 `;
@@ -31,9 +31,9 @@ if (typeof document !== 'undefined' && !document.getElementById('canvas-grid-css
     const s = document.createElement('style'); s.id = 'canvas-grid-css'; s.textContent = CANVAS_CSS; document.head.appendChild(s);
 }
 // Ensure print portal root exists but is invisible outside @media print
-if (typeof document !== 'undefined' && !document.getElementById('insighttrack-print-root')) {
+if (typeof document !== 'undefined' && !document.getElementById('insightstrack-print-root')) {
     const pr = document.createElement('div');
-    pr.id = 'insighttrack-print-root';
+    pr.id = 'insightstrack-print-root';
     pr.style.cssText = 'display:none;';
     document.body.appendChild(pr);
 }
@@ -2201,7 +2201,7 @@ function DataExportTab() {
             const raw = await dataset.fetch();
             const rows = normalise(raw);
             const date = new Date().toISOString().split('T')[0];
-            const base = `insighttrack-${dataset.key}-${dateRange}-${date}`;
+            const base = `insightstrack-${dataset.key}-${dateRange}-${date}`;
             format === 'json'
                 ? dlFile(JSON.stringify(rows, null, 2), `${base}.json`, 'application/json')
                 : dlFile(toCSV(rows), `${base}.csv`, 'text/csv');

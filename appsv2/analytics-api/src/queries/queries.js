@@ -167,21 +167,48 @@ function getDateRange(range) {
 /** GET /api/analytics/:siteId/traffic */
 export async function getTrafficOverTime(siteId, dateRange = '30d') {
     const { start, end } = getDateRange(dateRange);
+
+    // For ranges > today use daily_stats (pre-aggregated, microsecond reads).
+    // Fall back to raw events for today/yesterday where daily_stats may be stale.
+    const todayStr = new Date().toISOString().split('T')[0];
+    const startStr = start.split('T')[0];
+    const endStr   = end.split('T')[0];
+    const isToday  = startStr === todayStr || endStr === todayStr;
+
+    if (!isToday) {
+        const rollupRows = await duckAll(
+            `SELECT date, visitors, sessions, pageviews
+             FROM daily_stats
+             WHERE site_id = ? AND date >= ? AND date <= ?
+             ORDER BY date ASC`,
+            [siteId, startStr, endStr],
+        );
+        if (rollupRows.length > 0) {
+            return rollupRows.map(r => ({
+                date: toDateStr(r.date),
+                visitors:  Number(r.visitors  || 0),
+                sessions:  Number(r.sessions  || 0),
+                pageviews: Number(r.pageviews || 0),
+            }));
+        }
+    }
+
+    // Raw events fallback (today or no rollup data yet)
     const rows = await duckAll(
         `SELECT
-       CAST(timestamp AS DATE)              AS date,
-       COUNT(DISTINCT user_id)              AS visitors,
-       COUNT(DISTINCT session_id)           AS sessions,
-       COUNT(CASE WHEN type = 'pageview' THEN 1 END) AS pageviews
-     FROM events
-     WHERE site_id = ? AND timestamp >= ? AND timestamp <= ?
-     GROUP BY 1 ORDER BY 1`,
+           CAST(timestamp AS DATE)                          AS date,
+           COUNT(DISTINCT user_id)                          AS visitors,
+           COUNT(DISTINCT session_id)                       AS sessions,
+           COUNT(CASE WHEN type = 'pageview' THEN 1 END)   AS pageviews
+         FROM events
+         WHERE site_id = ? AND timestamp >= ? AND timestamp <= ?
+         GROUP BY 1 ORDER BY 1`,
         [siteId, start, end],
     );
     return rows.map(r => ({
-        date: toDateStr(r.date),
-        visitors: Number(r.visitors),
-        sessions: Number(r.sessions),
+        date:      toDateStr(r.date),
+        visitors:  Number(r.visitors),
+        sessions:  Number(r.sessions),
         pageviews: Number(r.pageviews),
     }));
 }
@@ -230,20 +257,35 @@ export async function getAvgSessionOverTime(siteId, dateRange = '30d') {
 /** GET /api/analytics/:siteId/pageviews */
 export async function getPageViewsOverTime(siteId, dateRange = '30d') {
     const { start, end } = getDateRange(dateRange);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const startStr = start.split('T')[0];
+    const endStr   = end.split('T')[0];
+    const isToday  = startStr === todayStr || endStr === todayStr;
+
+    if (!isToday) {
+        const rollupRows = await duckAll(
+            `SELECT date, pageviews FROM daily_stats
+             WHERE site_id = ? AND date >= ? AND date <= ?
+             ORDER BY date ASC`,
+            [siteId, startStr, endStr],
+        );
+        if (rollupRows.length > 0) {
+            return rollupRows.map(r => ({
+                date: toDateStr(r.date),
+                pageviews: Number(r.pageviews || 0),
+            }));
+        }
+    }
+
     const rows = await duckAll(
-        `SELECT
-       CAST(timestamp AS DATE) AS date,
-       COUNT(*)                AS pageviews
-     FROM events
-     WHERE site_id = ? AND type = 'pageview'
-       AND timestamp >= ? AND timestamp <= ?
-     GROUP BY 1 ORDER BY 1`,
+        `SELECT CAST(timestamp AS DATE) AS date, COUNT(*) AS pageviews
+         FROM events
+         WHERE site_id = ? AND type = 'pageview'
+           AND timestamp >= ? AND timestamp <= ?
+         GROUP BY 1 ORDER BY 1`,
         [siteId, start, end],
     );
-    return rows.map(r => ({
-        date: toDateStr(r.date),
-        pageviews: Number(r.pageviews),
-    }));
+    return rows.map(r => ({ date: toDateStr(r.date), pageviews: Number(r.pageviews) }));
 }
 
 /** GET /api/analytics/:siteId/top-pages */
@@ -546,44 +588,83 @@ export async function getKPISummary(siteId, dateRange = '30d') {
     const { start, end } = getDateRange(dateRange);
 
     const currentStart = new Date(start);
-    const currentEnd = new Date(end);
-    const periodMs = currentEnd.getTime() - currentStart.getTime();
-    const prevEnd = new Date(currentStart.getTime());
-    const prevStart = new Date(currentStart.getTime() - periodMs);
+    const currentEnd   = new Date(end);
+    const periodMs     = currentEnd.getTime() - currentStart.getTime();
+    const prevEnd      = new Date(currentStart.getTime());
+    const prevStart    = new Date(currentStart.getTime() - periodMs);
 
+    const todayStr  = new Date().toISOString().split('T')[0];
+    const startStr  = start.split('T')[0];
+    const endStr    = end.split('T')[0];
+    const prevStartStr = prevStart.toISOString().split('T')[0];
+    const prevEndStr   = prevEnd.toISOString().split('T')[0];
+    const isToday = startStr === todayStr || endStr === todayStr;
+
+    // Use daily_stats aggregates when the range doesn't include today
+    // (rollup for today runs after midnight so it would be stale for live data).
+    if (!isToday) {
+        const [curr, prev] = await Promise.all([
+            duckAll(
+                `SELECT SUM(visitors) AS total_visitors, SUM(pageviews) AS total_pageviews,
+                        SUM(sessions) AS total_sessions
+                 FROM daily_stats WHERE site_id = ? AND date >= ? AND date <= ?`,
+                [siteId, startStr, endStr],
+            ),
+            duckAll(
+                `SELECT SUM(visitors) AS total_visitors, SUM(pageviews) AS total_pageviews,
+                        SUM(sessions) AS total_sessions
+                 FROM daily_stats WHERE site_id = ? AND date >= ? AND date < ?`,
+                [siteId, prevStartStr, prevEndStr],
+            ),
+        ]);
+
+        if (Number(curr[0]?.total_visitors || 0) > 0) {
+            const totalVisitors  = Number(curr[0]?.total_visitors  || 0);
+            const totalPageviews = Number(curr[0]?.total_pageviews || 0);
+            const totalSessions  = Number(curr[0]?.total_sessions  || 0);
+            const prevVisitors   = Number(prev[0]?.total_visitors  || 0);
+            const prevPageviews  = Number(prev[0]?.total_pageviews || 0);
+
+            function calcTrend(c, p) {
+                if (p === 0) return c > 0 ? 100 : 0;
+                return Math.round(((c - p) / p) * 1000) / 10;
+            }
+
+            return {
+                totalVisitors, totalPageviews, totalSessions,
+                bounceRate: 0, avgSessionDuration: '0m 0s',
+                pagesPerSession: totalSessions > 0 ? (totalPageviews / totalSessions).toFixed(2) : '0.00',
+                visitorsTrend:   calcTrend(totalVisitors,  prevVisitors),
+                pageviewsTrend:  calcTrend(totalPageviews, prevPageviews),
+                bounceRateTrend: 0, sessionTrend: 0,
+            };
+        }
+    }
+
+    // Raw events fallback — today/yesterday or no rollup yet
     const [eventRows, sessionRows, prevEventRows, prevSessionRows] = await Promise.all([
         duckAll(
-            `SELECT
-         COUNT(DISTINCT user_id) AS total_visitors,
-         COUNT(CASE WHEN type = 'pageview' THEN 1 END) AS total_pageviews
-       FROM events
-       WHERE site_id = ? AND timestamp >= ? AND timestamp <= ?`,
+            `SELECT COUNT(DISTINCT user_id) AS total_visitors,
+                    COUNT(CASE WHEN type = 'pageview' THEN 1 END) AS total_pageviews
+             FROM events WHERE site_id = ? AND timestamp >= ? AND timestamp <= ?`,
             [siteId, start, end],
         ),
         duckAll(
-            `SELECT
-         COUNT(*)             AS total_sessions,
-         AVG(duration)        AS avg_duration,
-         SUM(CASE WHEN is_bounce THEN 1 ELSE 0 END) AS bounces
-       FROM sessions
-       WHERE site_id = ? AND started_at >= ? AND started_at <= ?`,
+            `SELECT COUNT(*) AS total_sessions, AVG(duration) AS avg_duration,
+                    SUM(CASE WHEN is_bounce THEN 1 ELSE 0 END) AS bounces
+             FROM sessions WHERE site_id = ? AND started_at >= ? AND started_at <= ?`,
             [siteId, start, end],
         ),
         duckAll(
-            `SELECT
-         COUNT(DISTINCT user_id) AS total_visitors,
-         COUNT(CASE WHEN type = 'pageview' THEN 1 END) AS total_pageviews
-       FROM events
-       WHERE site_id = ? AND timestamp >= ? AND timestamp < ?`,
+            `SELECT COUNT(DISTINCT user_id) AS total_visitors,
+                    COUNT(CASE WHEN type = 'pageview' THEN 1 END) AS total_pageviews
+             FROM events WHERE site_id = ? AND timestamp >= ? AND timestamp < ?`,
             [siteId, prevStart.toISOString(), prevEnd.toISOString()],
         ),
         duckAll(
-            `SELECT
-         COUNT(*)             AS total_sessions,
-         AVG(duration)        AS avg_duration,
-         SUM(CASE WHEN is_bounce THEN 1 ELSE 0 END) AS bounces
-       FROM sessions
-       WHERE site_id = ? AND started_at >= ? AND started_at < ?`,
+            `SELECT COUNT(*) AS total_sessions, AVG(duration) AS avg_duration,
+                    SUM(CASE WHEN is_bounce THEN 1 ELSE 0 END) AS bounces
+             FROM sessions WHERE site_id = ? AND started_at >= ? AND started_at < ?`,
             [siteId, prevStart.toISOString(), prevEnd.toISOString()],
         ),
     ]);

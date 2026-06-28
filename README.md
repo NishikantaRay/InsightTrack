@@ -1,481 +1,359 @@
-# InsightTrack — Self-Hosted Web Analytics
+<div align="center">
 
-> **🚀 v2.0 launched — Hot+Cold Analytics Architecture** · [Read the architecture docs →](docs/hot-cold-analytics-architecture.md)
->
-> InsightTrack v2 introduces a dual-layer data lake: DuckDB **hot tables** for the last 30 days and columnar **Parquet cold partitions** for historical data. Analytics queries across months of data now return in under 100 ms. [See what changed →](#v2-whats-new)
+# 📊 InsightsTrack
 
-A privacy-friendly, self-hosted web analytics platform. Track visitors, pageviews, sessions, conversions, and user flows — all on your own infrastructure. No cookies, no third-party data sharing.
+### Self-hosted, privacy-first web analytics — the open-source alternative to Google Analytics
 
-**Dual-database architecture**: PostgreSQL handles writes (tracking, auth, sites) while DuckDB — an embedded columnar OLAP engine — powers analytics reads at 10-100× the speed of traditional row-store queries.
+[![Open Source](https://img.shields.io/badge/Open%20Source-MIT-6366f1)](LICENSE)
+[![Self-Hosted](https://img.shields.io/badge/Self--Hosted-✓-10b981)]()
+[![No Cookies](https://img.shields.io/badge/Cookies-0-ef4444)]()
+[![Stack](https://img.shields.io/badge/React%2018%20·%20Express%204%20·%20PostgreSQL%20·%20DuckDB-1a1d27)]()
+[![Sponsor](https://img.shields.io/badge/♥%20Sponsor-NishikantaRay-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/NishikantaRay)
+
+**Track visitors, pageviews, conversions, heatmaps, and Core Web Vitals — all on your own server.**
+No cookies, no consent banners, no data selling. Deploy in under 15 minutes.
+
+[Live Demo](#-live-demo) · [Quick Start](#-quick-start) · [Features](#-feature-walkthrough) · [Deploy](#-deploy-your-own) · [Docs](docs/)
+
+![InsightsTrack Dashboard](screenshots/11-dashboard-full.png)
+
+</div>
 
 ---
 
-## Screenshots
+## What is InsightsTrack?
 
-### Landing Page
+InsightsTrack is a complete, production-grade web analytics platform you run yourself. It gives you the depth of Google Analytics 4 — real-time visitors, traffic sources, funnels, heatmaps, Web Vitals — without sending a single byte of your visitors' data to a third party.
+
+**Why teams choose it:**
+
+- 🔒 **Privacy by design** — no cookies, no fingerprinting, anonymous visitor IDs, GDPR-compliant, DNT/GPC honored.
+- ⚡ **Fast at any scale** — a dual-database design (PostgreSQL for writes, DuckDB for reads) answers 90-day queries in under 100 ms even over millions of events.
+- 🧩 **Everything in one place** — 17 analytics pages: dashboard, pages, realtime, funnels, heatmaps, engagement, performance, audience, acquisition, conversions, user flow, reporting studio, SQL editor, and more.
+- 🪶 **Lightweight** — a single ~2 KB `<script>` tag, works with any site (WordPress, Next.js, Shopify, plain HTML…).
+- 👥 **Team-ready** — invite teammates, assign roles, build custom permission roles, and control which pages each member sees.
+- 💸 **Free forever** — MIT licensed, self-hosted, no seat limits.
+
+### How it works
+
+```
+┌──────────────┐   POST /api/track/*    ┌──────────────────────────────┐
+│  Your website│──────────────────────▶ │  Backend API (Express, :3001)│
+│  (2 KB tag)  │                        │                              │
+└──────────────┘                        │  ┌──────────┐   ┌──────────┐ │
+                                        │  │ Postgres │──▶│  DuckDB  │ │
+┌──────────────┐  GET /api/analytics/*  │  │ (writes) │sync│ (reads)  │ │
+│  Dashboard   │◀────────────────────── │  └──────────┘   └──────────┘ │
+│  React SPA   │                        └──────────────────────────────┘
+└──────────────┘
+```
+
+All **writes** (tracking events, auth, sites) go to **PostgreSQL**. A background sync streams them into **DuckDB**, an embedded columnar engine that powers every **analytics read** 10–100× faster than a row store. The dashboard never queries PostgreSQL directly.
+
+---
+
+## 🎬 Live Demo
+
+The landing page ships a **live demo instance** so anyone can explore the full product with realistic sample data before installing anything.
 
 | | |
 |---|---|
-| ![Landing Page Hero](screenshots/02-landing-hero.png) | ![Landing Features](screenshots/03-landing-features.png) |
-| **Hero** — Headline, tagline, and primary CTAs ("Start Tracking Free", "See How It Works") with a live dashboard preview mockup. | **Features Grid** — Six feature highlights: Real-Time Analytics, Privacy-First, Lightweight Script, Country Detection, Conversion Funnels, and Multi-Site Support. |
-| ![How It Works](screenshots/04-landing-how-it-works.png) | ![Tech Stack](screenshots/05-landing-tech-stack.png) |
-| **How It Works** — 3-step onboarding guide (Create Account → Add Script → View Dashboard) with a live code snippet example. | **Tech Stack** — Cards for React 18, Express, PG+DuckDB, JWT Auth, Open Source, Auto Sync, plus an inline architecture diagram. |
-| ![Comparison Table](screenshots/06-landing-comparison.png) | ![Footer & CTA](screenshots/07-landing-footer.png) |
-| **Comparison Table** — Side-by-side feature comparison between InsightTrack and Google Analytics across 9 dimensions. | **Footer & CTA** — Final call-to-action banner ("Create Free Account") and the site footer with navigation links. |
+| ![Landing hero](screenshots/02-landing-hero.png) | ![Landing dark](screenshots/07-landing-dark.png) |
+| **Landing page** — open-source banner, live demo notice, and clear CTAs. | **Light & dark mode** — the whole site (and app) supports both. |
 
-<details>
-<summary>View full landing page</summary>
+**Two paths from the landing page:**
 
-![Full Landing Page](screenshots/01-landing-full.png)
+1. **Open live dashboard** → log in or sign up → you're dropped straight into a dashboard pre-loaded with demo data (the `hello.com` sample site). Great for evaluating features.
+2. **Set up your own instance** → sign up for a fresh account → onboarding walks you through adding your first site and tracking script.
 
-</details>
+> Want demo data on your own instance? Run `node scripts/seed-live-demo.js` (see [Seeding demo data](#seeding-demo-data)).
 
 ---
 
-### Authentication
+## 🚀 Quick Start
 
-| ![Login](screenshots/08-login.png) | ![Register](screenshots/09-register.png) |
-|---|---|
-| **Login** — Split-panel layout with branding on the left and the sign-in form (email, password, toggle visibility) on the right. | **Register** — Split-panel registration form with name, email, password, confirm password, and real-time password strength validation. |
-
----
-
-### Onboarding
-
-![Onboarding](screenshots/10-onboarding.png)
-
-**Onboarding Wizard** — Two-step flow: Step 1 lets users enter a website name and domain; Step 2 provides the ready-to-paste tracking `<script>` snippet with a one-click copy button.
-
----
-
-### Dashboard
-
-![Dashboard Full](screenshots/11-dashboard-full.png)
-
-**Main Dashboard** — The primary analytics view. Displays KPI metric cards at the top, followed by stacked chart rows covering traffic trends, top pages, traffic sources, devices, sessions, countries, and funnels.
-
-| | |
-|---|---|
-| ![KPI Cards](screenshots/12-dashboard-kpi-cards.png) | ![Charts](screenshots/13-dashboard-charts.png) |
-| **KPI Cards** — Four headline metrics (Total Visitors, Pageviews, Bounce Rate, Avg. Session) each with a trend indicator, percentage change vs. the previous period, and a sparkline mini-chart. | **Traffic & Pageviews Charts** — Line charts showing visitor and pageview trends over the selected date range with hover tooltips and comparison mode support. |
-| ![Bottom Section](screenshots/14-dashboard-bottom.png) | ![Dark Mode](screenshots/25-dashboard-dark-mode.png) |
-| **Countries & Funnels** — Country leaderboard with flag emojis and percentage bars alongside the conversion funnel drop-off chart. | **Dark Mode** — Full dashboard in dark theme. Toggle via the moon/sun icon in the navbar or auto-detected from system preferences. |
-
----
-
-### Pages View
-
-![Pages View](screenshots/15-pages-view.png)
-
-**Top Pages** — Sortable table listing every tracked URL with Views, Unique Visitors, and % of Total traffic columns. Supports date range filtering and CSV/JSON export.
-
----
-
-### Funnels
-
-![Funnels](screenshots/16-funnels.png)
-
-**Conversion Funnels** — Define multi-step user journeys (e.g., Landing → Signup → Checkout) and visualise the exact percentage drop-off between each stage.
-
----
-
-### Realtime
-
-![Realtime](screenshots/17-realtime.png)
-
-**Real-Time Analytics** — Live visitor count with a pulsing activity indicator, an interactive world map pinpointing active visitor locations, a list of currently active pages, and a device-type breakdown — all auto-refreshing every 5 seconds.
-
----
-
-### User Flow
-
-![User Flow](screenshots/18-user-flow.png)
-
-**User Flow** — Sankey-style flow diagram showing how visitors navigate between pages: entry points on the left, subsequent page transitions in the middle, and exit pages on the right.
-
----
-
-### Settings
-
-![Settings](screenshots/19-settings.png)
-
-**Settings** — Multi-site management panel to add, rename, and delete tracked sites. Includes the ready-to-copy tracking script snippet and the Traffic Alerts panel for configuring anomaly detection thresholds.
-
----
-
-### Profile
-
-![Profile](screenshots/20-profile.png)
-
-**User Profile** — Three-tab settings area: **General** (update name, email, role, timezone), **Security** (change password, view and revoke active sessions), and **Notifications** (toggle traffic alerts, weekly reports, goal completions, and uptime monitoring).
-
----
-
-### Documentation
-
-| ![Docs Full](screenshots/21-docs-full.png) | ![API Reference](screenshots/22-docs-api-reference.png) |
-|---|---|
-| **Documentation Home** — In-app docs page with collapsible sections covering Architecture overview, Quick Start guide, Tracking Script reference, Database Schema, Data Sync mechanism, Cache TTL table, Dashboard pages, and Tech Stack. | **API Reference** — Expanded API Reference section listing all 34 endpoints across four groups (Analytics, Tracking, Sites, Auth) with HTTP method badges, paths, parameters, and example responses. |
-
----
-
-### Engagement Analytics
-
-![Engagement Full](screenshots/27-engagement-full.png)
-
-**Engagement** — Deep behavioural analytics for every tracked site: scroll depth milestones, rage click detection, time-on-page heatmap, and click distribution table.
-
-| | |
-|---|---|
-| ![Scroll Depth](screenshots/28-engagement-scroll-depth.png) | ![Rage Clicks](screenshots/29-engagement-rage-clicks.png) |
-| **Scroll Depth** — Bar chart showing what % of visitors reached the 25 / 50 / 75 / 100 % scroll milestone on each page. Identifies content that users never see. | **Rage Clicks** — Table of elements that received 3+ rapid clicks within 1 second, ranked by incident count. A rage click = user frustration — the element likely looks interactive but isn't responding. |
-
----
-
-### Visual Heatmap
-
-![Heatmap Full](screenshots/30-heatmap-full.png)
-
-**Visual Heatmap** — Overlay coloured click-density dots on a live iframe preview of any tracked page. Dots scale from indigo (rarely clicked) through green → yellow → orange → red (hottest spot). A Click Distribution table below ranks every element by click count and unique users.
-
-| | |
-|---|---|
-| ![Heatmap How It Works](screenshots/31-heatmap-how-it-works.png) | |
-| **How It Works panel** — Collapsible PageNote explains click recording, dot colour scale, iframe preview behaviour, and the distribution table — with a business tip and developer tip. | |
-
----
-
-### Performance & Web Vitals
-
-![Performance Full](screenshots/32-performance-full.png)
-
-**Performance** — Core Web Vitals dashboard (LCP, FID, CLS, INP, TTFB) captured via the tracking script's `PerformanceObserver` and shown as scored gauge cards. Includes a JS Error log table with message, source file, line/col, and a trend chart of errors over time.
-
-| | |
-|---|---|
-| ![Web Vitals](screenshots/33-performance-web-vitals.png) | ![JS Errors](screenshots/34-performance-js-errors.png) |
-| **Web Vitals** — Each metric is scored Good / Needs Improvement / Poor against Google's thresholds (e.g. LCP < 2.5 s = Good). P75 values shown. | **JS Errors** — Every `window.error` and unhandled Promise rejection from your tracked pages is logged with full context. |
-
----
-
-### Navigation Components
-
-| ![Sidebar](screenshots/23-sidebar.png) | ![Navbar](screenshots/24-navbar.png) |
-|---|---|
-| **Sidebar** — Collapsible left navigation with icons and labels for Dashboard, Pages, Funnels, Realtime, User Flow, Settings, and Docs. Active route is highlighted. | **Navbar** — Top bar with the site selector dropdown (switch between tracked sites), a date range filter, a refresh button, notification bell, dark-mode toggle, and user avatar menu. |
-
----
-
-## Features
-
-- **Dashboard** — KPI cards with sparklines, traffic charts, comparison mode
-- **Top Pages** — Most visited pages with pageview trends
-- **Traffic Sources** — Direct, search, social, referral breakdown + UTM campaigns
-- **Devices & Countries** — Device type donut chart, country leaderboard with flags
-- **Conversion Funnels** — Define multi-step funnels and track drop-off
-- **User Flow** — Visualize how visitors navigate between pages
-- **Real-time** — Live visitor count, active pages, interactive world map
-- **Visual Heatmap** — Click-density dots overlaid on live page preview; element click distribution table
-- **Engagement Analytics** — Scroll depth milestones (25/50/75/100%), rage click detection, time-on-page
-- **Performance & Web Vitals** — LCP, FID, CLS, INP, TTFB scored against Google thresholds; JS error log
-- **Traffic Alerts** — Automatic anomaly detection for spikes and drops
-- **Multi-site** — Manage multiple websites from one dashboard
-- **Dark Mode** — System preference detection + manual toggle
-- **Export** — CSV, JSON, PNG export for all charts + print support
-- **Authentication** — JWT-based login/registration with bcrypt passwords
-- **Privacy-first** — No cookies, anonymous user IDs, timezone-based country detection
-
-## Quick Start
+The fastest way to run the whole stack (PostgreSQL + API + dashboard + a demo site) is Docker.
 
 ### Prerequisites
+- **Docker** & **Docker Compose** (recommended), or **Node.js 20+** + **PostgreSQL 16** for manual setup.
 
-- **Node.js** v18+
-- **Docker** (for PostgreSQL)
-
-### 1. Start PostgreSQL
+### One command (Docker)
 
 ```bash
-docker run -d \
-  --name analytics-pg \
-  -e POSTGRES_USER=analytics \
-  -e POSTGRES_PASSWORD=analytics123 \
-  -e POSTGRES_DB=analytics_db \
-  -p 5432:5432 \
-  postgres:16-alpine
+git clone https://github.com/NishikantaRay/InsightTrack.git
+cd InsightTrack
+
+cp .env.example .env          # fill in passwords / secrets
+docker-compose up --build -d
 ```
 
-### 2. Start the API Server
+| Service | URL |
+|---------|-----|
+| 📊 Dashboard | http://localhost:4173 |
+| 🔌 Backend API | http://localhost:3001 |
+| 🌐 Demo site (sample tracked page) | http://localhost:8080 |
+| 🗄️ pgAdmin (DB browser) | http://localhost:5050 |
 
-```bash
-cd apps/analytics-api
-npm install
+Open the dashboard, register an account, and you're live.
 
-# First-time setup: create tables, seed data, initialize DuckDB
-npm run migrate        # Create PostgreSQL tables
-npm run seed           # Generate sample data
-npm run init           # Create DuckDB tables
-npm run sync           # Sync PostgreSQL → DuckDB
+### Add tracking to your website
 
-# Start the server
-npm start
-```
-
-Server starts at `http://localhost:3001`. Health check: `curl http://localhost:3001/api/health`.
-
-### 3. Start the Dashboard
-
-```bash
-cd apps/dashboard-web
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173` — register an account and start tracking.
-
-### 4. Add Tracking to Your Website
-
-After creating a site in **Settings**, add this to your website's `<head>`:
+After creating a site in **Settings**, paste this once into your site's `<head>`:
 
 ```html
 <script src="http://localhost:3001/api/sites/YOUR_SITE_ID/script"></script>
 ```
 
-Pageviews, sessions, clicks, and device data start flowing immediately.
+Pageviews, sessions, clicks, scroll depth, Web Vitals, JS errors, and heatmap data start flowing immediately — no extra configuration.
 
-> For the full step-by-step walkthrough, see [docs/running-locally.md](docs/running-locally.md).
-
-## v2 — What's New
-
-InsightTrack v2 ships the **Hot+Cold Analytics Architecture**, a production-grade data-lake pipeline that makes historical analytics fast without ever touching PostgreSQL for reads.
-
-### Why we changed the architecture
-
-The v1 architecture synced every event from PostgreSQL into a single flat DuckDB table. This worked well for small sites, but as data grew beyond a few months the DuckDB file became large, startup sync was slow, and memory pressure increased. v2 solves this with a two-tier store:
-
-| Tier | Store | Data window | Query latency |
-|------|-------|-------------|---------------|
-| **Hot** | DuckDB in-memory table (`events_hot`) | Last `HOT_DAYS` days (default 30) | < 10 ms |
-| **Cold** | Parquet files on disk (`data-lake/`) | All older data | < 50 ms (DuckDB columnar scan) |
-| **Union** | DuckDB `VIEW events` | Full history | < 100 ms for 90-day queries |
-
-Analytics queries continue to use `FROM events` and `FROM sessions` — the views are fully transparent.
-
-### Performance benchmarks (98 k events, 120-day window)
-
-| Query | v1 (flat DuckDB) | v2 Hot+Cold | Improvement |
-|-------|-----------------|-------------|-------------|
-| KPI summary — 7 days | ~80 ms | **~55 ms** | 1.5× |
-| KPI summary — 30 days | ~210 ms | **~64 ms** | 3.3× |
-| KPI summary — 90 days | ~620 ms | **~25 ms** | **25×** |
-| Traffic chart — 90 days | ~490 ms | **~44 ms** | **11×** |
-| Top pages — 90 days | ~520 ms | **~39 ms** | **13×** |
-
-> Benchmarks are single-node Docker, Apple M1, 98 837 events, 39 669 sessions.
-
-### Key improvements
-
-- **Parquet cold partitions** — data older than `HOT_DAYS` is exported to date-partitioned Parquet files under `data-lake/events/site_id=X/event_date=Y/part-0001.parquet`. DuckDB reads these via `read_parquet()` glob scans.
-- **Dual watermarks** — the sync worker tracks both a `last_event_id` (for append-only events table) and a `last_synced` timestamp (for sessions). This prevents duplicates across restarts.
-- **Transparent union views** — `refreshAnalyticsViews()` creates or replaces DuckDB VIEWs that UNION `events_hot` with all cold Parquet files. Every dashboard query gets the full history automatically.
-- **`event_uuid` deduplication** — a `UUID DEFAULT gen_random_uuid()` column on the PostgreSQL `events` table ensures each event has a stable identity for idempotent re-sync.
-- **`sync_state` table** — PostgreSQL-side pipeline state table tracks `last_event_id`, `last_synced`, and `last_exported_partition` for audit and recovery.
-- **`/api/sync/full` and `/api/sync/run` endpoints** — authenticated HTTP endpoints allow manual sync triggers without restarting the server.
-- **`HOT_DAYS` env var** — configurable hot window (default 30). Set `HOT_DAYS=7` for memory-constrained servers or `HOT_DAYS=90` for read-heavy workloads.
-
-### New project layout (`appsv2/`)
-
-The v2 implementation lives in `appsv2/` alongside the original `apps/` which is kept for reference. The `docker-compose.v2.yml` file at the repo root starts the full v2 stack.
-
-```
-appsv2/
-├── analytics-api/
-│   ├── src/
-│   │   ├── sync/sync.js          ← Hot+cold sync worker (new)
-│   │   ├── queries/queries.js    ← refreshAnalyticsViews() added
-│   │   ├── schema/schema.js      ← events_hot, sessions_hot, dual watermarks
-│   │   ├── db/postgres.js        ← event_uuid column, sync_state table
-│   │   └── routes/sync.js        ← /api/sync/* management routes (new)
-│   ├── scripts/
-│   │   └── seed-hotcold.js       ← Stress-test seed (120 days, ~100k events)
-│   └── data-lake/                ← Parquet cold partitions (auto-created)
-│       └── events/
-│           └── site_id=X/
-│               └── event_date=Y/
-│                   └── part-0001.parquet
-└── dashboard-web/                ← Frontend unchanged from v1
-```
-
-### How to run v2
-
-```bash
-# Start full v2 stack (PostgreSQL + DuckDB hot+cold backend + React dashboard)
-docker-compose -f docker-compose.v2.yml up --build -d
-
-# Demo credentials (pre-created)
-# Email:    demo@insighttrack.dev
-# Password: Demo@2024!
-# Site ID:  site_d0fa12f3
-# Dashboard: http://localhost:4173
-
-# Seed 120 days of realistic test data (~100k events)
-docker exec traffic-backend-1 node scripts/seed-hotcold.js --days 120 --visitors 300
-
-# Trigger a full sync (also runs automatically on startup and every 5 min)
-TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@insighttrack.dev","password":"Demo@2024!"}' \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
-curl -X POST http://localhost:3001/api/sync/full -H "Authorization: Bearer $TOKEN"
-
-# Check sync watermarks
-curl http://localhost:3001/api/sync/status -H "Authorization: Bearer $TOKEN"
-
-# List Parquet cold partitions
-docker exec traffic-backend-1 find /app/data-lake -name "*.parquet" | wc -l
-```
-
-### Reference architecture
-
-The Hot+Cold design is based on the Lakehouse pattern — specifically the approach used by Apache Hudi and Delta Lake for incremental data ingestion with fast recent-data queries:
-
-- **Lambda Architecture** (Nathan Marz, 2011) — batch + speed layers, simplified here as cold Parquet + hot DuckDB
-- **DuckDB Parquet integration** — [duckdb.org/docs/data/parquet](https://duckdb.org/docs/data/parquet/overview)
-- **Hive-style partitioning** — `site_id=X/event_date=Y/` partition paths that DuckDB can prune automatically
-- **Incremental sync with high-watermark** — standard CDC pattern; only new rows (`id > last_event_id`) are synced each cycle
-
-Full architecture documentation: [docs/hot-cold-analytics-architecture.md](docs/hot-cold-analytics-architecture.md)
+> Full local walkthrough: [docs/running-locally.md](docs/running-locally.md)
 
 ---
 
-## Architecture
+## ✨ Feature Walkthrough
 
-```
-┌──────────────┐    POST /api/track/*    ┌──────────────────────────────┐
-│  Your Website│───────────────────────▶│  Unified Backend (port 3001) │
-│  (tracking)  │                        │  Express + Node.js           │
-└──────────────┘                        │                              │
-                                        │  ┌─────────┐  ┌──────────┐ │
-┌──────────────┐   GET /api/analytics/* │  │  PG     │  │ DuckDB   │ │
-│  Dashboard   │◀──────────────────────│  │ (writes)│  │ (reads)  │ │
-│  React SPA   │                        │  └────┬────┘  └─────▲────┘ │
-│  port: 5173  │                        │       │     sync    │      │
-└──────────────┘                        │       └─────────────┘      │
-                                        └──────────────────────────────┘
-```
+### Dashboard
+![Dashboard](screenshots/11-dashboard-full.png)
 
-## Project Structure
+The home view: KPI cards (visitors, pageviews, bounce rate, avg. session) with trends and sparklines, traffic & pageviews charts, top pages, traffic sources donut, devices, countries leaderboard, the conversion funnel, and a live world map — all for the selected date range, auto-refreshing.
 
-```
-insighttrack/
-├── apps/
-│   ├── dashboard-web/            # Frontend (React + Vite + Tailwind)
-│   │   └── src/
-│   │       ├── components/       # Recharts visualization components
-│   │       ├── hooks/            # useAnalytics data-fetching hook
-│   │       ├── pages/            # Dashboard views, auth, settings, docs
-│   │       ├── services/         # Axios API client with auth interceptors
-│   │       ├── store/            # Zustand stores
-│   │       └── utils/            # Formatters, export helpers
-│   └── analytics-api/            # Unified backend (Express + PostgreSQL + DuckDB)
-│       ├── src/
-│       │   ├── db/               # PostgreSQL pool + DuckDB connection
-│       │   ├── middleware/       # JWT auth middleware
-│       │   ├── routes/           # auth, analytics, tracking, sites
-│       │   ├── services/         # Business logic, cache, auth
-│       │   ├── queries/          # DuckDB analytical query functions
-│       │   └── scripts/          # Migration, seed, DuckDB init, sync
-│       ├── duckdb/               # DuckDB database file (auto-created)
-│       └── tests/                # Vitest + Supertest test suite
-├── archive/
-│   └── analytics-api-legacy/     # Previous backend retained for reference
-├── examples/
-│   ├── demo-blog/                # Demo content site with tracking script
-│   ├── demo-site/                # Docker-served demo site used by compose
-│   └── demo-website/             # Sample static website with tracking
-├── marketing/
-│   └── landing-page/             # Marketing / launch page assets
-├── design/
-│   └── pencil-new.pen            # Pencil design working file
-├── docs/                         # Project documentation
-│   ├── getting-started.md        # Step-by-step setup guide
-│   ├── running-locally.md        # Detailed local development guide
-│   ├── tracking-script.md        # Tracking script usage & customization
-│   ├── api-reference.md          # Full REST API documentation
-│   ├── architecture.md           # System design & data flow
-│   ├── backend-architecture.md   # Unified backend deep-dive
-│   ├── docker-setup.md           # Docker & PostgreSQL setup
-│   ├── duckdb-guide.md           # DuckDB analytics engine guide
-│   └── deployment.md             # Production deployment guide
-├── scripts/                      # Utility scripts (Docker checks, helpers)
-├── screenshots/                  # Product screenshots used in docs/README
-└── README.md
-```
+### Real-time
+![Realtime](screenshots/17-realtime.png)
 
-The grouped structure above is the canonical project layout. Use those paths for all new work, automation, and deployment configuration.
+Live visitor count, active pages, an interactive world map of current visitors, and a device breakdown — refreshing every few seconds.
 
-## Tech Stack
+### Visual Heatmap
+![Heatmap](screenshots/30-heatmap-full.png)
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, Vite 5, Tailwind CSS 3, Recharts, Zustand, React Router 6 |
-| Backend | Node.js, Express 4 |
-| Write DB | PostgreSQL 16 (Docker) — tracking events, auth, sites |
-| Read DB | DuckDB (embedded) — analytics queries, 10-100× faster aggregations |
-| Auth | JWT (7-day expiry), bcrypt (12 rounds) |
-| Caching | In-memory TTL cache (10s realtime → 120s general) |
-| Testing | Vitest, Supertest |
-| Icons | Lucide React |
-| HTTP | Axios |
+Click-density dots overlaid on a live preview of any tracked page — indigo (rare) → red (hottest). A Click Distribution table ranks every element by clicks and unique users. Filter by device, cluster nearby clicks, and export to CSV.
 
-## API Overview
+### Engagement & Performance
 
-| Group | Key Endpoints | Database |
-|-------|---------------|---------|
-| **Auth** | `POST /api/auth/register`, `/login`, `GET /api/auth/me` | PostgreSQL |
-| **Sites** | `GET /api/sites`, `POST /api/sites`, `GET /api/sites/:id/script` | PostgreSQL |
-| **Analytics** | `/api/analytics/:siteId/kpi`, `/traffic`, `/top-pages`, `/sources`, `/devices`, `/countries`, `/realtime`, `/user-flow`, `/funnel`, `/alerts`, `/comparison`, `/all` | DuckDB |
-| **Engagement** | `/api/analytics/:siteId/engagement/scroll-depth`, `/rage-clicks`, `/heatmap`, `/heatmap-summary`, `/time-on-page` | DuckDB |
-| **Performance** | `/api/analytics/:siteId/performance/web-vitals`, `/web-vitals-overview`, `/errors`, `/errors-over-time` | DuckDB |
-| **Tracking** | `POST /api/track/event`, `/pageview`, `/session`, `/batch`, `GET /api/track/pixel.gif` | PostgreSQL |
+| ![Engagement](screenshots/27-engagement-full.png) | ![Performance](screenshots/32-performance-full.png) |
+|---|---|
+| **Engagement** — scroll-depth milestones (25/50/75/100%), rage-click detection, and time-on-page behaviour. | **Performance** — Core Web Vitals (LCP, FID, CLS, INP, TTFB) scored against Google thresholds, plus a JS error log with trend chart. |
 
-All analytics endpoints accept `?dateRange=today|7d|30d|90d|custom:YYYY-MM-DD:YYYY-MM-DD`.
+### Funnels & Conversions
 
-See [docs/api-reference.md](docs/api-reference.md) for full details.
+| ![Funnels](screenshots/16-funnels.png) | ![Conversions](screenshots/40-conversions.png) |
+|---|---|
+| **Funnels** — define multi-step journeys and see exact drop-off between stages. | **Conversions** — track goals and conversion rates over time. |
 
-## Running Tests
+### Audience, Acquisition & Pages
+
+| ![Audience](screenshots/36-audience.png) | ![Acquisition](screenshots/37-acquisition.png) |
+|---|---|
+| **Audience** — devices, browsers, OS, countries, returning vs. new. | **Acquisition** — traffic sources, referrers, and UTM campaign breakdown. |
+
+![Pages](screenshots/15-pages-view.png)
+**Pages** — every tracked URL with views, unique visitors, and % of total. Sortable, filterable, CSV/JSON export.
+
+### Reporting Studio & SQL Editor
+
+| ![Reporting](screenshots/38-reporting.png) | ![SQL Editor](screenshots/39-sql-editor.png) |
+|---|---|
+| **Reporting Studio** — drag-and-drop custom dashboards, scheduled email reports, shareable links. | **SQL Editor** — run read-only DuckDB queries directly against your analytics data, with schema browser and saved queries. |
+
+### User Flow & Dark Mode
+
+| ![User Flow](screenshots/18-user-flow.png) | ![Dark mode](screenshots/25-dashboard-dark-mode.png) |
+|---|---|
+| **User Flow** — how visitors move between pages, entry → transitions → exits. | **Dark mode** — full app theming, system-preference aware. |
+
+### Team, Settings & Profile
+
+| ![Settings](screenshots/19-settings.png) | ![Profile](screenshots/20-profile.png) |
+|---|---|
+| **Settings** — manage multiple sites, copy the tracking script, configure traffic-spike alerts. | **Profile** — General, Security, **Team** (invite members, custom roles), and per-member Feature Manager. |
+
+> Team access, custom roles, and the live-demo join flow are documented in [docs/team-access.md](docs/team-access.md).
+
+---
+
+## 🛳️ Deploy Your Own
+
+InsightsTrack ships two interchangeable app layouts:
+
+- **`apps/`** — the stable layout. PostgreSQL + DuckDB in one backend. Best default.
+- **`appsv2/`** — the hot/cold layout. DuckDB **hot tier** (RAM, last 30 days) + **cold Parquet** on S3/R2 for very large datasets. See [docs/hot-cold-analytics-architecture.md](docs/hot-cold-analytics-architecture.md).
+
+![Deploy section](screenshots/35-landing-deploy.png)
+
+### Docker (fastest)
 
 ```bash
-cd apps/analytics-api
-npm test
+git clone https://github.com/NishikantaRay/InsightTrack.git
+cd InsightTrack
+cp .env.example .env
+docker-compose up --build -d            # apps/ stack
+# or, for the hot/cold build:
+docker-compose -f docker-compose.v2.yml up --build -d
 ```
 
-## Environment Variables
+### Manual — `apps/`
+
+```bash
+# Backend
+cd apps/analytics-api
+cp .env.example .env        # set DATABASE_URL, JWT_SECRET, APP_BASE_URL
+npm install && npm run migrate && npm run init && npm start   # :3001
+
+# Frontend
+cd ../dashboard-web
+npm install && npm run build && npm run preview               # :4173
+```
+
+### Manual — `appsv2/` (hot/cold + S3/R2)
+
+```bash
+cd appsv2/analytics-api
+cp .env.example .env        # add S3_*/R2_* vars to enable cold storage
+npm install && npm run migrate && npm run init && npm start   # :3001
+
+cd ../dashboard-web
+npm install && npm run build && npm run preview               # :4173
+```
+
+### Cloud (Railway / Render + Vercel / Cloudflare Pages)
+
+- **Backend** → Railway or Render. Add a PostgreSQL plugin (sets `DATABASE_URL`), set Root Dir to `apps/analytics-api`, Start command `npm run migrate && npm run init && npm start`, and attach a volume at `/data` for the DuckDB file.
+- **Frontend** → Vercel, Cloudflare Pages, or Netlify. Root Dir `apps/dashboard-web`, build `npm run build`, output `dist`, and set `VITE_API_URL` to your backend URL.
+
+Full production guide (Nginx, SSL, backups, env vars): [docs/deployment.md](docs/deployment.md)
+
+### Seeding demo data
+
+Populate any instance with realistic sample data so the "Open live dashboard" CTA works:
+
+```bash
+# Local
+node scripts/seed-live-demo.js
+
+# Against a remote backend (e.g. Railway)
+EVENTS=10000 API=https://your-backend.up.railway.app node scripts/seed-live-demo.js
+```
+
+Then set on the backend: `DEMO_SITE_DOMAIN=hello.com` and `APP_BASE_URL=https://your-dashboard-url`.
+
+---
+
+## 🔑 Key Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` | API server port |
-| `DATABASE_URL` | `postgresql://analytics:analytics123@localhost:5432/analytics_db` | PostgreSQL connection string |
-| `JWT_SECRET` | (built-in default) | Secret for signing JWT tokens — **change in production** |
-| `CORS_ORIGINS` | `http://localhost:5173,http://localhost:8080` | Comma-separated allowed origins |
-| `DUCKDB_PATH` | `./duckdb/analytics.duckdb` | Path to DuckDB database file |
+| `DATABASE_URL` | `postgresql://…@localhost:5432/analytics` | PostgreSQL connection string |
+| `JWT_SECRET` | _(set in production)_ | Secret for signing JWTs (≥ 32 random bytes) |
+| `APP_BASE_URL` | `http://localhost:4173` | Frontend URL for team invite links |
+| `DEMO_SITE_DOMAIN` | `hello.com` | Domain of the public demo site for the "Open live dashboard" CTA |
+| `DUCKDB_PATH` | `duckdb/analytics.duckdb` | Path to the DuckDB file (use a volume in production) |
+| `DUCKDB_POOL_SIZE` | `4` | DuckDB connection pool size |
+| `SYNC_DEBOUNCE_MS` | `5000` | Debounce window before PG→DuckDB sync after a tracking event |
+| `CORS_ORIGINS` | `localhost:4173,…` | Comma-separated allowed origins |
+| `HOT_DAYS` _(appsv2)_ | `30` | Days kept in the DuckDB hot tier before archiving to Parquet |
 
-## Documentation
+The `appsv2/` layout adds `S3_*`/`R2_*` variables to enable cold storage — see its `.env.example`.
 
-| Document | Description |
-|----------|-------------|
-| [Getting Started](docs/getting-started.md) | Step-by-step setup from scratch |
-| [Running Locally](docs/running-locally.md) | Detailed local development walkthrough |
+---
+
+## 🗂️ Project Structure
+
+```
+InsightsTrack/
+├── apps/                          # Stable layout (default)
+│   ├── analytics-api/             # Express + PostgreSQL + DuckDB
+│   │   └── src/{db,routes,services,queries,sync,schema}/
+│   └── dashboard-web/             # React 18 + Vite + Tailwind dashboard
+├── appsv2/                        # Hot/cold layout (DuckDB hot + S3/R2 Parquet)
+│   ├── analytics-api/
+│   └── dashboard-web/
+├── examples/                      # Demo sites with the tracking script
+├── scripts/                       # seed-live-demo.js, benchmarks, helpers
+├── screenshots/                   # Product screenshots used in this README
+├── docs/                          # Full documentation
+├── docker-compose.yml             # apps/ full stack
+└── docker-compose.v2.yml          # appsv2/ full stack
+```
+
+---
+
+## 🧱 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite 5, Tailwind CSS 3, Recharts, Zustand, React Router 6 |
+| Backend | Node.js 20, Express 4 |
+| Write DB | PostgreSQL 16 — tracking events, auth, sites, teams |
+| Read DB | DuckDB (embedded columnar) — analytics queries |
+| Cold storage _(appsv2)_ | Parquet on AWS S3 / Cloudflare R2 / MinIO |
+| Auth | JWT (7-day expiry), bcrypt |
+| Caching | In-memory TTL cache + request coalescing |
+| Testing | Vitest, Supertest, Playwright |
+
+---
+
+## 🔌 API Overview
+
+| Group | Key Endpoints | DB |
+|-------|---------------|-----|
+| **Auth** | `POST /api/auth/register` · `/login` · `GET /api/auth/me` | PostgreSQL |
+| **Sites** | `GET/POST /api/sites` · `GET /api/sites/:id/script` | PostgreSQL |
+| **Tracking** | `POST /api/track/event` · `/pageview` · `/batch` · `GET /api/track/pixel.gif` | PostgreSQL |
+| **Analytics** | `/api/analytics/:siteId/{kpi,traffic,top-pages,sources,devices,countries,realtime,user-flow,funnel,…}` | DuckDB |
+| **Engagement** | `/engagement/{scroll-depth,rage-clicks,heatmap,time-on-page}` | DuckDB |
+| **Performance** | `/performance/{web-vitals,errors,errors-over-time}` | DuckDB |
+| **Team** | `/api/team/:siteId/{members,invite,roles}` · `/api/demo/join` | PostgreSQL |
+
+All analytics endpoints accept `?dateRange=today|7d|30d|90d|custom:YYYY-MM-DD:YYYY-MM-DD`.
+Full reference: [docs/api-reference.md](docs/api-reference.md)
+
+---
+
+## 📚 Documentation
+
+| Document | What's inside |
+|----------|---------------|
+| [Getting Started](docs/getting-started.md) | Setup from scratch |
+| [Running Locally](docs/running-locally.md) | Detailed local dev walkthrough |
+| [Deployment](docs/deployment.md) | Production: Docker, Nginx, SSL, Railway, appsv2 |
 | [Tracking Script](docs/tracking-script.md) | How tracking works, SPA support, custom events |
-| [API Reference](docs/api-reference.md) | Full REST API documentation with examples |
-| [Architecture](docs/architecture.md) | System design, data flow, database schema |
-| [Backend Architecture](docs/backend-architecture.md) | Unified backend deep-dive (routes, caching, security) |
-| [Docker Setup](docs/docker-setup.md) | Docker & PostgreSQL container management |
-| [DuckDB Guide](docs/duckdb-guide.md) | DuckDB analytics engine, sync, queries |
-| [Deployment](docs/deployment.md) | Production deployment with Docker, Nginx, SSL |
-| [Visual Heatmap](docs/heatmap.md) | Heatmap feature guide — click recording, API, testing, troubleshooting |
-| [Hot+Cold Architecture](docs/hot-cold-analytics-architecture.md) | DuckDB hot (30d) + cold (Parquet) data layer |
-| [PG→DuckDB Sync](docs/pg-duckdb-sync.md) | PostgreSQL to DuckDB sync pipeline |
+| [API Reference](docs/api-reference.md) | Full REST API with examples |
+| [Architecture](docs/architecture.md) | System design & data flow |
+| [Hot+Cold Architecture](docs/hot-cold-analytics-architecture.md) | DuckDB hot (30d) + Parquet cold layer |
+| [PG→DuckDB Sync](docs/pg-duckdb-sync.md) | The sync pipeline (keyset cursor, idempotency) |
+| [Team Access](docs/team-access.md) | Multi-user, custom roles, live-demo flow |
+| [Visual Heatmap](docs/heatmap.md) | Heatmap feature deep-dive |
+| [SQL Editor](docs/sql-editor.md) · [Custom Dashboards](docs/custom-dashboards.md) · [Reporting Studio](docs/reporting-studio.md) | Feature guides |
+
+---
+
+## Running Tests
+
+```bash
+cd apps/analytics-api && npm test          # backend (Vitest + Supertest)
+cd apps/dashboard-web && npm test          # frontend unit tests
+cd apps/dashboard-web && npx playwright test  # end-to-end
+```
+
+---
+
+## ❤️ Support
+
+InsightsTrack is free and open source. If it's useful to you, please consider
+**[sponsoring on GitHub](https://github.com/sponsors/NishikantaRay)** — it directly
+funds new features, maintenance, and keeping the project free for everyone.
+
+<a href="https://github.com/sponsors/NishikantaRay">
+  <img src="https://img.shields.io/badge/Sponsor%20on%20GitHub-♥-ea4aaa?style=for-the-badge&logo=githubsponsors" alt="Sponsor NishikantaRay" />
+</a>
+
+<!-- On GitHub this renders the live Sponsor button: -->
+<iframe src="https://github.com/sponsors/NishikantaRay/button" title="Sponsor NishikantaRay" height="32" width="114" style="border: 0; border-radius: 6px;"></iframe>
+
+A ⭐ on the repo also helps a lot!
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE) — free to self-host, modify, and run forever.

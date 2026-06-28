@@ -1,6 +1,6 @@
-# InsightTrack — Unified Backend
+# InsightsTrack — Unified Backend
 
-The single backend server for InsightTrack, combining **Express.js**, **PostgreSQL** (writes), and **DuckDB** (analytics reads) in one process.
+The single backend server for InsightsTrack, combining **Express.js**, **PostgreSQL** (writes), and **DuckDB** (analytics reads) in one process.
 
 ```
        Tracking/Auth/Sites               Analytics Charts

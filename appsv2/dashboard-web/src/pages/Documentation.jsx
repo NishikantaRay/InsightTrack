@@ -121,6 +121,26 @@ const apiEndpoints = [
         ],
     },
     {
+        group: 'Team & Invites',
+        prefix: '/api/team · /api/invite',
+        color: 'text-indigo-500',
+        bg: 'bg-indigo-50 dark:bg-indigo-500/10',
+        routes: [
+            { method: 'GET',    path: '/team/:siteId/members',                   desc: 'List members, pending invites, and custom roles' },
+            { method: 'POST',   path: '/team/:siteId/invite',                    desc: 'Invite by email { email, role }' },
+            { method: 'PUT',    path: '/team/:siteId/members/:userId',            desc: 'Change built-in role { role: admin|viewer }' },
+            { method: 'DELETE', path: '/team/:siteId/members/:userId',            desc: 'Remove member (owner only)' },
+            { method: 'GET',    path: '/team/:siteId/roles',                      desc: 'List custom roles for the site' },
+            { method: 'POST',   path: '/team/:siteId/roles',                      desc: 'Create custom role { name, color, permissions }' },
+            { method: 'PUT',    path: '/team/:siteId/roles/:roleId',              desc: 'Update custom role (owner/admin)' },
+            { method: 'DELETE', path: '/team/:siteId/roles/:roleId',              desc: 'Delete custom role (owner only)' },
+            { method: 'PUT',    path: '/team/:siteId/members/:userId/custom-role',desc: 'Assign custom role { customRoleId }' },
+            { method: 'GET',    path: '/invite/:token',                           desc: 'Public — get invite info (site name, role, inviter)' },
+            { method: 'POST',   path: '/invite/:token/accept',                    desc: 'Accept invite (auth required)' },
+            { method: 'DELETE', path: '/invite/:token',                           desc: 'Cancel pending invite (owner/admin)' },
+        ],
+    },
+    {
         group: 'Auth',
         prefix: '/api/auth',
         color: 'text-rose-500',
@@ -146,7 +166,10 @@ const dbTables = [
     { name: 'report_schedules', cols: 'id, site_id, name, frequency, recipients (JSON), enabled, config (JSON)', purpose: 'Scheduled report delivery' },
     { name: 'custom_dashboards', cols: 'id, site_id, name, description, widgets (JSON), created_at', purpose: 'Saved dashboard layouts' },
     { name: 'data_retention_policies', cols: 'id, site_id, retention_days, created_at, updated_at', purpose: 'Per-site data retention config' },
-    { name: 'daily_stats', cols: 'id, site_id, date, visitors, sessions, pageviews, bounces, avg_duration', purpose: 'Pre-aggregated daily rollups' },
+    { name: 'daily_stats',        cols: 'id, site_id, date, visitors, sessions, pageviews, bounces, avg_duration, computed_at', purpose: 'Pre-aggregated daily rollups (used by KPI/traffic queries for historical ranges)' },
+    { name: 'site_members',       cols: 'id, site_id, user_id, role, custom_role_id, invited_by, created_at', purpose: 'Team membership — who can access each site' },
+    { name: 'site_invitations',   cols: 'id, site_id, email, role, token, invited_by, expires_at, accepted_at', purpose: 'Pending invite tokens (7-day expiry)' },
+    { name: 'site_custom_roles',  cols: 'id, site_id, name, color, description, permissions (JSONB), created_by, created_at', purpose: 'Owner/admin-defined roles with per-page permissions' },
 ];
 
 const trackingEvents = [
@@ -182,7 +205,7 @@ const dashboardPages = [
     { icon: TrendingUp, name: 'Reporting', path: '/reporting', desc: 'Custom dashboards (freeform pixel canvas, 18 data sources, layout persistence, share/export), annotations, scheduled reports, CSV/JSON data export' },
     { icon: Lock, name: 'Privacy', path: '/privacy', desc: 'DNT/GPC status, data retention policy config, manual cleanup trigger' },
     { icon: SettingsIcon, name: 'Settings', path: '/settings', desc: 'Site management (add/edit/delete), tracking snippet, alerts panel with pagination and search' },
-    { icon: Users, name: 'Profile', path: '/profile', desc: 'User account name, email, password update' },
+    { icon: Users, name: 'Profile', path: '/profile', desc: 'Account settings, security, Team tab (invite members, custom roles, Feature Manager per member), personal sidebar visibility manager' },
 ];
 
 function CodeBlock({ children, label }) {
@@ -242,10 +265,10 @@ function BusinessOwnerGuide() {
             icon: HelpCircle,
             color: 'text-indigo-500',
             bg: 'bg-indigo-500/10',
-            title: 'What is InsightTrack?',
+            title: 'What is InsightsTrack?',
             content: (
                 <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
-                    <p>InsightTrack is a <strong className="text-gray-800 dark:text-gray-200">self-hosted web analytics platform</strong> — like Google Analytics, but you own all the data, there are no third parties involved, and there is no tracking consent banner required.</p>
+                    <p>InsightsTrack is a <strong className="text-gray-800 dark:text-gray-200">self-hosted web analytics platform</strong> — like Google Analytics, but you own all the data, there are no third parties involved, and there is no tracking consent banner required.</p>
                     <p>It runs on your own server (or a cheap cloud host like Railway) and shows you:</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                         <li>How many people visit your website and when</li>
@@ -265,8 +288,8 @@ function BusinessOwnerGuide() {
             content: (
                 <div className="space-y-4">
                     {[
-                        { step: '1', title: 'Create an account', text: 'Go to the login page and register. You\'ll be the admin of your own InsightTrack instance. No subscription, no monthly fees — it runs on your servers.' },
-                        { step: '2', title: 'Add your website', text: 'Go to Settings → Add Site. Enter your website name and domain. InsightTrack will give you a tracking snippet (a small piece of code).' },
+                        { step: '1', title: 'Create an account', text: 'Go to the login page and register. You\'ll be the admin of your own InsightsTrack instance. No subscription, no monthly fees — it runs on your servers.' },
+                        { step: '2', title: 'Add your website', text: 'Go to Settings → Add Site. Enter your website name and domain. InsightsTrack will give you a tracking snippet (a small piece of code).' },
                         { step: '3', title: 'Paste the snippet into your website', text: 'Copy the tracking snippet from Settings and paste it inside the <head> tag of every page on your website. If you use WordPress, Webflow, or similar, there is usually a "Header Code" setting where you can paste it.' },
                     ].map(({ step, title, text }) => (
                         <div key={step} className="flex gap-3">
@@ -299,7 +322,7 @@ function BusinessOwnerGuide() {
                         { name: 'Performance', icon: '⚡', tip: 'Slow pages = lost visitors. If your LCP is over 2.5 seconds, it hurts Google rankings. Fix the biggest issues first.' },
                         { name: 'User Flow', icon: '🔀', tip: 'Like a map of how people walk through your website. Useful for navigation redesigns.' },
                         { name: 'Reporting', icon: '📅', tip: 'Set up a weekly email summary so your team gets key metrics without logging in. Add annotations to remember why traffic changed.' },
-                        { name: 'Privacy', icon: '🔒', tip: 'No action needed — InsightTrack is privacy-compliant by default. Review if you want to configure how long data is kept.' },
+                        { name: 'Privacy', icon: '🔒', tip: 'No action needed — InsightsTrack is privacy-compliant by default. Review if you want to configure how long data is kept.' },
                     ].map(({ name, icon, tip }) => (
                         <div key={name} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
                             <p className="font-semibold text-gray-800 dark:text-gray-200 mb-1">{icon} {name}</p>
@@ -316,7 +339,7 @@ function BusinessOwnerGuide() {
             title: 'How to track marketing campaigns (UTM links)',
             content: (
                 <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
-                    <p>When you share a link to your website (in an email, social post, or ad), add UTM parameters to the URL. InsightTrack will automatically group and report that traffic under the campaign name you set.</p>
+                    <p>When you share a link to your website (in an email, social post, or ad), add UTM parameters to the URL. InsightsTrack will automatically group and report that traffic under the campaign name you set.</p>
                     <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 font-mono text-xs break-all">
                         https://yoursite.com/landing?<span className="text-indigo-500">utm_source=newsletter</span>&amp;<span className="text-green-500">utm_medium=email</span>&amp;<span className="text-orange-500">utm_campaign=may-promo</span>
                     </div>
@@ -365,7 +388,7 @@ function BusinessOwnerGuide() {
                 <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                        <p><strong className="text-green-700 dark:text-green-400">No cookie banner needed.</strong> InsightTrack does not use cookies. It uses anonymous localStorage identifiers. Most data privacy laws (GDPR, CCPA, PECR) only require consent banners for cookies and personal data — InsightTrack uses neither.</p>
+                        <p><strong className="text-green-700 dark:text-green-400">No cookie banner needed.</strong> InsightsTrack does not use cookies. It uses anonymous localStorage identifiers. Most data privacy laws (GDPR, CCPA, PECR) only require consent banners for cookies and personal data — InsightsTrack uses neither.</p>
                     </div>
                     <div className="flex gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
@@ -373,7 +396,7 @@ function BusinessOwnerGuide() {
                     </div>
                     <div className="flex gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                         <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <p><strong className="text-amber-700 dark:text-amber-400">Consult a lawyer for your specific situation.</strong> InsightTrack reduces your privacy obligations, but you should confirm compliance with legal counsel, especially if you operate in regulated industries.</p>
+                        <p><strong className="text-amber-700 dark:text-amber-400">Consult a lawyer for your specific situation.</strong> InsightsTrack reduces your privacy obligations, but you should confirm compliance with legal counsel, especially if you operate in regulated industries.</p>
                     </div>
                     <p>For full details, see the <strong>Privacy &amp; Compliance</strong> page in the dashboard sidebar.</p>
                 </div>
@@ -389,7 +412,7 @@ function BusinessOwnerGuide() {
                     <div>
                         <h2 className="font-bold text-indigo-900 dark:text-indigo-100">For Business Owners &amp; Non-Technical Users</h2>
                         <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">
-                            Everything you need to know to use InsightTrack effectively, without needing to understand the code.
+                            Everything you need to know to use InsightsTrack effectively, without needing to understand the code.
                         </p>
                     </div>
                 </div>
@@ -419,7 +442,7 @@ export default function Documentation() {
             <div>
                 <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary-dark">Documentation</h1>
                 <p className="mt-1 text-text-secondary dark:text-text-secondary-dark">
-                    Complete reference for InsightTrack — pick your audience below.
+                    Complete reference for InsightsTrack — pick your audience below.
                 </p>
             </div>
 
@@ -984,41 +1007,73 @@ function DeveloperGuide() {
             <Collapsible title="Quick Start (Local / Docker)" icon={Terminal} color="text-green-500" defaultOpen>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <CodeBlock label="Docker (recommended)">{`# Clone and start everything
-git clone <repo>
-cd traffic
+                        <CodeBlock label="Docker — start everything (recommended)">{`# 1. Clone the repo
+git clone https://github.com/NishikantaRay/InsightTrack.git
+cd InsightTrack
+
+# 2. Configure environment (fill in passwords)
+cp .env.example .env
+
+# 3. Start all services
 docker-compose up --build
 
-# Services:
-# http://localhost:4173  → Dashboard
-# http://localhost:3001  → Backend API
+# Running services:
+# http://localhost:4173  → Dashboard   (apps/dashboard-web)
+# http://localhost:3001  → Backend API (apps/analytics-api)
 # http://localhost:8080  → Demo site
-# http://localhost:5050  → pgAdmin`}</CodeBlock>
+# http://localhost:5050  → pgAdmin (DB browser)
+
+# For the v2 hot+cold architecture:
+# docker-compose -f docker-compose.v2.yml up --build`}</CodeBlock>
                     </div>
                     <div>
-                        <CodeBlock label="Manual setup">{`# 1. PostgreSQL
-docker run -d --name analytics-pg \\
-  -e POSTGRES_USER=analytics \\
-  -e POSTGRES_PASSWORD=analytics123 \\
-  -e POSTGRES_DB=analytics_db \\
-  -p 5432:5432 postgres:16-alpine
-
-# 2. Backend
+                        <CodeBlock label="Manual setup (no Docker)">{`# ── Backend (apps/analytics-api) ─────────────────
 cd apps/analytics-api
-npm install && npm run migrate
-npm run seed && npm run init
-npm run sync && npm start
+npm install
 
-# 3. Dashboard
-cd apps/dashboard-web
-npm install && npm run dev`}</CodeBlock>
+# First-time: create tables, seed data, init DuckDB
+npm run migrate   # PostgreSQL tables
+npm run seed      # sample data
+npm run init      # DuckDB tables
+npm run sync      # sync PG → DuckDB
+
+npm start         # → http://localhost:3001
+
+# ── Dashboard (apps/dashboard-web) ────────────────
+cd ../dashboard-web
+npm install
+# Create .env with: VITE_API_URL=http://localhost:3001
+npm run dev       # → http://localhost:5173`}</CodeBlock>
                     </div>
                     <div>
-                        <CodeBlock label="Add Tracking Script">{`<!-- Paste in your website's <head> -->
-<script src="https://your-backend.railway.app/api/sites/YOUR_SITE_ID/script"></script>`}</CodeBlock>
+                        <CodeBlock label="Manual setup — appsv2/ (hot/cold DuckDB)">{`# The appsv2/ layout adds a hot (RAM) + cold (S3/R2
+# Parquet) tier for very large datasets.
+
+# ── Backend (appsv2/analytics-api) ────────────────
+cd appsv2/analytics-api
+cp .env.example .env   # add S3_*/R2_* vars to enable cold storage
+npm install
+npm run migrate && npm run init && npm start   # :3001
+
+# ── Dashboard (appsv2/dashboard-web) ──────────────
+cd ../dashboard-web
+npm install
+npm run build && npm run preview   # :4173`}</CodeBlock>
                     </div>
                     <div>
-                        <CodeBlock label="Custom Events">{`// Manual event tracking
+                        <CodeBlock label="Add tracking to your website">{`<!-- Paste once into your website's <head> -->
+<!-- Get YOUR_SITE_ID from Settings → Sites -->
+<script
+  src="http://localhost:3001/api/sites/YOUR_SITE_ID/script"
+></script>
+
+<!-- Auto-tracks: pageviews, clicks, scroll depth,
+     Web Vitals (LCP/FID/CLS/INP/TTFB), JS errors,
+     heatmap clicks, rage clicks, sessions. -->`}</CodeBlock>
+                    </div>
+                    <div>
+                        <CodeBlock label="Custom events (optional)">{`// After the tracking script is loaded:
+window.trackEvent('signup', { plan: 'pro' });
 window.trackEvent('purchase', { amount: 49.99 });
 window.trackAddToCart('Widget', 29.99);
 window.trackCheckout([{ name: 'Widget', qty: 1 }]);
@@ -1027,54 +1082,144 @@ window.trackPurchase(29.99);`}</CodeBlock>
                 </div>
             </Collapsible>
 
-            {/* Deployment */}
-            <Collapsible title="Production Deployment (Railway + Cloudflare Pages)" icon={Cloud} color="text-sky-500">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-semibold flex items-center gap-2"><Server className="w-4 h-4 text-green-500" /> Backend → Railway</h3>
-                        <ol className="space-y-2 text-xs text-text-secondary dark:text-text-secondary-dark list-decimal list-inside">
-                            <li>Create a Railway project and connect your GitHub repo</li>
-                            <li>Add a <strong>PostgreSQL</strong> database plugin — <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">DATABASE_URL</code> is injected automatically</li>
-                            <li>Set <strong>Root Directory</strong> to <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">apps/analytics-api</code></li>
-                            <li>Add required env vars (see table below)</li>
-                            <li>Set Start Command to <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">npm run migrate &amp;&amp; npm run init &amp;&amp; npm start</code></li>
-                            <li>Optionally attach a <strong>Volume</strong> at <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">/data</code> for DuckDB persistence</li>
-                        </ol>
+            {/* npm scripts reference */}
+            <Collapsible title="Available npm Scripts" icon={Terminal} color="text-purple-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                    <div>
+                        <h3 className="font-semibold text-text-primary dark:text-text-primary-dark mb-2 flex items-center gap-2">
+                            <Server className="w-3.5 h-3.5 text-green-500" /> apps/analytics-api
+                        </h3>
                         <div className="rounded-lg border border-border dark:border-border-dark overflow-hidden">
-                            <table className="w-full text-xs">
-                                <thead><tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-border dark:border-border-dark">
-                                    <th className="px-3 py-2 text-left font-medium text-text-muted dark:text-text-muted-dark">Variable</th>
-                                    <th className="px-3 py-2 text-left font-medium text-text-muted dark:text-text-muted-dark">Value</th>
-                                </tr></thead>
+                            <table className="w-full">
                                 <tbody>
                                     {[
-                                        ['DATABASE_URL', 'Auto-injected by PostgreSQL plugin'],
-                                        ['JWT_SECRET', 'Long random string'],
-                                        ['CORS_ORIGINS', 'https://your-app.pages.dev'],
-                                        ['NODE_ENV', 'production'],
-                                        ['DUCKDB_PATH', '/data/analytics.duckdb'],
-                                    ].map(([k, v]) => (
-                                        <tr key={k} className="border-b border-border/50 dark:border-border-dark/50 last:border-0">
-                                            <td className="px-3 py-2 font-mono text-text-primary dark:text-text-primary-dark">{k}</td>
-                                            <td className="px-3 py-2 text-text-secondary dark:text-text-secondary-dark">{v}</td>
+                                        ['npm start',           'Start the API server (production)'],
+                                        ['npm run dev',         'Start with hot-reload (nodemon)'],
+                                        ['npm run migrate',     'Create / update all PostgreSQL tables'],
+                                        ['npm run seed',        'Insert realistic sample data'],
+                                        ['npm run init',        'Initialise DuckDB tables and schema'],
+                                        ['npm run sync',        'Run one incremental PG → DuckDB sync'],
+                                        ['npm run sync:full',   'Full re-sync (truncate + reimport everything)'],
+                                        ['npm run aggregate',   'Rebuild daily_stats aggregations'],
+                                        ['npm test',            'Run Vitest unit tests'],
+                                    ].map(([cmd, desc]) => (
+                                        <tr key={cmd} className="border-b border-border/50 dark:border-border-dark/50 last:border-0">
+                                            <td className="px-3 py-2 font-mono text-text-primary dark:text-text-primary-dark whitespace-nowrap">{cmd}</td>
+                                            <td className="px-3 py-2 text-text-secondary dark:text-text-secondary-dark">{desc}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-semibold flex items-center gap-2"><Globe className="w-4 h-4 text-cyan-500" /> Dashboard → Cloudflare Pages</h3>
-                        <ol className="space-y-2 text-xs text-text-secondary dark:text-text-secondary-dark list-decimal list-inside">
-                            <li>Cloudflare Dashboard → Workers &amp; Pages → Create application → Pages → Connect to Git</li>
-                            <li>Set <strong>Root directory</strong> to <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">apps/dashboard-web</code></li>
-                            <li>Build command: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">npm run build</code></li>
-                            <li>Output directory: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">dist</code></li>
-                            <li>Add env var <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">VITE_API_URL</code> = your Railway backend URL (with <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">https://</code>)</li>
-                            <li>Deploy — preview deployments created automatically for every PR</li>
-                        </ol>
-                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-                            <strong>Note:</strong> <code className="font-mono">VITE_API_URL</code> must include <code className="font-mono">https://</code> — Cloudflare Pages bakes env vars at build time. After any change, retrigger a deployment.
+                    <div>
+                        <h3 className="font-semibold text-text-primary dark:text-text-primary-dark mb-2 flex items-center gap-2">
+                            <Globe className="w-3.5 h-3.5 text-cyan-500" /> apps/dashboard-web
+                        </h3>
+                        <div className="rounded-lg border border-border dark:border-border-dark overflow-hidden">
+                            <table className="w-full">
+                                <tbody>
+                                    {[
+                                        ['npm run dev',         'Start Vite dev server → http://localhost:5173'],
+                                        ['npm run build',       'Production build → /dist'],
+                                        ['npm run preview',     'Preview production build locally'],
+                                        ['npm test',            'Run Vitest component tests'],
+                                        ['npm run test:e2e',    'Run Playwright end-to-end tests'],
+                                    ].map(([cmd, desc]) => (
+                                        <tr key={cmd} className="border-b border-border/50 dark:border-border-dark/50 last:border-0">
+                                            <td className="px-3 py-2 font-mono text-text-primary dark:text-text-primary-dark whitespace-nowrap">{cmd}</td>
+                                            <td className="px-3 py-2 text-text-secondary dark:text-text-secondary-dark">{desc}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-3 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs text-indigo-700 dark:text-indigo-300">
+                            <strong>Note:</strong> Dev server runs on <code className="font-mono">:5173</code>.
+                            The Docker build serves the compiled app on <code className="font-mono">:4173</code> via nginx.
+                        </div>
+                    </div>
+                </div>
+            </Collapsible>
+
+            {/* Deployment */}
+            <Collapsible title="Production Deployment" icon={Cloud} color="text-sky-500">
+                <div className="space-y-6">
+                    {/* Backend options */}
+                    <div>
+                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Server className="w-4 h-4 text-green-500" /> Backend (apps/analytics-api) — choose one</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                            {[
+                                { name: 'Railway', badge: 'Easiest', steps: ['Connect GitHub repo', 'Add PostgreSQL plugin (DATABASE_URL auto-injected)', 'Root Dir: apps/analytics-api', 'Start: npm run migrate && npm run init && npm start', 'Attach Volume at /data for DuckDB persistence'] },
+                                { name: 'Render', badge: 'Free tier', steps: ['New → Web Service → connect repo', 'Root Dir: apps/analytics-api', 'Build: npm install', 'Start: npm run migrate && npm run init && npm start', 'Add PostgreSQL database, copy DATABASE_URL env var'] },
+                                { name: 'Docker / VPS', badge: 'Full control', steps: ['Copy .env.example → .env and fill secrets', 'docker-compose up --build', 'API on :3001, Dashboard on :4173', 'Use nginx reverse proxy for HTTPS', 'Mount volumes for PG data and DuckDB'] },
+                            ].map(({ name, badge, steps }) => (
+                                <div key={name} className="rounded-lg border border-border dark:border-border-dark p-3 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-text-primary dark:text-text-primary-dark">{name}</span>
+                                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold">{badge}</span>
+                                    </div>
+                                    <ol className="space-y-1 list-decimal list-inside text-text-secondary dark:text-text-secondary-dark">
+                                        {steps.map((s, i) => <li key={i}>{s}</li>)}
+                                    </ol>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Required env vars */}
+                    <div>
+                        <h4 className="text-xs font-bold text-text-muted dark:text-text-muted-dark uppercase tracking-wider mb-2">Required environment variables (apps/analytics-api/.env)</h4>
+                        <div className="rounded-lg border border-border dark:border-border-dark overflow-hidden">
+                            <table className="w-full text-xs">
+                                <thead><tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-border dark:border-border-dark">
+                                    <th className="px-3 py-2 text-left font-medium text-text-muted dark:text-text-muted-dark">Variable</th>
+                                    <th className="px-3 py-2 text-left font-medium text-text-muted dark:text-text-muted-dark">Value</th>
+                                    <th className="px-3 py-2 text-left font-medium text-text-muted dark:text-text-muted-dark">Note</th>
+                                </tr></thead>
+                                <tbody>
+                                    {[
+                                        ['POSTGRES_USER',       'trafficuser',                         'From .env.example — Railway injects PG_* vars automatically'],
+                                        ['POSTGRES_PASSWORD',   '<strong-password>',                   'Change before going live — never commit real values'],
+                                        ['POSTGRES_DB',         'analytics',                           'Database name'],
+                                        ['JWT_SECRET',          '≥32 random chars',                    'node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'],
+                                        ['CORS_ORIGINS',        'https://your-dashboard.vercel.app',   'Must exactly match your frontend URL — comma-separated for multiple'],
+                                        ['NODE_ENV',            'production',                          'Hides internal error details from API responses'],
+                                        ['DUCKDB_PATH',         'duckdb/analytics.duckdb',             'Set to /data/analytics.duckdb when using a Docker volume'],
+                                        ['APP_BASE_URL',        'https://your-dashboard.vercel.app',   'Required for team invite links to work correctly'],
+                                        ['SYNC_DEBOUNCE_MS',    '5000',                                'ms to wait before syncing after first tracking event'],
+                                        ['DUCKDB_POOL_SIZE',    '4',                                   'Parallel DuckDB query connections — increase on 8+ core machines'],
+                                    ].map(([k, v, n]) => (
+                                        <tr key={k} className="border-b border-border/50 dark:border-border-dark/50 last:border-0">
+                                            <td className="px-3 py-2 font-mono text-text-primary dark:text-text-primary-dark whitespace-nowrap">{k}</td>
+                                            <td className="px-3 py-2 text-text-secondary dark:text-text-secondary-dark">{v}</td>
+                                            <td className="px-3 py-2 text-text-muted dark:text-text-muted-dark italic">{n}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Frontend options */}
+                    <div>
+                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Globe className="w-4 h-4 text-cyan-500" /> Frontend (apps/dashboard-web) — choose one</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                            {[
+                                { name: 'Vercel', steps: ['vercel --prod from apps/dashboard-web', 'Or: connect repo, Root Dir: apps/dashboard-web', 'Add VITE_API_URL env var in Vercel dashboard', 'Redeploy after changing any env var'] },
+                                { name: 'Cloudflare Pages', steps: ['Workers & Pages → Create → Pages → Connect Git', 'Root Dir: apps/dashboard-web, Build: npm run build, Output: dist', 'Add VITE_API_URL (must include https://)', 'Retrigger deploy after env var changes'] },
+                                { name: 'Netlify / Static', steps: ['npm run build in apps/dashboard-web', 'Upload /dist to Netlify, GitHub Pages, or S3', 'Set VITE_API_URL at build time', 'Add _redirects file: /* /index.html 200'] },
+                            ].map(({ name, steps }) => (
+                                <div key={name} className="rounded-lg border border-border dark:border-border-dark p-3 space-y-2">
+                                    <span className="font-semibold text-text-primary dark:text-text-primary-dark">{name}</span>
+                                    <ol className="space-y-1 list-decimal list-inside text-text-secondary dark:text-text-secondary-dark mt-1">
+                                        {steps.map((s, i) => <li key={i}>{s}</li>)}
+                                    </ol>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
+                            <strong>Important:</strong> <code className="font-mono">VITE_API_URL</code> is baked into the JS bundle at build time. After changing it you must redeploy. Must start with <code className="font-mono">https://</code> in production.
                         </div>
                     </div>
                 </div>
@@ -1371,6 +1516,117 @@ GET /api/analytics/:siteId/performance/errors-over-time?dateRange=30d`}</CodeBlo
                 </div>
             </Collapsible>
 
+            {/* Team Access & Custom Roles */}
+            <Collapsible title="Team Access & Custom Roles" icon={Users} color="text-indigo-500">
+                <div className="space-y-4 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>InsightsTrack supports multiple users per site. The owner can invite teammates and assign roles. Custom roles let you define exactly which pages each person can see.</p>
+
+                    <div>
+                        <p className="text-[10px] font-bold text-text-muted dark:text-text-muted-dark uppercase tracking-wider mb-2">Built-in roles</p>
+                        <div className="rounded-lg border border-border dark:border-border-dark overflow-hidden">
+                            <table className="w-full text-xs">
+                                <thead><tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-border dark:border-border-dark">
+                                    <th className="px-3 py-2 text-left font-medium text-text-muted dark:text-text-muted-dark">Role</th>
+                                    <th className="px-3 py-2 text-center font-medium text-text-muted dark:text-text-muted-dark">View analytics</th>
+                                    <th className="px-3 py-2 text-center font-medium text-text-muted dark:text-text-muted-dark">Invite members</th>
+                                    <th className="px-3 py-2 text-center font-medium text-text-muted dark:text-text-muted-dark">Change roles</th>
+                                    <th className="px-3 py-2 text-center font-medium text-text-muted dark:text-text-muted-dark">Delete site</th>
+                                </tr></thead>
+                                <tbody>
+                                    {[['Owner','✅','✅','✅','✅'],['Admin','✅','✅','❌','❌'],['Viewer','✅','❌','❌','❌']].map(([r,...cols]) => (
+                                        <tr key={r} className="border-b border-border/50 dark:border-border-dark/50 last:border-0">
+                                            <td className="px-3 py-2 font-semibold text-text-primary dark:text-text-primary-dark">{r}</td>
+                                            {cols.map((c,i) => <td key={i} className="px-3 py-2 text-center">{c}</td>)}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { label: 'Invite flow', detail: 'Profile → Team tab → Invite. If they have an account, added directly. Otherwise, a 7-day invite link is generated to copy and share.' },
+                            { label: 'Custom roles', detail: 'Create named roles (e.g. "Marketing", "Analyst") with per-page permissions. Assign to any non-owner member.' },
+                            { label: 'Feature Manager', detail: 'Per-member sidebar visibility: expand any member row in Profile → Team and click Pages to control which nav items they see.' },
+                            { label: 'Accept invite', detail: 'Recipient opens /join?token=… — shows site info and role. If not logged in, redirected to login/register first, then back to accept.' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <CodeBlock label="Team API endpoints">{`GET    /api/team/:siteId/members          → members + pending invites + custom roles
+POST   /api/team/:siteId/invite            → invite by email { email, role }
+PUT    /api/team/:siteId/members/:userId   → change base role { role }
+DELETE /api/team/:siteId/members/:userId   → remove member
+GET    /api/team/:siteId/roles             → list custom roles
+POST   /api/team/:siteId/roles             → create custom role { name, color, permissions }
+PUT    /api/team/:siteId/roles/:roleId     → update custom role
+DELETE /api/team/:siteId/roles/:roleId     → delete (owner only)
+PUT    /api/team/:siteId/members/:userId/custom-role  → assign { customRoleId }
+GET    /api/invite/:token                  → public — get invite info
+POST   /api/invite/:token/accept           → auth required — accept invite
+DELETE /api/invite/:token                  → cancel pending invite`}</CodeBlock>
+                </div>
+            </Collapsible>
+
+            {/* Performance Architecture */}
+            <Collapsible title="Performance Architecture" icon={Zap} color="text-amber-500">
+                <div className="space-y-4 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>InsightsTrack uses four Phase 1 optimisations to handle millions of events with sub-second query latency.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                            { label: 'DuckDB connection pool', detail: 'Pool of 4 connections (DUCKDB_POOL_SIZE). Concurrent analytics queries run truly in parallel instead of serialising. 4× throughput for concurrent users.' },
+                            { label: 'Request coalescing', detail: 'When 50 users hit the same cache-miss simultaneously, only 1 DuckDB query fires. Others await the same Promise. Eliminates thundering herd on cache expiry.' },
+                            { label: 'Debounced sync', detail: 'triggerSync() is debounced 5s (SYNC_DEBOUNCE_MS). Cache invalidated only after sync succeeds. At 1K events/sec: 1 sync per 5s instead of 1K/s.' },
+                            { label: 'Daily rollup (daily_stats)', detail: 'After each sync, events are aggregated into daily_stats (1 row per site per day). KPI/traffic queries for historical ranges read daily_stats — 100M events returns in <5ms.' },
+                            { label: 'DuckDB ART indexes', detail: '5 composite indexes on (site_id, timestamp), (type, site_id), (path, site_id), etc. 5–20× faster on selective single-site queries.' },
+                            { label: 'Hot/cold Parquet (S3)', detail: 'Events older than ARCHIVE_DAYS go to S3/R2 as Hive-partitioned Parquet. DuckDB UNION ALL view covers both hot RAM and cold S3 transparently.' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <CodeBlock label="Performance env vars">{`DUCKDB_POOL_SIZE=4         # parallel query connections
+SYNC_DEBOUNCE_MS=5000      # ms to wait before syncing after first event
+SYNC_INTERVAL_MS=60000     # background sync interval
+SYNC_BATCH_SIZE=5000       # rows per sync batch`}</CodeBlock>
+                </div>
+            </Collapsible>
+
+            {/* S3 Cold Storage */}
+            <Collapsible title="S3 / R2 Cold Storage" icon={Cloud} color="text-blue-500">
+                <div className="space-y-4 text-xs text-text-secondary dark:text-text-secondary-dark">
+                    <p>When S3_BUCKET is configured, InsightsTrack archives events older than ARCHIVE_DAYS to S3-compatible storage as Hive-partitioned Parquet files. DuckDB queries both hot (RAM) and cold (S3) transparently via a UNION ALL view.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {[
+                            { label: 'AWS S3', detail: 'S3_BUCKET + S3_ACCESS_KEY + S3_SECRET_KEY. Leave S3_ENDPOINT blank.' },
+                            { label: 'Cloudflare R2 (recommended)', detail: 'Zero egress cost. S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com' },
+                            { label: 'MinIO (self-hosted)', detail: 'S3_ENDPOINT=http://minio:9000, S3_USE_SSL=false' },
+                        ].map(({ label, detail }) => (
+                            <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
+                                <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
+                                <p>{detail}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <CodeBlock label="S3 env vars (apps/analytics-api/.env)">{`S3_BUCKET=insightstrack-cold
+S3_ACCESS_KEY=<your-key-id>
+S3_SECRET_KEY=<your-secret-key>
+S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com  # omit for AWS S3
+S3_REGION=auto
+S3_PREFIX=insightstrack
+ARCHIVE_DAYS=30               # events older than 30 days → S3
+ARCHIVE_TABLES=events,sessions`}</CodeBlock>
+                    <p>After restarting the backend with S3 configured, archival runs automatically after each sync cycle. Manual trigger: <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">POST /api/storage/archive</code></p>
+                </div>
+            </Collapsible>
+
             {/* Tech Stack */}
             <div className="rounded-xl border border-border dark:border-border-dark bg-card dark:bg-card-dark p-5">
                 <h2 className="text-base font-semibold mb-3">Tech Stack</h2>
@@ -1380,14 +1636,14 @@ GET /api/analytics/:siteId/performance/errors-over-time?dateRange=30d`}</CodeBlo
                         { label: 'Tailwind CSS 3', detail: 'Styling + dark mode' },
                         { label: 'Recharts', detail: 'Charts & graphs' },
                         { label: 'Zustand', detail: 'State management' },
-                        { label: 'Express 4', detail: 'Backend API' },
-                        { label: 'PostgreSQL 16', detail: 'Write DB (OLTP)' },
-                        { label: 'DuckDB', detail: 'Read DB (OLAP)' },
+                        { label: 'Express 4 + Node 20', detail: 'Backend API' },
+                        { label: 'PostgreSQL 15+', detail: 'Write DB (OLTP)' },
+                        { label: 'DuckDB 1.1+', detail: 'Read DB (OLAP)' },
                         { label: 'JWT + bcrypt', detail: 'Auth & security' },
-                        { label: 'Railway', detail: 'Backend hosting' },
-                        { label: 'Cloudflare Pages', detail: 'Frontend hosting' },
-                        { label: 'Docker', detail: 'Local development' },
+                        { label: 'Parquet + S3/R2', detail: 'Cold storage tier' },
+                        { label: 'Docker Compose', detail: 'Local development' },
                         { label: 'Vitest + Playwright', detail: 'Testing' },
+                        { label: 'MIT License', detail: 'Open source' },
                     ].map((t) => (
                         <div key={t.label} className="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-border dark:border-border-dark text-center">
                             <div className="font-semibold text-text-primary dark:text-text-primary-dark">{t.label}</div>

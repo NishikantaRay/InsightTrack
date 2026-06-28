@@ -49,7 +49,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                 </div>
                 {!collapsed && (
                     <span className="font-semibold text-lg tracking-tight whitespace-nowrap">
-                        InsightTrack
+                        InsightsTrack
                     </span>
                 )}
             </div>

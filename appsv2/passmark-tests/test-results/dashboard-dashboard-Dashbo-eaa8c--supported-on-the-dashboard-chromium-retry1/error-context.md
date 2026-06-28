@@ -33,7 +33,7 @@ Call log:
     - generic [ref=e7]:
       - generic [ref=e8]:
         - img [ref=e10]
-        - generic [ref=e12]: InsightTrack
+        - generic [ref=e12]: InsightsTrack
       - generic [ref=e13]:
         - link "Features" [ref=e14] [cursor=pointer]:
           - /url: "#features"
@@ -67,7 +67,7 @@ Call log:
         - generic [ref=e49]:
           - generic [ref=e50]:
             - img [ref=e52]
-            - generic [ref=e54]: InsightTrack
+            - generic [ref=e54]: InsightsTrack
           - generic [ref=e55]: Dashboard
           - generic [ref=e56]: Pages
           - generic [ref=e57]: Funnels
@@ -268,12 +268,12 @@ Call log:
                 - generic [ref=e349]: DuckDB
                 - generic [ref=e350]: (reads)
   - generic [ref=e352]:
-    - heading "Why InsightTrack?" [level=2] [ref=e354]
+    - heading "Why InsightsTrack?" [level=2] [ref=e354]
     - table [ref=e356]:
       - rowgroup [ref=e357]:
-        - row "Feature InsightTrack Google Analytics" [ref=e358]:
+        - row "Feature InsightsTrack Google Analytics" [ref=e358]:
           - columnheader "Feature" [ref=e359]
-          - columnheader "InsightTrack" [ref=e360]
+          - columnheader "InsightsTrack" [ref=e360]
           - columnheader "Google Analytics" [ref=e361]
       - rowgroup [ref=e362]:
         - row "Privacy-first (no cookies) —" [ref=e363]:
@@ -337,7 +337,7 @@ Call log:
     - generic [ref=e447]:
       - generic [ref=e448]:
         - img [ref=e450]
-        - generic [ref=e452]: InsightTrack
+        - generic [ref=e452]: InsightsTrack
       - generic [ref=e453]:
         - link "Features" [ref=e454] [cursor=pointer]:
           - /url: "#features"
@@ -345,7 +345,7 @@ Call log:
           - /url: "#how-it-works"
         - link "Tech Stack" [ref=e456] [cursor=pointer]:
           - /url: "#tech-stack"
-      - paragraph [ref=e457]: © 2026 InsightTrack. Open-source web analytics.
+      - paragraph [ref=e457]: © 2026 InsightsTrack. Open-source web analytics.
 ```
 
 # Test source
@@ -423,7 +423,7 @@ Call log:
   137 |       ],
   138 |       assertions: [
   139 |         { assertion: 'A sidebar or left navigation panel with links is visible' },
-  140 |         { assertion: 'The InsightTrack logo or brand name is visible in the sidebar' },
+  140 |         { assertion: 'The InsightsTrack logo or brand name is visible in the sidebar' },
   141 |         { assertion: 'A "Pages" navigation link is present in the sidebar' },
   142 |         { assertion: 'A "Realtime" navigation link is present in the sidebar' },
   143 |         { assertion: 'A "Settings" navigation link is present in the sidebar' },

@@ -23,7 +23,7 @@ Test timeout of 240000ms exceeded.
     - generic [ref=e7]:
       - generic [ref=e8]:
         - img [ref=e10]
-        - generic [ref=e12]: InsightTrack
+        - generic [ref=e12]: InsightsTrack
       - generic [ref=e13]:
         - link "Features" [ref=e14] [cursor=pointer]:
           - /url: "#features"
@@ -57,7 +57,7 @@ Test timeout of 240000ms exceeded.
         - generic [ref=e45]:
           - generic [ref=e46]:
             - img [ref=e48]
-            - generic [ref=e50]: InsightTrack
+            - generic [ref=e50]: InsightsTrack
           - generic [ref=e51]: Dashboard
           - generic [ref=e52]: Pages
           - generic [ref=e53]: Funnels
@@ -258,12 +258,12 @@ Test timeout of 240000ms exceeded.
                 - generic [ref=e345]: DuckDB
                 - generic [ref=e346]: (reads)
   - generic [ref=e348]:
-    - heading "Why InsightTrack?" [level=2] [ref=e350]
+    - heading "Why InsightsTrack?" [level=2] [ref=e350]
     - table [ref=e352]:
       - rowgroup [ref=e353]:
-        - row "Feature InsightTrack Google Analytics" [ref=e354]:
+        - row "Feature InsightsTrack Google Analytics" [ref=e354]:
           - columnheader "Feature" [ref=e355]
-          - columnheader "InsightTrack" [ref=e356]
+          - columnheader "InsightsTrack" [ref=e356]
           - columnheader "Google Analytics" [ref=e357]
       - rowgroup [ref=e358]:
         - row "Privacy-first (no cookies) —" [ref=e359]:
@@ -327,7 +327,7 @@ Test timeout of 240000ms exceeded.
     - generic [ref=e443]:
       - generic [ref=e444]:
         - img [ref=e446]
-        - generic [ref=e448]: InsightTrack
+        - generic [ref=e448]: InsightsTrack
       - generic [ref=e449]:
         - link "Features" [ref=e450] [cursor=pointer]:
           - /url: "#features"
@@ -335,5 +335,5 @@ Test timeout of 240000ms exceeded.
           - /url: "#how-it-works"
         - link "Tech Stack" [ref=e452] [cursor=pointer]:
           - /url: "#tech-stack"
-      - paragraph [ref=e453]: © 2026 InsightTrack. Open-source web analytics.
+      - paragraph [ref=e453]: © 2026 InsightsTrack. Open-source web analytics.
 ```

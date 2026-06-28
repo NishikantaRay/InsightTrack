@@ -1,5 +1,5 @@
 /**
- * ExportModal — InsightTrack Professional Export Engine
+ * ExportModal — InsightsTrack Professional Export Engine
  *
  * Architecture:
  *   Dashboard Canvas (live Recharts SVGs)
@@ -167,8 +167,8 @@ async function fetchWidgetData(siteId, widget) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PrintLayout — the dedicated print DOM tree
-// Rendered into a portal at #insighttrack-print-root.
-// CSS: @media print { #root { display:none } #insighttrack-print-root { display:block } }
+// Rendered into a portal at #insightstrack-print-root.
+// CSS: @media print { #root { display:none } #insightstrack-print-root { display:block } }
 // ─────────────────────────────────────────────────────────────────────────────
 const PAGE_SIZES = {
     a4: { label: 'A4 Portrait', width: '210mm', aspect: 1.414 },
@@ -243,7 +243,7 @@ function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pag
                                 <p style={{ fontSize: 13, color: muted, marginBottom: 4 }}>Generated {ts}</p>
                             )}
                             <p style={{ fontSize: 13, color: muted }}>
-                                {widgets.length} widgets · InsightTrack Analytics
+                                {widgets.length} widgets · InsightsTrack Analytics
                             </p>
                         </div>
                         {showBranding && (
@@ -251,7 +251,7 @@ function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pag
                                 <div style={{ width: 32, height: 32, borderRadius: 8, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>I</span>
                                 </div>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: muted }}>InsightTrack</span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: muted }}>InsightsTrack</span>
                             </div>
                         )}
                     </div>
@@ -340,7 +340,7 @@ function PrintLayout({ dashName, snapshots, widgets, layoutMap, exportTheme, pag
             {/* ── Footer ────────────────────────────────────────────────── */}
             <div style={{ padding: '24px 48px', borderTop: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {showTimestamp && <p style={{ fontSize: 11, color: muted }}>Generated {ts}</p>}
-                {showBranding && <p style={{ fontSize: 11, color: muted, fontWeight: 600 }}>InsightTrack Analytics</p>}
+                {showBranding && <p style={{ fontSize: 11, color: muted, fontWeight: 600 }}>InsightsTrack Analytics</p>}
             </div>
         </div>
     );
@@ -389,10 +389,10 @@ export default function ExportModal({
 
     // Ensure portal div exists in body
     useEffect(() => {
-        let el = document.getElementById('insighttrack-print-root');
+        let el = document.getElementById('insightstrack-print-root');
         if (!el) {
             el = document.createElement('div');
-            el.id = 'insighttrack-print-root';
+            el.id = 'insightstrack-print-root';
             document.body.appendChild(el);
         }
         printRootRef.current = el;
@@ -701,7 +701,7 @@ export default function ExportModal({
                                             {[
                                                 [showCover, setShowCover, 'Include cover page'],
                                                 [showTimestamp, setShowTimestamp, 'Include generated timestamp'],
-                                                [showBranding, setShowBranding, 'Include InsightTrack branding'],
+                                                [showBranding, setShowBranding, 'Include InsightsTrack branding'],
                                             ].map(([val, set, label]) => (
                                                 <label key={label} className="flex items-center gap-2.5 cursor-pointer">
                                                     <button

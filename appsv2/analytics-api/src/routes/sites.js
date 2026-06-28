@@ -1,6 +1,7 @@
 import express from 'express';
 import sitesService from '../services/sitesService.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { sendError, safeMsg } from '../utils/safeError.js';
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.get('/', authMiddleware, async (req, res) => {
         res.json({ success: true, data: sites });
     } catch (error) {
         console.error('Error fetching sites:', error);
-        res.status(500).json({ error: error.message });
+        sendError(res, error);
     }
 });
 
@@ -32,7 +33,7 @@ router.post('/', authMiddleware, async (req, res) => {
     } catch (error) {
         const status = error.message.includes('already exists') ? 409 : 500;
         console.error('Error creating site:', error);
-        res.status(status).json({ error: error.message });
+        sendError(res, error, status);
     } finally {
         _createLock = false;
     }
@@ -48,7 +49,7 @@ router.get('/:siteId', authMiddleware, async (req, res) => {
         res.json({ success: true, data: site });
     } catch (error) {
         console.error('Error fetching site:', error);
-        res.status(500).json({ error: error.message });
+        sendError(res, error);
     }
 });
 
@@ -63,7 +64,7 @@ router.put('/:siteId', authMiddleware, async (req, res) => {
         res.json({ success: true, data: site });
     } catch (error) {
         console.error('Error updating site:', error);
-        res.status(500).json({ error: error.message });
+        sendError(res, error);
     }
 });
 
@@ -74,7 +75,7 @@ router.delete('/:siteId', authMiddleware, async (req, res) => {
         res.json({ success: true, message: 'Site deleted' });
     } catch (error) {
         console.error('Error deleting site:', error);
-        res.status(500).json({ error: error.message });
+        sendError(res, error);
     }
 });
 
@@ -110,7 +111,7 @@ router.get('/:siteId/snippet', async (req, res) => {
         res.json({ success: true, data: { snippet, siteId: req.params.siteId, site } });
     } catch (error) {
         console.error('Error fetching snippet:', error);
-        res.status(500).json({ error: error.message });
+        sendError(res, error);
     }
 });
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, useRef, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -33,6 +33,8 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const SqlEditor = lazy(() => import('./pages/SqlEditor'));
 const Heatmap = lazy(() => import('./pages/Heatmap'));
 const SharedDashboard = lazy(() => import('./pages/SharedDashboard'));
+const JoinSite = lazy(() => import('./pages/JoinSite'));
+const DemoLanding = lazy(() => import('./pages/DemoLanding'));
 
 function ProtectedRoute({ children }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -42,7 +44,14 @@ function ProtectedRoute({ children }) {
 
 function GuestRoute({ children }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-    if (isAuthenticated) return <Navigate to="/" replace />;
+    const [searchParams] = useSearchParams();
+    if (isAuthenticated) {
+        // Honor an explicit ?redirect= target (e.g. /demo) so that when login/
+        // register flips auth state, GuestRoute sends the user to the intended
+        // destination instead of clobbering it with a redirect to "/".
+        const redirect = searchParams.get('redirect');
+        return <Navigate to={redirect || '/'} replace />;
+    }
     return children;
 }
 
@@ -159,6 +168,9 @@ function AppContent() {
                             {/* Public shared dashboard — no auth, no sidebar */}
                             <Route path="/share" element={<SharedDashboard />} />
 
+                            {/* Invite acceptance — semi-public (shows info without auth, accept requires auth) */}
+                            <Route path="/join" element={<JoinSite />} />
+
                             {/* Public landing page */}
                             <Route path="/landing" element={<GuestRoute><Landing /></GuestRoute>} />
 
@@ -170,6 +182,16 @@ function AppContent() {
                             <Route path="/onboarding" element={
                                 <ProtectedRoute>
                                     <Onboarding />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* Live demo — requires auth (login/signup first), then
+                                grants demo-site access and forwards to the dashboard.
+                                Sits outside SiteGate so the join runs before any
+                                onboarding redirect. */}
+                            <Route path="/demo" element={
+                                <ProtectedRoute>
+                                    <DemoLanding />
                                 </ProtectedRoute>
                             } />
 

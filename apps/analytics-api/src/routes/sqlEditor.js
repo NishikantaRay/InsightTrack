@@ -4,6 +4,7 @@ import { duckAll } from '../db/duckdb.js';
 import { query as pgQuery } from '../db/postgres.js';
 import { authMiddleware } from '../middleware/auth.js';
 import sitesService from '../services/sitesService.js';
+import { safeMsg } from '../utils/safeError.js';
 
 const router = express.Router();
 

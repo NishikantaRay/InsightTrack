@@ -323,7 +323,7 @@ export default function Acquisition() {
                 <Info className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                 <div className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
                     <p className="font-semibold">How acquisition tracking works</p>
-                    <p className="text-indigo-600 dark:text-indigo-400">Add <span className="font-mono font-medium">UTM parameters</span> to any link pointing to your site. When a visitor clicks the link, InsightTrack reads those parameters and attributes the visit to the correct campaign, source, and keyword.</p>
+                    <p className="text-indigo-600 dark:text-indigo-400">Add <span className="font-mono font-medium">UTM parameters</span> to any link pointing to your site. When a visitor clicks the link, InsightsTrack reads those parameters and attributes the visit to the correct campaign, source, and keyword.</p>
                     <p className="text-indigo-600 dark:text-indigo-400">Example: <span className="font-mono text-xs bg-indigo-100 dark:bg-indigo-900/40 px-1.5 py-0.5 rounded">https://yoursite.com?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=spring&amp;utm_term=analytics+tool</span></p>
                 </div>
             </div>

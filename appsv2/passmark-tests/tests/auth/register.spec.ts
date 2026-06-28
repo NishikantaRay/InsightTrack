@@ -48,7 +48,7 @@ test.describe('Register — new account creation', () => {
     test.setTimeout(240_000);
 
     // Pre-register a user via API so we can attempt duplicate registration
-    const email = `dup-${Date.now()}@insighttrack.local`;
+    const email = `dup-${Date.now()}@insightstrack.local`;
     await request.post(`${process.env.API_BASE_URL || 'http://localhost:3001'}/api/auth/register`, {
       data: { name: 'Dupe User', email, password: 'Passmark$ecure123' },
     });

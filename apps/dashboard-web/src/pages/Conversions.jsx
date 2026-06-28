@@ -384,7 +384,7 @@ export default function Conversions() {
                     summary="Conversions measure the actions that matter most to your business — sign-ups, purchases, button clicks, or time spent. Everything here is tied directly to business outcomes."
                     details={[
                         { label: 'Goals', text: 'Define what a “conversion” means for you: a page visit, a button click, a custom event, or a minimum time on site. The dashboard then tracks how many visitors complete each goal.' },
-                        { label: 'A/B Tests', text: 'Compare two versions of a page or feature. InsightTrack tracks which variant gets more conversions so you can pick a winner with real data.' },
+                        { label: 'A/B Tests', text: 'Compare two versions of a page or feature. InsightsTrack tracks which variant gets more conversions so you can pick a winner with real data.' },
                         { label: 'Revenue', text: 'Track purchase events with a value attached. See total revenue, revenue by traffic source, and average order value.' },
                     ]}
                     businessTip="Start with one high-value goal (e.g. sign-up or purchase). Measure it for 2 weeks, then set up an A/B test on your main CTA button to try to improve it."

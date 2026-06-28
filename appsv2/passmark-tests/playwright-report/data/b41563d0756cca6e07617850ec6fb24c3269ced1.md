@@ -85,7 +85,7 @@ Received: false
   48  |     test.setTimeout(240_000);
   49  | 
   50  |     // Pre-register a user via API so we can attempt duplicate registration
-  51  |     const email = `dup-${Date.now()}@insighttrack.local`;
+  51  |     const email = `dup-${Date.now()}@insightstrack.local`;
   52  |     await request.post(`${process.env.API_BASE_URL || 'http://localhost:3001'}/api/auth/register`, {
   53  |       data: { name: 'Dupe User', email, password: 'Passmark$ecure123' },
   54  |     });

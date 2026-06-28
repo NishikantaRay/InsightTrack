@@ -1,12 +1,12 @@
-# InsightTrack — Passmark AI Test Suite
+# InsightsTrack — Passmark AI Test Suite
 
-AI-powered end-to-end tests for the InsightTrack analytics dashboard. Instead of CSS selectors and brittle `getByTestId` calls, every test is written in **plain English** — the AI reads the page like a human and acts on it.
+AI-powered end-to-end tests for the InsightsTrack analytics dashboard. Instead of CSS selectors and brittle `getByTestId` calls, every test is written in **plain English** — the AI reads the page like a human and acts on it.
 
 ---
 
 ## What Is This?
 
-This is the test suite for the [InsightTrack](../../apps/dashboard-web) dashboard, built with [Passmark](https://github.com/bug0inc/passmark) — an AI-native testing layer that sits on top of Playwright.
+This is the test suite for the [InsightsTrack](../../apps/dashboard-web) dashboard, built with [Passmark](https://github.com/bug0inc/passmark) — an AI-native testing layer that sits on top of Playwright.
 
 The key idea: you describe **what to do** and **what to assert** in natural language. Passmark converts those descriptions into real browser actions using an LLM, evaluates assertions against a live DOM snapshot, and reports pass/fail just like a normal Playwright test.
 
@@ -152,8 +152,8 @@ await runSteps({ page, userFlow: '...', steps: [], assertions: [...], test, expe
 ### Prerequisites
 
 - Node.js 20+
-- The InsightTrack API running on `http://localhost:3001`
-- The InsightTrack dashboard running on `http://localhost:4173`
+- The InsightsTrack API running on `http://localhost:3001`
+- The InsightsTrack dashboard running on `http://localhost:4173`
 - An [OpenRouter](https://openrouter.ai) API key with credits
 
 ### Install
@@ -177,7 +177,7 @@ PW_BASE_URL=http://localhost:4173
 API_BASE_URL=http://localhost:3001
 
 # Test account (auto-created on first run if it doesn't exist)
-TEST_USER_EMAIL=passmark-tester@insighttrack.local
+TEST_USER_EMAIL=passmark-tester@insightstrack.local
 TEST_USER_PASSWORD=Passmark$ecure123
 ```
 

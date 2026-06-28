@@ -1,12 +1,13 @@
 import { query } from '../db/postgres.js';
 import { v4 as uuidv4 } from 'uuid';
+import { getMemberRole, getSitesForUser, roleAtLeast } from './teamService.js';
 
 export const sitesService = {
   async createSite(name, domain, userId) {
-    // Check for existing site with same domain for this user
+    // Check for existing site with same domain (global — one domain per platform)
     const existing = await query(
-      `SELECT id FROM sites WHERE domain = $1 AND user_id = $2 LIMIT 1`,
-      [domain, userId]
+      `SELECT id FROM sites WHERE domain = $1 LIMIT 1`,
+      [domain]
     );
     if (existing.rows.length > 0) {
       throw new Error(`A site with domain "${domain}" already exists (${existing.rows[0].id})`);
@@ -17,7 +18,15 @@ export const sitesService = {
       `INSERT INTO sites (id, user_id, name, domain, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [id, userId, name, domain, new Date().toISOString()]
     );
-    return result.rows[0];
+    const site = result.rows[0];
+
+    // Create the owner membership row
+    await query(
+      `INSERT INTO site_members (site_id, user_id, role) VALUES ($1, $2, 'owner')`,
+      [id, userId]
+    );
+
+    return { ...site, user_role: 'owner' };
   },
 
   async getSiteById(siteId) {
@@ -30,14 +39,18 @@ export const sitesService = {
       const result = await query(`SELECT * FROM sites ORDER BY created_at DESC`);
       return result.rows;
     }
-    const result = await query(`SELECT * FROM sites WHERE user_id = $1 ORDER BY created_at DESC`, [userId]);
-    return result.rows;
+    // Return all sites the user is a member of (owned + shared)
+    return getSitesForUser(userId);
   },
 
   async updateSite(siteId, name, domain, userId) {
     const existing = await this.getSiteById(siteId);
     if (!existing) return null;
-    if (userId && existing.user_id !== userId) return null;
+    // Require at least admin role to update
+    if (userId) {
+      const role = await getMemberRole(siteId, userId);
+      if (!roleAtLeast(role, 'admin')) return null;
+    }
     const result = await query(
       `UPDATE sites SET name = $1, domain = $2 WHERE id = $3 RETURNING *`,
       [name || existing.name, domain || existing.domain, siteId]
@@ -48,8 +61,10 @@ export const sitesService = {
   async deleteSite(siteId, userId) {
     const existing = await this.getSiteById(siteId);
     if (!existing) return { success: false };
-    if (userId && existing.user_id !== userId) {
-      throw new Error('You do not own this site');
+    // Only owner can delete
+    if (userId) {
+      const role = await getMemberRole(siteId, userId);
+      if (role !== 'owner') throw new Error('Only the site owner can delete a site');
     }
     await query(`DELETE FROM events WHERE site_id = $1`, [siteId]);
     await query(`DELETE FROM sessions WHERE site_id = $1`, [siteId]);

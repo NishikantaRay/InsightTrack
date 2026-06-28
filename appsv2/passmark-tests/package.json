@@ -1,7 +1,7 @@
 {
-  "name": "insighttrack-passmark-tests",
+  "name": "insightstrack-passmark-tests",
   "version": "1.0.0",
-  "description": "AI-powered Passmark regression tests for InsightTrack analytics dashboard",
+  "description": "AI-powered Passmark regression tests for InsightsTrack analytics dashboard",
   "type": "module",
   "scripts": {
     "test": "playwright test",

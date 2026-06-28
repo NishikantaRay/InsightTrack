@@ -28,7 +28,7 @@ Received: false
     - generic [ref=e10]:
       - generic [ref=e11]:
         - img [ref=e13]
-        - generic [ref=e15]: InsightTrack
+        - generic [ref=e15]: InsightsTrack
       - paragraph [ref=e16]: Privacy-first web analytics
     - generic [ref=e17]:
       - heading "Get started in minutes. No credit card needed." [level=2] [ref=e18]:
@@ -47,7 +47,7 @@ Received: false
         - generic [ref=e26]:
           - generic [ref=e27]: "4"
           - text: View your analytics
-    - paragraph [ref=e28]: © 2026 InsightTrack. Open-source analytics.
+    - paragraph [ref=e28]: © 2026 InsightsTrack. Open-source analytics.
   - generic [ref=e31]:
     - generic [ref=e32]:
       - heading "Create your account" [level=1] [ref=e33]
@@ -58,7 +58,7 @@ Received: false
         - textbox "John Doe" [ref=e38]: Dupe User
       - generic [ref=e39]:
         - generic [ref=e40]: Email
-        - textbox "you@company.com" [ref=e41]: dup-1778418034354@insighttrack.local
+        - textbox "you@company.com" [ref=e41]: dup-1778418034354@insightstrack.local
       - generic [ref=e42]:
         - generic [ref=e43]: Password
         - generic [ref=e44]:
@@ -137,7 +137,7 @@ Received: false
   48  |     test.setTimeout(240_000);
   49  | 
   50  |     // Pre-register a user via API so we can attempt duplicate registration
-  51  |     const email = `dup-${Date.now()}@insighttrack.local`;
+  51  |     const email = `dup-${Date.now()}@insightstrack.local`;
   52  |     await request.post(`${process.env.API_BASE_URL || 'http://localhost:3001'}/api/auth/register`, {
   53  |       data: { name: 'Dupe User', email, password: 'Passmark$ecure123' },
   54  |     });

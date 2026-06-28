@@ -1,7 +1,7 @@
 /**
  * helpers/auth.ts
  * Shared utilities for authenticating a test user and seeding a site
- * via the InsightTrack REST API before Passmark steps begin.
+ * via the InsightsTrack REST API before Passmark steps begin.
  */
 import type { APIRequestContext, Page } from '@playwright/test';
 
@@ -49,7 +49,7 @@ export async function createTestSession(
   suffix: string,
 ): Promise<AuthSession> {
   const email =
-    process.env.TEST_USER_EMAIL ?? `passmark-${suffix}@insighttrack.local`;
+    process.env.TEST_USER_EMAIL ?? `passmark-${suffix}@insightstrack.local`;
   const password = process.env.TEST_USER_PASSWORD ?? 'Passmark$ecure123';
 
   // Register (idempotent — ignore 409 Conflict)
@@ -82,7 +82,7 @@ export async function createTestSession(
     const site = await apiPost(
       request,
       '/api/sites',
-      { name: 'InsightTrack Demo', domain: `passmark-${suffix}.insighttrack.local` },
+      { name: 'InsightsTrack Demo', domain: `passmark-${suffix}.insightstrack.local` },
       token,
     );
     const data = (site.data ?? site) as Record<string, unknown>;

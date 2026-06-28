@@ -118,7 +118,7 @@ function PrivacyFeaturesTab() {
             color: 'text-green-500',
             bg: 'bg-green-500/10',
             title: 'No Cookies — No Consent Banner Required',
-            business: 'You do not need to show a GDPR cookie banner. InsightTrack uses first-party localStorage to generate anonymous visitor IDs — no cookies means no cookie law obligations in most jurisdictions.',
+            business: 'You do not need to show a GDPR cookie banner. InsightsTrack uses first-party localStorage to generate anonymous visitor IDs — no cookies means no cookie law obligations in most jurisdictions.',
             dev: 'Visitor ID is generated as a UUID stored in localStorage under the key _itv. This is cleared when the user clears browser storage. No Set-Cookie headers are ever sent by the tracking endpoints.',
         },
         {
@@ -176,7 +176,7 @@ function PrivacyFeaturesTab() {
                             Privacy-first analytics, by design
                         </h2>
                         <p className="text-sm text-emerald-700 dark:text-emerald-300 leading-relaxed max-w-2xl">
-                            InsightTrack is built so that meaningful analytics and user privacy are not in conflict.
+                            InsightsTrack is built so that meaningful analytics and user privacy are not in conflict.
                             No cookies. No fingerprinting. No IP storage. No third-party data sharing.
                             Just honest, accurate analytics that you own.
                         </p>
@@ -191,7 +191,7 @@ function PrivacyFeaturesTab() {
                     <h3 className="font-semibold text-gray-900 dark:text-white">GDPR / CCPA / PECR Compliance Summary</h3>
                     <InfoTooltip
                         title="What are these regulations?"
-                        content="GDPR (Europe), CCPA (California), and PECR (UK) are data privacy laws that regulate how websites can collect and use visitor data. Most analytics tools require cookie consent banners to comply. InsightTrack is designed to be compliant without needing consent banners."
+                        content="GDPR (Europe), CCPA (California), and PECR (UK) are data privacy laws that regulate how websites can collect and use visitor data. Most analytics tools require cookie consent banners to comply. InsightsTrack is designed to be compliant without needing consent banners."
                     />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -215,7 +215,7 @@ function PrivacyFeaturesTab() {
                     <div className="flex gap-2">
                         <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                         <p className="text-xs text-amber-800 dark:text-amber-300">
-                            <strong>Important:</strong> While InsightTrack is designed to minimise privacy obligations, you should consult a legal professional to confirm compliance for your specific use case, jurisdiction, and any other tools you use on your website.
+                            <strong>Important:</strong> While InsightsTrack is designed to minimise privacy obligations, you should consult a legal professional to confirm compliance for your specific use case, jurisdiction, and any other tools you use on your website.
                         </p>
                     </div>
                 </div>
@@ -256,7 +256,7 @@ function PrivacyFeaturesTab() {
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-4">What data is actually collected?</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Every data point InsightTrack collects is listed below. Nothing else is stored.
+                    Every data point InsightsTrack collects is listed below. Nothing else is stored.
                 </p>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">

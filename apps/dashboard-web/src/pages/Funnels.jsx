@@ -231,7 +231,7 @@ export default function Funnels() {
                     details={[
                         { label: 'Steps', text: 'Each step is either a pageview (visitor loaded a specific URL) or an event (visitor triggered a tracked action like add_to_cart or purchase).' },
                         { label: 'Drop-off Rate', text: 'The percentage of visitors who did not proceed to the next step. High drop-off at the checkout step usually means friction (confusing form, unexpected shipping costs, etc.).' },
-                        { label: 'Auto-detect', text: 'InsightTrack can automatically suggest funnel steps based on your most visited pages and most common tracked events. Edit the steps to match your exact customer journey.' },
+                        { label: 'Auto-detect', text: 'InsightsTrack can automatically suggest funnel steps based on your most visited pages and most common tracked events. Edit the steps to match your exact customer journey.' },
                         { label: 'Save & Share', text: 'Saved funnels appear on your main Dashboard for quick access without needing to rebuild them each time.' },
                     ]}
                     businessTip="Build a funnel for your most important customer journey first (e.g. Homepage → Pricing → Sign-up). Even a 5% improvement in the worst drop-off step can significantly increase your conversion rate."

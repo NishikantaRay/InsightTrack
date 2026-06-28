@@ -2,6 +2,7 @@ export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS _sync_meta (
   table_name  VARCHAR PRIMARY KEY,
   last_synced TIMESTAMP NOT NULL,
+  last_id     BIGINT    DEFAULT 0,   -- keyset cursor for append-only tables
   rows_synced BIGINT    DEFAULT 0,
   updated_at  TIMESTAMP DEFAULT current_timestamp
 );
@@ -81,14 +82,38 @@ CREATE TABLE IF NOT EXISTS data_retention_policies (
   retention_days INTEGER DEFAULT 365, enabled BOOLEAN DEFAULT FALSE,
   last_cleanup_at TIMESTAMP, created_at TIMESTAMP
 );
+
+-- ── DuckDB ART indexes ────────────────────────────────────────────────────────
+-- These dramatically speed up the WHERE site_id=? AND timestamp>=? pattern
+-- that every analytics query uses. DuckDB's columnar format already helps,
+-- but ART indexes on the hot filter columns give 5-20× additional speedup
+-- on selective (single-site) queries.
+
+CREATE INDEX IF NOT EXISTS idx_events_site_ts
+  ON events(site_id, timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_events_type_site
+  ON events(type, site_id);
+
+CREATE INDEX IF NOT EXISTS idx_events_path_site
+  ON events(path, site_id);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_site_ts
+  ON sessions(site_id, started_at);
+
+CREATE INDEX IF NOT EXISTS idx_daily_stats_site_date
+  ON daily_stats(site_id, date);
 `;
 
 export const SYNCABLE_TABLES = [
-  { table: 'events', tsColumn: 'timestamp', idColumn: 'id' },
+  { table: 'events', tsColumn: 'timestamp', idColumn: 'id', appendOnly: true },
   { table: 'sessions', tsColumn: 'started_at', idColumn: 'id' },
   { table: 'sites', tsColumn: 'created_at', idColumn: 'id' },
   { table: 'funnels', tsColumn: 'created_at', idColumn: 'id' },
-  { table: 'daily_stats', tsColumn: 'computed_at', idColumn: 'id' },
+  // NOTE: daily_stats is intentionally NOT synced from PostgreSQL. It is a
+  // DuckDB-derived rollup owned solely by computeDailyRollups() in sync.js.
+  // Syncing it from PG too would create two competing writers (PG-upsert by id
+  // vs rollup delete-by-date + insert with NULL id) that double-count metrics.
   { table: 'users', tsColumn: 'created_at', idColumn: 'id' },
   { table: 'goals', tsColumn: 'created_at', idColumn: 'id' },
   { table: 'ab_tests', tsColumn: 'created_at', idColumn: 'id' },

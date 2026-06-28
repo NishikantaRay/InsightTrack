@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { BarChart3, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { BarChart3, Eye, EyeOff, ArrowRight, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
@@ -12,6 +12,7 @@ export default function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const setAuth = useAuthStore((s) => s.setAuth);
 
     const validate = () => {
@@ -31,7 +32,9 @@ export default function Login() {
             const res = await authAPI.login({ email, password });
             setAuth(res.data.user, res.data.token);
             toast.success('Welcome back!');
-            navigate('/', { replace: true });
+            // If we arrived here via an invite redirect, go back there
+            const redirect = searchParams.get('redirect');
+            navigate(redirect || '/', { replace: true });
         } catch (err) {
             const msg = err.message || 'Login failed';
             setError(msg);
@@ -55,7 +58,7 @@ export default function Login() {
                         <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
                             <BarChart3 className="w-5 h-5" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight">InsightTrack</span>
+                        <span className="text-2xl font-bold tracking-tight">InsightsTrack</span>
                     </div>
                     <p className="text-white/70 text-sm mt-1">Privacy-first web analytics</p>
                 </div>
@@ -73,7 +76,7 @@ export default function Login() {
                     </div>
                 </div>
                 <p className="relative z-10 text-xs text-white/40">
-                    &copy; {new Date().getFullYear()} InsightTrack. Open-source analytics.
+                    &copy; {new Date().getFullYear()} InsightsTrack. Open-source analytics.
                 </p>
             </div>
 
@@ -85,7 +88,7 @@ export default function Login() {
                         <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
                             <BarChart3 className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">InsightTrack</span>
+                        <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">InsightsTrack</span>
                     </div>
 
                     <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
@@ -161,10 +164,19 @@ export default function Login() {
 
                         <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
                             Don't have an account?{' '}
-                            <Link to="/register" className="text-indigo-600 hover:text-indigo-500 font-semibold">
+                            <Link to={`/register${searchParams.get('redirect') ? `?redirect=${encodeURIComponent(searchParams.get('redirect'))}` : ''}`} className="text-indigo-600 hover:text-indigo-500 font-semibold">
                                 Create one
                             </Link>
                         </p>
+
+                        <div className="mt-5 flex items-center justify-center">
+                            <a href="https://github.com/sponsors/NishikantaRay" target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                                    border border-pink-200 dark:border-pink-500/30 text-pink-600 dark:text-pink-400
+                                    hover:bg-pink-50 dark:hover:bg-pink-500/10 transition-colors">
+                                <Heart className="w-3.5 h-3.5" /> Sponsor InsightsTrack
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

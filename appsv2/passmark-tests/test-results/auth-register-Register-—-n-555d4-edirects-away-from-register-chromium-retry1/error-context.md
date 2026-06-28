@@ -32,7 +32,7 @@ Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, open '
     - generic [ref=e10]:
       - generic [ref=e11]:
         - img [ref=e13]
-        - generic [ref=e15]: InsightTrack
+        - generic [ref=e15]: InsightsTrack
       - paragraph [ref=e16]: Privacy-first web analytics
     - generic [ref=e17]:
       - heading "Get started in minutes. No credit card needed." [level=2] [ref=e18]:
@@ -51,7 +51,7 @@ Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, open '
         - generic [ref=e26]:
           - generic [ref=e27]: "4"
           - text: View your analytics
-    - paragraph [ref=e28]: © 2026 InsightTrack. Open-source analytics.
+    - paragraph [ref=e28]: © 2026 InsightsTrack. Open-source analytics.
   - generic [ref=e31]:
     - generic [ref=e32]:
       - heading "Create your account" [level=1] [ref=e33]

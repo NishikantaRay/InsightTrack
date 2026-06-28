@@ -7,7 +7,9 @@ import {
     Megaphone, Gauge, Sun, Moon, Menu, X, ChevronRight,
     TrendingUp, TrendingDown, Star, RefreshCw, Layers,
     Terminal, FileText, Map, GitBranch, AlertTriangle,
+    Github, PlayCircle, Mail, ExternalLink, Box, Heart, ChevronDown, HelpCircle,
 } from 'lucide-react';
+import { useThemeStore } from '../store/useThemeStore';
 
 // ─── CSS-in-JS animation keyframes injected once ─────────────────────────────
 const ANIM_CSS = `
@@ -28,6 +30,7 @@ const ANIM_CSS = `
 .reveal-scale.visible { opacity:1; transform:scale(1); }
 .reveal-left { opacity:0; transform:translateX(32px); transition:opacity 0.6s cubic-bezier(.22,1,.36,1), transform 0.6s cubic-bezier(.22,1,.36,1); }
 .reveal-left.visible { opacity:1; transform:translateX(0); }
+
 `;
 if (typeof document !== 'undefined' && !document.getElementById('landing-anim-css')) {
     const s = document.createElement('style');
@@ -332,31 +335,145 @@ const HOW_STEPS = [
     { n: '03', icon: BarChart3, title: 'See everything live', desc: '17 analytics pages ready instantly — no configuration.' },
 ];
 
+// Self-hosting / deploy-your-own-instance tabs. Each tab shows the exact
+// commands to stand up the full stack from the public repo. The two manual
+// tabs map to the two supported app layouts: apps/ (stable) and appsv2/
+// (hot/cold DuckDB architecture).
+const DEPLOY_TABS = [
+    {
+        id: 'docker', label: 'Docker (fastest)', icon: Box,
+        note: 'One command brings up Postgres, the API, the dashboard and a demo site.',
+        code: `git clone https://github.com/NishikantaRay/InsightTrack.git
+cd InsightTrack
+
+# copy env defaults, then bring the whole stack up
+cp .env.example .env
+docker-compose up --build -d
+
+# dashboard → http://localhost:4173
+# API       → http://localhost:3001`,
+    },
+    {
+        id: 'apps', label: 'Manual · apps/', icon: Server,
+        note: 'Run the stable apps/ layout directly with Node 20 + your own Postgres.',
+        code: `git clone https://github.com/NishikantaRay/InsightTrack.git
+cd InsightTrack
+
+# 1) Backend (Express + Postgres + DuckDB)
+cd apps/analytics-api
+cp .env.example .env        # set DATABASE_URL, JWT_SECRET, APP_BASE_URL
+npm install && npm run migrate && npm start   # :3001
+
+# 2) Frontend (React + Vite)
+cd ../dashboard-web
+npm install && npm run build && npm run preview  # :4173`,
+    },
+    {
+        id: 'appsv2', label: 'Manual · appsv2/', icon: Database,
+        note: 'The hot/cold DuckDB build — hot tier in RAM, cold Parquet on S3/R2.',
+        code: `git clone https://github.com/NishikantaRay/InsightTrack.git
+cd InsightTrack
+
+# 1) Backend (hot/cold DuckDB + optional S3/R2 cold storage)
+cd appsv2/analytics-api
+cp .env.example .env        # add S3_* / R2_* vars to enable cold storage
+npm install && npm run migrate && npm start   # :3001
+
+# 2) Frontend
+cd ../dashboard-web
+npm install && npm run build && npm run preview  # :4173`,
+    },
+];
+
+// FAQ — concise, factual answers. Rendered on the page AND emitted as FAQPage
+// JSON-LD so answer engines (Google, ChatGPT, Perplexity, Gemini) can quote them.
+const FAQS = [
+    {
+        q: 'What is InsightsTrack?',
+        a: 'InsightsTrack is an open-source, self-hosted web analytics platform — a privacy-friendly alternative to Google Analytics. You run it on your own server and track visitors, pageviews, conversions, heatmaps, and Core Web Vitals without cookies or third-party data sharing.',
+    },
+    {
+        q: 'How is InsightsTrack different from Google Analytics?',
+        a: 'InsightsTrack stores all data on your own infrastructure, sets no cookies, needs no consent banner, and never sells or shares data. It is open-source and free, where Google Analytics is closed-source and monetises your visitors’ data.',
+    },
+    {
+        q: 'Is InsightsTrack privacy-friendly?',
+        a: 'Yes. It is cookieless by design, stores no IP addresses, does no fingerprinting, generates anonymous first-party visitor IDs, and honors Do Not Track (DNT) and Global Privacy Control (GPC). This makes it GDPR-compliant without a cookie banner in most jurisdictions.',
+    },
+    {
+        q: 'How do I install InsightsTrack?',
+        a: 'Self-host the stack with one Docker command (git clone, then docker-compose up), create a site in Settings, and paste a single ~2 KB <script> tag into your website’s <head>. Tracking starts immediately — setup takes under 15 minutes.',
+    },
+    {
+        q: 'Does InsightsTrack work with React and Next.js?',
+        a: 'Yes. The lightweight script tag works on any website or framework — React, Next.js, Vue, Nuxt, SvelteKit, WordPress, Shopify, or plain HTML. It tracks SPA route changes automatically.',
+    },
+    {
+        q: 'Can I track custom events?',
+        a: 'Yes. After the script loads, call window.trackEvent(\'name\', { …props }) to record custom events such as signups, purchases, or clicks alongside automatic pageviews, sessions, scroll depth, Web Vitals, and heatmap data.',
+    },
+    {
+        q: 'How fast is InsightsTrack?',
+        a: 'The tracking script is ~2 KB and loads asynchronously, so it does not slow your site. On the backend, a DuckDB columnar engine answers 90-day analytics queries in under 100 ms even across millions of events.',
+    },
+    {
+        q: 'How does real-time tracking work?',
+        a: 'Events are written to PostgreSQL on arrival and streamed into DuckDB by a background sync. The Realtime page shows the live visitor count, active pages, and a world map of current visitors, refreshing every few seconds.',
+    },
+    {
+        q: 'Is InsightsTrack really free and open source?',
+        a: 'Yes — it is MIT licensed and free forever, with no seat limits. You can read, modify, and self-host the full source code from GitHub.',
+    },
+];
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Landing() {
-    const [dark, setDark] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const s = localStorage.getItem('it-theme');
-            if (s) return s === 'dark';
-            return window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-        return true;
-    });
+    // Use the app-wide theme store as the single source of truth. App.jsx
+    // applies the `dark` class on a wrapper <div> that Tailwind's
+    // darkMode:'class' resolves against, so toggling here flips the same class
+    // — no separate <html> mechanism (which previously fought the wrapper div).
+    const theme = useThemeStore((s) => s.theme);
+    const toggleTheme = useThemeStore((s) => s.toggleTheme);
+    const dark = theme === 'dark';
+
     const [menuOpen, setMenuOpen] = useState(false);
     const [activeFeature, setActiveFeature] = useState(0);
     const [scrolled, setScrolled] = useState(false);
+    const [deployTab, setDeployTab] = useState('docker');
+    const [openFaq, setOpenFaq] = useState(0);
     const mouse = useMouseParallax(0.018);
-
-    useEffect(() => {
-        document.documentElement.classList.toggle('dark', dark);
-        localStorage.setItem('it-theme', dark ? 'dark' : 'light');
-    }, [dark]);
 
     useEffect(() => {
         const fn = () => setScrolled(window.scrollY > 24);
         window.addEventListener('scroll', fn, { passive: true });
         return () => window.removeEventListener('scroll', fn);
+    }, []);
+
+    // ── Desktop layout on mobile ──────────────────────────────────────────────
+    // The landing page is dense and built for wide screens. On phones we widen
+    // the viewport meta to a desktop width so the browser renders the FULL
+    // desktop layout and then auto-scales it to fit the device — visitors see
+    // everything compactly with far less scrolling, instead of an endless
+    // single column. Restored to responsive on unmount so the app's internal
+    // pages stay mobile-friendly.
+    useEffect(() => {
+        const meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) return;
+        const original = meta.getAttribute('content');
+        const apply = () => {
+            if (window.innerWidth < 768) {
+                meta.setAttribute('content', 'width=1280, initial-scale=' + (window.innerWidth / 1280));
+            } else {
+                meta.setAttribute('content', original || 'width=device-width, initial-scale=1');
+            }
+        };
+        apply();
+        window.addEventListener('resize', apply, { passive: true });
+        return () => {
+            window.removeEventListener('resize', apply);
+            meta.setAttribute('content', original || 'width=device-width, initial-scale=1');
+        };
     }, []);
 
     // Auto-cycle features
@@ -370,33 +487,50 @@ export default function Landing() {
     return (
         <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0f] text-gray-900 dark:text-white overflow-x-hidden">
 
+            {/* ── Open Source Top Banner ──────────────────────────────── */}
+            <div className="bg-indigo-600 dark:bg-indigo-700 text-white text-center py-2.5 px-4 text-xs sm:text-sm font-medium">
+                <span className="flex items-center justify-center gap-2 flex-wrap">
+                    <Github className="w-3.5 h-3.5 shrink-0" />
+                    InsightsTrack is <strong>100% open source</strong> — self-host on your own server, free forever.
+                    <a href="https://github.com/NishikantaRay/InsightTrack" target="_blank" rel="noopener noreferrer"
+                        className="underline underline-offset-2 hover:no-underline inline-flex items-center gap-1">
+                        View on GitHub <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <span className="hidden sm:inline opacity-60">·</span>
+                    <span className="hidden sm:inline opacity-80">⭐ Star us if you find it useful</span>
+                </span>
+            </div>
+
             {/* ── NAV ────────────────────────────────────────────────────── */}
-            <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled
+            <nav className={`sticky top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled
                 ? 'bg-white/90 dark:bg-[#0a0a0f]/90 backdrop-blur-2xl border-b border-gray-200/80 dark:border-gray-800/80 shadow-sm'
-                : 'bg-transparent'}`}>
+                : 'bg-white/80 dark:bg-[#0a0a0f]/80 backdrop-blur-xl'}`}>
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
                             <BarChart3 className="w-4 h-4 text-white" />
                         </div>
-                        <span className="font-bold text-[15px] tracking-tight">InsightTrack</span>
+                        <span className="font-bold text-[15px] tracking-tight">InsightsTrack</span>
                     </div>
 
                     <div className="hidden md:flex items-center gap-7">
-                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#why','Why Us']].map(([h,l]) => (
+                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#deploy','Deploy'],['#faq','FAQ']].map(([h,l]) => (
                             <a key={l} href={h} className="text-[13px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setDark(d => !d)} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        <button onClick={toggleTheme} aria-label="Toggle theme" className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                             {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         </button>
-                        <Link to="/login" className="hidden sm:flex text-[13px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-2 transition-colors">Sign in</Link>
-                        <Link to="/register" className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white rounded-xl
+                        <a href="mailto:nishikantaray1@gmail.com?subject=InsightsTrack%20Demo%20Request&body=Hi%20Nishikanta%2C%0A%0AI%27d%20love%20to%20see%20a%20demo%20of%20InsightsTrack.%0A%0ACompany%3A%20%0AUse%20case%3A%20%0A%0AThanks!"
+                            className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-all">
+                            <Mail className="w-3.5 h-3.5" /> Book a Demo
+                        </a>
+                        <Link to="/register?redirect=/demo" className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white rounded-xl
                             bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500
                             shadow-md shadow-indigo-500/25 transition-all hover:shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-px">
-                            Get started <ArrowRight className="w-3.5 h-3.5" />
+                            Try Demo <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                         <button onClick={() => setMenuOpen(v => !v)} className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -405,22 +539,47 @@ export default function Landing() {
                 </div>
                 {menuOpen && (
                     <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0a0a0f] px-4 py-4 space-y-1">
-                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#why','Why Us']].map(([h,l]) => (
+                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#deploy','Deploy'],['#faq','FAQ']].map(([h,l]) => (
                             <a key={l} href={h} onClick={() => setMenuOpen(false)}
                                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                 <ChevronRight className="w-3.5 h-3.5 text-indigo-500" />{l}
                             </a>
                         ))}
                         <div className="pt-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-2">
-                            <Link to="/login" className="py-2.5 text-sm font-medium text-center rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Sign in</Link>
-                            <Link to="/register" className="py-2.5 text-sm font-semibold text-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Get started</Link>
+                            <a href="mailto:nishikantaray1@gmail.com?subject=InsightsTrack%20Demo%20Request" className="py-2.5 text-sm font-medium text-center rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Book a Demo</a>
+                            <Link to="/register?redirect=/demo" className="py-2.5 text-sm font-semibold text-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Try Demo</Link>
                         </div>
                     </div>
                 )}
             </nav>
 
+            {/* ── Demo Notice Banner ──────────────────────────────────── */}
+            <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800/50 px-4 py-3">
+                <div className="max-w-6xl mx-auto flex items-start sm:items-center gap-3 text-sm text-amber-800 dark:text-amber-200 flex-wrap">
+                    <PlayCircle className="w-4 h-4 mt-0.5 sm:mt-0 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="flex-1 leading-snug">
+                        <strong>This is a live demo instance.</strong>{' '}
+                        The data you see is pre-seeded sample data, not real traffic from your website.
+                    </p>
+                    <div className="flex items-center gap-3 flex-wrap text-xs font-semibold">
+                        <Link to="/login?redirect=/demo"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/60 transition-colors whitespace-nowrap">
+                            <Activity className="w-3.5 h-3.5" /> Open live dashboard
+                        </Link>
+                        <Link to="/register"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/60 transition-colors whitespace-nowrap">
+                            <Users className="w-3.5 h-3.5" /> Try with a new account
+                        </Link>
+                        <Link to="/register"
+                            className="underline underline-offset-2 text-amber-700 dark:text-amber-400 hover:no-underline whitespace-nowrap">
+                            Set up your own instance →
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
             {/* ── HERO ───────────────────────────────────────────────────── */}
-            <section className="relative flex flex-col items-center pt-28 sm:pt-32 pb-0 px-4 sm:px-6 overflow-hidden">
+            <section className="relative flex flex-col items-center pt-14 sm:pt-20 pb-0 px-4 sm:px-6 overflow-hidden">
 
                 {/* Background grid */}
                 <div className="absolute inset-0 -z-10"
@@ -447,12 +606,12 @@ export default function Landing() {
                 {/* ── Headline ── */}
                 <h1 className="text-[42px] sm:text-6xl lg:text-[76px] font-black tracking-[-0.02em] leading-[1.04] text-center mb-5 max-w-4xl"
                     style={{ animation: 'fadeUp 0.7s 0.08s ease-out both' }}>
-                    Analytics that{' '}
+                    Know your{' '}
                     <span className="bg-clip-text text-transparent"
                         style={{ backgroundImage: 'linear-gradient(135deg,#6366f1,#a855f7,#ec4899)', backgroundSize: '200% 200%', animation: 'gradShift 4s ease infinite' }}>
-                        respect
+                        visitors
                     </span>
-                    {' '}your users
+                    , not their identities
                 </h1>
 
                 {/* ── Sub ── */}
@@ -483,24 +642,36 @@ export default function Landing() {
                 {/* ── CTAs ── */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 mb-16"
                     style={{ animation: 'fadeUp 0.7s 0.28s ease-out both' }}>
-                    <Link to="/register"
+                    <Link to="/register?redirect=/demo"
                         className="group inline-flex items-center gap-2 px-7 py-3.5 text-sm font-bold text-white rounded-xl
                             bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500
                             shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/40
                             transition-all duration-200 hover:-translate-y-0.5">
-                        Start for free
+                        <PlayCircle className="w-4 h-4" />
+                        Try Live Demo Free
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
-                    <a href="#showcase"
+                    <a href="mailto:nishikantaray1@gmail.com?subject=InsightsTrack%20Demo%20Request&body=Hi%20Nishikanta%2C%0A%0AI%27d%20love%20to%20book%20a%20demo%20of%20InsightsTrack.%0A%0ACompany%3A%20%0AUse%20case%3A%20%0A%0AThanks!"
                         className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-xl
                             border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300
                             bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10
                             backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5">
-                        See demo
+                        <Mail className="w-4 h-4" />
+                        Book a Personal Demo
+                    </a>
+                    <a href="https://github.com/sponsors/NishikantaRay" target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-semibold rounded-xl
+                            border border-pink-200 dark:border-pink-500/30 text-pink-600 dark:text-pink-400
+                            bg-pink-50/60 dark:bg-pink-500/10 hover:bg-pink-100 dark:hover:bg-pink-500/20
+                            transition-all duration-200 hover:-translate-y-0.5">
+                        <Heart className="w-4 h-4" />
+                        Sponsor
                     </a>
                 </div>
 
-                {/* ── Dashboard cluster ── */}
+                {/* ── Dashboard cluster ──
+                    Floating side-widgets show on lg+; on phones the centered
+                    main dashboard panel (max-w-responsive) carries the hero. */}
                 <div className="relative w-full max-w-[1100px] mx-auto pb-0"
                     style={{ animation: 'fadeUp 0.9s 0.38s ease-out both' }}>
 
@@ -581,7 +752,7 @@ export default function Landing() {
                                 <span className="w-3 h-3 rounded-full bg-yellow-400 shrink-0" />
                                 <span className="w-3 h-3 rounded-full bg-green-400 shrink-0" />
                                 <div className="flex-1 mx-3 h-5 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center px-2.5">
-                                    <span className="text-[10px] text-gray-400">app.insighttrack.io · Dashboard</span>
+                                    <span className="text-[10px] text-gray-400">app.insightstrack.io · Dashboard</span>
                                 </div>
                                 <div className="hidden sm:flex items-center gap-3 ml-2">
                                     <span className="text-[10px] text-gray-400">Last 30 days</span>
@@ -914,7 +1085,7 @@ export default function Landing() {
                         </p>
                     </Reveal>
 
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
 
                         {/* 1 — KPI Cards */}
                         <Reveal delay={0} className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm hover:shadow-lg transition-shadow">
@@ -1045,6 +1216,68 @@ export default function Landing() {
                 </div>
             </section>
 
+            {/* ── DEPLOY YOUR OWN ─────────────────────────────────────────── */}
+            <section id="deploy" className="py-24 px-4 sm:px-6 bg-white dark:bg-gray-900/30 border-t border-gray-200 dark:border-gray-800">
+                <div className="max-w-4xl mx-auto">
+                    <Reveal className="text-center mb-12">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/8 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide mb-4">
+                            <Server className="w-3 h-3" /> Self-host
+                        </div>
+                        <h2 className="text-3xl sm:text-5xl font-black tracking-tight mb-4">Deploy your own in minutes</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base max-w-lg mx-auto">
+                            100% open source — run the whole stack on your own server. Pick Docker for the
+                            fastest path, or run the <code className="text-indigo-600 dark:text-indigo-400">apps/</code> or{' '}
+                            <code className="text-indigo-600 dark:text-indigo-400">appsv2/</code> layout manually.
+                        </p>
+                    </Reveal>
+
+                    <Reveal type="scale">
+                        {/* Tab selector */}
+                        <div className="flex flex-wrap justify-center gap-2 mb-5">
+                            {DEPLOY_TABS.map((t) => (
+                                <button key={t.id} onClick={() => setDeployTab(t.id)}
+                                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold border transition-all
+                                        ${deployTab === t.id
+                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/25'
+                                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'}`}>
+                                    <t.icon className="w-3.5 h-3.5" /> {t.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {(() => {
+                            const tab = DEPLOY_TABS.find(t => t.id === deployTab) || DEPLOY_TABS[0];
+                            return (
+                                <div className="rounded-2xl overflow-hidden border border-gray-800 shadow-2xl shadow-black/30">
+                                    {/* terminal chrome */}
+                                    <div className="flex items-center gap-1.5 px-4 py-2.5 bg-[#1a1d27] border-b border-gray-700/60">
+                                        <span className="w-3 h-3 rounded-full bg-red-400" />
+                                        <span className="w-3 h-3 rounded-full bg-yellow-400" />
+                                        <span className="w-3 h-3 rounded-full bg-green-400" />
+                                        <span className="ml-3 text-[11px] text-gray-400 font-mono">terminal — {tab.label}</span>
+                                    </div>
+                                    <pre className="bg-[#0d0f1a] text-gray-200 text-[12px] sm:text-[13px] leading-relaxed p-4 sm:p-6 overflow-x-auto font-mono whitespace-pre">{tab.code}</pre>
+                                    <div className="bg-[#0d0f1a] border-t border-gray-800 px-4 sm:px-6 py-3 flex items-center gap-2 text-[12px] text-gray-400">
+                                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {tab.note}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* helper links */}
+                        <div className="flex flex-wrap items-center justify-center gap-4 mt-6 text-[13px]">
+                            <a href="https://github.com/NishikantaRay/InsightTrack" target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                <Github className="w-4 h-4" /> View on GitHub <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <Link to="/docs" className="inline-flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                <FileText className="w-4 h-4" /> Read the deployment docs
+                            </Link>
+                        </div>
+                    </Reveal>
+                </div>
+            </section>
+
             {/* ── WHY ────────────────────────────────────────────────────── */}
             <section id="why" className="py-24 px-4 sm:px-6 bg-white dark:bg-gray-900/30">
                 <div className="max-w-4xl mx-auto">
@@ -1054,7 +1287,7 @@ export default function Landing() {
                         </div>
                         <h2 className="text-3xl sm:text-5xl font-black tracking-tight mb-4">Why switch?</h2>
                         <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base max-w-md mx-auto">
-                            GA4 sells your data. Plausible costs $9+/mo. InsightTrack is both free and private.
+                            GA4 sells your data. Plausible costs $9+/mo. InsightsTrack is both free and private.
                         </p>
                     </Reveal>
 
@@ -1063,7 +1296,7 @@ export default function Landing() {
                             <div className="grid grid-cols-4 bg-gray-50 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
                                 <div className="col-span-1 px-4 sm:px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Feature</div>
                                 {[
-                                    { name: 'InsightTrack', sub: 'Free forever', accent: '#6366f1', icon: BarChart3 },
+                                    { name: 'InsightsTrack', sub: 'Free forever', accent: '#6366f1', icon: BarChart3 },
                                     { name: 'GA4', sub: 'Sells your data', accent: '#9ca3af' },
                                     { name: 'Plausible', sub: '$9+/month', accent: '#9ca3af' },
                                 ].map(({ name, sub, accent, icon: Icon }) => (
@@ -1137,6 +1370,65 @@ export default function Landing() {
                 </Reveal>
             </section>
 
+            {/* ── FAQ (with FAQPage structured data for AEO) ──────────────── */}
+            <section id="faq" className="py-24 px-4 sm:px-6 bg-[#fafafa] dark:bg-[#0a0a0f] border-t border-gray-200 dark:border-gray-800">
+                {/* FAQPage JSON-LD — lets Google & AI answer engines quote these directly */}
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+                    '@context': 'https://schema.org',
+                    '@type': 'FAQPage',
+                    mainEntity: FAQS.map(({ q, a }) => ({
+                        '@type': 'Question',
+                        name: q,
+                        acceptedAnswer: { '@type': 'Answer', text: a },
+                    })),
+                }) }} />
+
+                <div className="max-w-3xl mx-auto">
+                    <Reveal className="text-center mb-12">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/8 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide mb-4">
+                            <HelpCircle className="w-3 h-3" /> FAQ
+                        </div>
+                        <h2 className="text-3xl sm:text-5xl font-black tracking-tight mb-4">Frequently asked questions</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                            Everything you need to know about InsightsTrack.
+                        </p>
+                    </Reveal>
+
+                    <div className="space-y-3">
+                        {FAQS.map((faq, i) => (
+                            <Reveal key={faq.q} delay={i * 40}>
+                                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 overflow-hidden">
+                                    <button
+                                        onClick={() => setOpenFaq(openFaq === i ? -1 : i)}
+                                        aria-expanded={openFaq === i}
+                                        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left">
+                                        <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">{faq.q}</span>
+                                        <ChevronDown className={`w-5 h-5 shrink-0 text-gray-400 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {openFaq === i && (
+                                        <p className="px-5 pb-5 -mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                            {faq.a}
+                                        </p>
+                                    )}
+                                </div>
+                            </Reveal>
+                        ))}
+                    </div>
+
+                    <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-10">
+                        Still have questions?{' '}
+                        <a href="https://github.com/NishikantaRay/InsightTrack" target="_blank" rel="noopener noreferrer"
+                            className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                            Ask on GitHub
+                        </a>{' '}
+                        or{' '}
+                        <a href="mailto:nishikantaray1@gmail.com" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                            email us
+                        </a>.
+                    </p>
+                </div>
+            </section>
+
             {/* ── FOOTER ─────────────────────────────────────────────────── */}
             <footer className="border-t border-gray-200 dark:border-gray-800 py-10 px-4 sm:px-6 bg-white dark:bg-gray-900/20">
                 <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5">
@@ -1144,16 +1436,30 @@ export default function Landing() {
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
                             <BarChart3 className="w-4 h-4 text-white" />
                         </div>
-                        <span className="font-bold text-sm">InsightTrack</span>
+                        <span className="font-bold text-sm">InsightsTrack</span>
                         <span className="text-xs text-gray-400">· Open-source analytics</span>
                     </div>
                     <div className="flex flex-wrap justify-center gap-x-6 gap-y-1.5 text-sm text-gray-400">
-                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#why','Why Us']].map(([h,l]) => (
+                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#deploy','Deploy'],['#faq','FAQ']].map(([h,l]) => (
                             <a key={l} href={h} className="hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
                         <Link to="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign in</Link>
                     </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-600">&copy; {new Date().getFullYear()} InsightTrack</p>
+                    <div className="flex items-center gap-4">
+                        <a href="https://github.com/sponsors/NishikantaRay" target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
+                                border border-pink-200 dark:border-pink-500/30 text-pink-600 dark:text-pink-400
+                                hover:bg-pink-50 dark:hover:bg-pink-500/10 transition-colors">
+                            <Heart className="w-4 h-4" /> Sponsor
+                        </a>
+                        <p className="text-xs text-gray-400 dark:text-gray-600">
+                            &copy; {new Date().getFullYear()} InsightsTrack · Built by{' '}
+                            <a href="https://nishikanta.in/" target="_blank" rel="noopener noreferrer"
+                                className="hover:text-gray-900 dark:hover:text-white transition-colors underline-offset-2 hover:underline">
+                                Nishikanta Ray
+                            </a>
+                        </p>
+                    </div>
                 </div>
             </footer>
         </div>

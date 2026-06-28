@@ -329,6 +329,83 @@ export async function initializeDatabase() {
     await query(`CREATE INDEX IF NOT EXISTS idx_sql_query_audits_user_created ON sql_query_audits(user_id, created_at DESC)`);
     console.log('  ✓ sql_query_audits');
 
+    // ── Team / multi-user tables ─────────────────────────────────────────────
+
+    // site_members: which users can access which site, and with what role
+    await query(`
+    CREATE TABLE IF NOT EXISTS site_members (
+      id          SERIAL PRIMARY KEY,
+      site_id     VARCHAR(64) NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      user_id     INTEGER     NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+      role        VARCHAR(20) NOT NULL DEFAULT 'viewer'
+                              CHECK (role IN ('owner','admin','viewer')),
+      invited_by  INTEGER     REFERENCES users(id),
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (site_id, user_id)
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_site_members_site ON site_members(site_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_site_members_user ON site_members(user_id)`);
+    console.log('  ✓ site_members');
+
+    // site_invitations: pending email-based invite tokens
+    await query(`
+    CREATE TABLE IF NOT EXISTS site_invitations (
+      id          SERIAL PRIMARY KEY,
+      site_id     VARCHAR(64)  NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      email       VARCHAR(255) NOT NULL,
+      role        VARCHAR(20)  NOT NULL DEFAULT 'viewer'
+                               CHECK (role IN ('admin','viewer')),
+      token       VARCHAR(128) NOT NULL UNIQUE,
+      invited_by  INTEGER      NOT NULL REFERENCES users(id),
+      expires_at  TIMESTAMPTZ  NOT NULL,
+      accepted_at TIMESTAMPTZ,
+      created_at  TIMESTAMPTZ  DEFAULT NOW()
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_invitations_token ON site_invitations(token)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_invitations_email ON site_invitations(email)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_invitations_site  ON site_invitations(site_id)`);
+    console.log('  ✓ site_invitations');
+
+    // Backfill: for every existing site, ensure the owner has an 'owner' row in site_members
+    await query(`
+      INSERT INTO site_members (site_id, user_id, role, created_at)
+      SELECT s.id, s.user_id::INTEGER, 'owner', s.created_at
+      FROM   sites s
+      WHERE  s.user_id IS NOT NULL
+        AND  NOT EXISTS (
+               SELECT 1 FROM site_members m
+               WHERE m.site_id = s.id AND m.user_id = s.user_id::INTEGER
+             )
+    `);
+    console.log('  ✓ site_members backfill complete');
+
+    // site_custom_roles: owner/admin can define named roles with specific page permissions
+    await query(`
+    CREATE TABLE IF NOT EXISTS site_custom_roles (
+      id          SERIAL PRIMARY KEY,
+      site_id     VARCHAR(64)  NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      name        VARCHAR(64)  NOT NULL,
+      color       VARCHAR(32)  NOT NULL DEFAULT '#6366f1',
+      description VARCHAR(255) DEFAULT '',
+      permissions JSONB        NOT NULL DEFAULT '{}',
+      created_by  INTEGER      NOT NULL REFERENCES users(id),
+      created_at  TIMESTAMPTZ  DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ  DEFAULT NOW(),
+      UNIQUE (site_id, name)
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_custom_roles_site ON site_custom_roles(site_id)`);
+    console.log('  ✓ site_custom_roles');
+
+    // Add custom_role_id column to site_members if it doesn't exist yet
+    await query(`
+      ALTER TABLE site_members
+      ADD COLUMN IF NOT EXISTS custom_role_id INTEGER REFERENCES site_custom_roles(id) ON DELETE SET NULL
+    `);
+    console.log('  ✓ site_members.custom_role_id column ready');
+
     console.log('✅ All PostgreSQL tables initialized');
 }
 

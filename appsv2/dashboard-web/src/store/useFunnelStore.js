@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-const STORAGE_KEY = 'insighttrack-saved-funnel';
+const STORAGE_KEY = 'insightstrack-saved-funnel';
 
 function loadFromStorage() {
     try {

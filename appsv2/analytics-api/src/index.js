@@ -12,7 +12,9 @@ import authRoutes from './routes/auth.js';
 import goalsRoutes from './routes/goals.js';
 import reportingRoutes from './routes/reporting.js';
 import sqlEditorRoutes from './routes/sqlEditor.js';
-import { closeDuck } from './db/duckdb.js';
+import teamRoutes from './routes/team.js';
+import { safeMsg } from './utils/safeError.js';
+import { closeDuck, initDuckDB } from './db/duckdb.js';
 import { closeConnection } from './db/postgres.js';
 import { authMiddleware } from './middleware/auth.js';
 import { runSync } from './sync/sync.js';
@@ -27,6 +29,18 @@ const allowedOrigins = new Set(
         .map((origin) => origin.trim())
         .filter(Boolean)
 );
+
+// Production guard: a missing or localhost-only CORS allowlist in production is
+// almost always a misconfiguration. Warn loudly so it's caught before launch.
+if (process.env.NODE_ENV === 'production') {
+    const onlyLocal = [...allowedOrigins].every((o) => /localhost|127\.0\.0\.1/.test(o));
+    if (!process.env.CORS_ORIGINS || onlyLocal) {
+        console.warn(
+            '⚠️  [security] CORS_ORIGINS is unset or localhost-only in production. ' +
+            'Set it to your real dashboard origin(s), e.g. CORS_ORIGINS=https://analytics.yourdomain.com'
+        );
+    }
+}
 
 const publicCors = cors({
     origin: (origin, callback) => callback(null, origin || true),
@@ -88,13 +102,32 @@ app.use('/api/auth', privateCors, authRoutes);
 app.use('/api/goals', privateCors, goalsRoutes);
 app.use('/api/reporting', privateCors, reportingRoutes);
 app.use('/api/sql-editor', privateCors, sqlEditorRoutes);
+// Team management + invite acceptance
+app.use('/api/team', privateCors, teamRoutes);
+app.use('/api', privateCors, teamRoutes);   // mounts /api/invite/:token routes
 
-// Health check
+// Health check — minimal, no internal info
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+    res.json({ status: 'ok' });
 });
 
-// Manual sync trigger endpoint (POST only, no body needed)
+// Demo access — grant the logged-in user viewer access to the public demo site
+// so the landing page "Open live dashboard" CTA works after login/signup.
+app.post('/api/demo/join', privateCors, authMiddleware, async (req, res) => {
+    try {
+        const { joinDemoSite } = await import('./services/teamService.js');
+        const result = await joinDemoSite(req.user.id);
+        res.json({ success: true, data: result });
+    } catch (err) {
+        res.status(err.status || 500).json({
+            error: err.status === 404
+                ? 'Demo site is not available on this instance'
+                : 'Failed to join demo site',
+        });
+    }
+});
+
+// Manual sync trigger
 app.post('/api/sync', privateCors, authMiddleware, async (req, res) => {
     try {
         const full = req.query.full === 'true';
@@ -102,19 +135,44 @@ app.post('/api/sync', privateCors, authMiddleware, async (req, res) => {
         res.json({ success: true, totalRows, mode: full ? 'full' : 'incremental' });
     } catch (err) {
         console.error('Manual sync failed:', err.message);
-        res.status(500).json({ error: 'Sync failed', details: err.message });
+        res.status(500).json({ error: 'Sync failed' });
     }
 });
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ error: 'Not Found', message: `Route ${req.method} ${req.originalUrl} not found` });
+// S3/R2 cold storage status
+app.get('/api/storage/status', privateCors, authMiddleware, async (req, res) => {
+    try {
+        const { s3Status } = await import('./storage/s3.js');
+        res.json({ success: true, storage: s3Status() });
+    } catch (err) {
+        console.error('Storage status error:', err.message);
+        res.status(500).json({ error: 'Failed to get storage status' });
+    }
 });
 
-// Error handler
+// Manual archive trigger
+app.post('/api/storage/archive', privateCors, authMiddleware, async (req, res) => {
+    try {
+        const { s3Enabled, archiveAllToS3, refreshUnifiedViews } = await import('./storage/s3.js');
+        if (!s3Enabled()) return res.status(400).json({ error: 'S3 cold storage is not configured' });
+        const archived = await archiveAllToS3({ silent: true });
+        await refreshUnifiedViews({ silent: true });
+        res.json({ success: true, partitionsArchived: archived });
+    } catch (err) {
+        console.error('Archive error:', err.message);
+        res.status(500).json({ error: 'Archive operation failed' });
+    }
+});
+
+// 404 handler — don't echo back the requested URL (prevents reflected path disclosure)
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not Found' });
+});
+
+// Error handler — never leak stack traces or internal messages in production
 app.use((err, req, res, _next) => {
-    console.error('Unhandled error:', err);
-    res.status(500).json({ error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error' });
+    console.error('[unhandled]', err?.message, err?.stack?.split('\n')[1]?.trim());
+    res.status(500).json({ error: safeMsg(err, 500) });
 });
 
 // Start server
@@ -124,7 +182,10 @@ async function start() {
         await initializeDatabase();
         console.log('✅ PostgreSQL initialized');
 
-        // Auto-sync PG → DuckDB on startup
+        // Init DuckDB + S3/R2 httpfs (no-op when S3 env vars are not set)
+        await initDuckDB();
+
+        // Auto-sync PG → DuckDB on startup (+ S3 archive if configured)
         try {
             await runSync({ silent: false });
             console.log('✅ DuckDB synced from PostgreSQL');
@@ -143,7 +204,7 @@ async function start() {
         }, SYNC_INTERVAL);
 
         app.listen(PORT, () => {
-            console.log(`\n🚀 InsightTrack server running on http://localhost:${PORT}`);
+            console.log(`\n🚀 InsightsTrack server running on http://localhost:${PORT}`);
             console.log(`   Analytics queries powered by DuckDB`);
             console.log(`   Writes (tracking, auth, sites) → PostgreSQL`);
             console.log(`   Auto-sync: PG → DuckDB every ${SYNC_INTERVAL / 1000}s\n`);

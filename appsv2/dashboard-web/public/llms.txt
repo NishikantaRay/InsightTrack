@@ -1,0 +1,41 @@
+# InsightsTrack
+
+> InsightsTrack is an open-source, self-hosted, privacy-friendly website analytics platform — a cookieless alternative to Google Analytics, built for developers and modern websites.
+
+InsightsTrack lets you understand how visitors use your website without slowing it down and without compromising their privacy. You host it on your own infrastructure, so your visitors' data never leaves your servers. It is MIT licensed and free forever.
+
+## What it does
+
+- Real-time visitor analytics (live count, active pages, world map)
+- Pageviews, sessions, top pages, traffic sources, UTM campaigns
+- Visual click heatmaps on a live preview of your pages
+- Conversion funnels with per-step drop-off
+- Core Web Vitals monitoring (LCP, FID, CLS, INP, TTFB) and a JS error log
+- Engagement analytics (scroll depth, rage clicks, time on page)
+- Audience breakdown (devices, browsers, OS, countries, new vs. returning)
+- Reporting studio (custom dashboards, scheduled reports) and a read-only SQL editor
+- Multi-site support and team access with custom roles
+
+## Key facts
+
+- Privacy: no cookies, no fingerprinting, no IP storage; anonymous first-party visitor IDs; honors Do Not Track (DNT) and Global Privacy Control (GPC); GDPR-compliant without a cookie banner in most jurisdictions.
+- Performance: the tracking script is ~2 KB and loads asynchronously; the DuckDB columnar engine answers 90-day queries in under 100 ms across millions of events.
+- Architecture: PostgreSQL handles all writes; a background sync streams data into DuckDB which powers all analytics reads.
+- Integration: a single `<script>` tag works with any site or framework (React, Next.js, Vue, Nuxt, SvelteKit, WordPress, Shopify, plain HTML). Custom events via `window.trackEvent(name, props)`.
+- Licensing: open-source (MIT), self-hosted, free, no seat limits.
+
+## Install
+
+1. `git clone https://github.com/NishikantaRay/InsightTrack.git`
+2. `cd InsightTrack && cp .env.example .env`
+3. `docker-compose up --build -d`
+4. Open the dashboard, create a site, and paste the `<script>` tag into your site's `<head>`.
+
+Setup takes under 15 minutes.
+
+## Links
+
+- Website: https://insightstrack.dev/
+- Source code: https://github.com/NishikantaRay/InsightTrack
+- Author: Nishikanta Ray — https://nishikanta.in/
+- License: MIT

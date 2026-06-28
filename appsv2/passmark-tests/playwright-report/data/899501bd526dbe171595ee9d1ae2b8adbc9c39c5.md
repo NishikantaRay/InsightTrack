@@ -28,7 +28,7 @@ Received: false
     - generic [ref=e10]:
       - generic [ref=e11]:
         - img [ref=e13]
-        - generic [ref=e15]: InsightTrack
+        - generic [ref=e15]: InsightsTrack
       - paragraph [ref=e16]: Privacy-first web analytics
     - generic [ref=e17]:
       - heading "Understand your audience without compromising privacy." [level=2] [ref=e18]:
@@ -39,7 +39,7 @@ Received: false
         - generic [ref=e22]: Conversion funnels & user flows
         - generic [ref=e24]: Multi-site management
         - generic [ref=e26]: Lightweight tracking script
-    - paragraph [ref=e28]: © 2026 InsightTrack. Open-source analytics.
+    - paragraph [ref=e28]: © 2026 InsightsTrack. Open-source analytics.
   - generic [ref=e31]:
     - generic [ref=e32]:
       - heading "Welcome back" [level=1] [ref=e33]

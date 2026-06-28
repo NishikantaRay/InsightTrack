@@ -1,0 +1,20 @@
+# InsightTrack — robots.txt
+# Public marketing pages are indexable; the authenticated app is not.
+
+User-agent: *
+Allow: /$
+Allow: /landing
+
+# Don't index the authenticated dashboard or auth flows
+Disallow: /login
+Disallow: /register
+Disallow: /onboarding
+Disallow: /demo
+Disallow: /settings
+Disallow: /profile
+Disallow: /reporting
+Disallow: /sql-editor
+Disallow: /share
+Disallow: /join
+
+Sitemap: https://insighttrack.app/sitemap.xml

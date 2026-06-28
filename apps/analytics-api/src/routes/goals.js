@@ -1,16 +1,12 @@
 import express from 'express';
 import { goalsService } from '../services/goalsService.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { safeMsg } from '../utils/safeError.js';
 
 const router = express.Router();
 
 // All goal routes require authentication
 router.use(authMiddleware);
-
-const safeError = (error) => {
-    if (process.env.NODE_ENV === 'development') return error.message;
-    return 'An internal error occurred';
-};
 
 // ─── Goals ─────────────────────────────────────────
 
@@ -21,7 +17,7 @@ router.get('/:siteId', async (req, res) => {
         res.json({ success: true, data: goals });
     } catch (error) {
         console.error('Error listing goals:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -35,7 +31,7 @@ router.post('/:siteId', async (req, res) => {
         res.status(201).json({ success: true, data: goal });
     } catch (error) {
         console.error('Error creating goal:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -46,7 +42,7 @@ router.delete('/:siteId/:goalId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting goal:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -59,7 +55,7 @@ router.get('/:siteId/ab-tests', async (req, res) => {
         res.json({ success: true, data: tests });
     } catch (error) {
         console.error('Error listing A/B tests:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -73,7 +69,7 @@ router.post('/:siteId/ab-tests', async (req, res) => {
         res.status(201).json({ success: true, data: test });
     } catch (error) {
         console.error('Error creating A/B test:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -85,7 +81,7 @@ router.put('/:siteId/ab-tests/:testId/status', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating A/B test:', error);
-        res.status(400).json({ success: false, error: safeError(error) });
+        res.status(400).json({ success: false, error: safeMsg(error) });
     }
 });
 
@@ -96,7 +92,7 @@ router.delete('/:siteId/ab-tests/:testId', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting A/B test:', error);
-        res.status(500).json({ success: false, error: safeError(error) });
+        res.status(500).json({ success: false, error: safeMsg(error) });
     }
 });
 

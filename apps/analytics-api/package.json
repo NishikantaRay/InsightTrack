@@ -1,7 +1,7 @@
 {
-  "name": "insighttrack-server",
+  "name": "insightstrack-server",
   "version": "1.0.0",
-  "description": "InsightTrack unified backend — Express + PostgreSQL (writes) + DuckDB (analytics reads)",
+  "description": "InsightsTrack unified backend — Express + PostgreSQL (writes) + DuckDB (analytics reads)",
   "main": "src/index.js",
   "type": "module",
   "scripts": {

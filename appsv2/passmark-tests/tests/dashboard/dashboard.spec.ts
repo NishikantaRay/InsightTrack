@@ -137,7 +137,7 @@ test.describe('Dashboard — main analytics overview', () => {
       ],
       assertions: [
         { assertion: 'A sidebar or left navigation panel with links is visible' },
-        { assertion: 'The InsightTrack logo or brand name is visible in the sidebar' },
+        { assertion: 'The InsightsTrack logo or brand name is visible in the sidebar' },
         { assertion: 'A "Pages" navigation link is present in the sidebar' },
         { assertion: 'A "Realtime" navigation link is present in the sidebar' },
         { assertion: 'A "Settings" navigation link is present in the sidebar' },

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSiteStore } from '../store/useSiteStore';
 import {
     Copy, Check, Code, Server, Bell, Globe, Info, ChevronDown, ChevronUp,
-    BookOpen, Zap, Database, Shield, AlertTriangle, ExternalLink, Settings as SettingsIcon
+    BookOpen, Zap, Database, Shield, AlertTriangle, ExternalLink, Settings as SettingsIcon,
 } from 'lucide-react';
 import AlertsPanel from '../components/charts/AlertsPanel';
 import SiteManager from '../components/ui/SiteManager';
@@ -66,10 +66,10 @@ export default function Settings() {
     const trackingSnippet = siteId ? `<script src="${API_BASE}/api/sites/${siteId}/script"></script>` : '';
 
     const tabs = [
-        { id: 'sites', label: 'Sites', icon: Globe },
-        { id: 'tracking', label: 'Tracking', icon: Code },
-        { id: 'config', label: 'Connection', icon: Server },
-        { id: 'alerts', label: 'Alerts', icon: Bell },
+        { id: 'sites',    label: 'Sites',       icon: Globe },
+        { id: 'tracking', label: 'Tracking',    icon: Code },
+        { id: 'config',   label: 'Connection',  icon: Server },
+        { id: 'alerts',   label: 'Alerts',      icon: Bell },
     ];
 
     return (
@@ -96,7 +96,7 @@ export default function Settings() {
                         { label: 'Sites', text: 'Each website you want to track needs its own site entry. Switch between them using the site selector in the top bar.' },
                         { label: 'Tracking Script', text: 'A one-line script tag that goes in your website\'s <head>. It auto-tracks pageviews, clicks, scroll depth, performance metrics, and errors — no extra code needed.' },
                         { label: 'Custom Events', text: 'After adding the script, you can fire custom events with window.trackEvent("name", { key: value }). Use these for purchases, sign-ups, or any action you care about.' },
-                        { label: 'Alerts', text: 'Set thresholds for traffic drops or spikes. InsightTrack checks these automatically and flags anomalies on your dashboard.' },
+                        { label: 'Alerts', text: 'Set thresholds for traffic drops or spikes. InsightsTrack checks these automatically and flags anomalies on your dashboard.' },
                     ]}
                     businessTip="Add a new site for each domain you want to track. Paste the one-line script into your website's header — no developer needed for most website builders."
                     devTip="The tracking script is dynamically served from /api/sites/:siteId/script. It fingerprints visitors using a hashed localStorage ID — no cookies, no PII. Use window.trackEvent() for custom instrumentation."
@@ -246,57 +246,54 @@ video.addEventListener('timeupdate', () => {
             {tab === 'config' && (
                 <div className="space-y-4">
                     <Section icon={Server} iconColor="text-green-500" title="API Connection"
-                        subtitle="Current backend configuration">
+                        subtitle="Backend connectivity status">
                         <div className="space-y-3">
-                            <div className="grid grid-cols-1 gap-2 text-sm">
-                                {[
-                                    {
-                                        label: 'API Base URL',
-                                        value: API_BASE,
-                                        tip: 'Set via VITE_API_URL environment variable at build time',
-                                        mono: true,
-                                    },
-                                    {
-                                        label: 'Active Site ID',
-                                        value: siteId || 'None selected',
-                                        tip: 'The currently selected site. All dashboard queries use this ID.',
-                                        mono: true,
-                                    },
-                                    {
-                                        label: 'Analytics Endpoint',
-                                        value: siteId ? `${API_BASE}/api/analytics/${siteId}` : '—',
-                                        tip: 'Base path for all analytics GET requests',
-                                        mono: true,
-                                    },
-                                    {
-                                        label: 'Tracking Endpoint',
-                                        value: `${API_BASE}/api/track`,
-                                        tip: 'Where the tracking script sends events — no auth required',
-                                        mono: true,
-                                    },
-                                ].map(({ label, value, tip, mono }) => (
-                                    <div key={label} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-border dark:border-border-dark">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                <span className="text-xs font-medium text-text-muted dark:text-text-muted-dark">{label}</span>
-                                                <InfoTooltip content={tip} size="w-3 h-3" />
-                                            </div>
-                                            <span className={`text-sm text-text-primary dark:text-text-primary-dark break-all ${mono ? 'font-mono' : ''}`}>{value}</span>
-                                        </div>
-                                        {value && value !== '—' && <CopyButton value={value} size="sm" />}
+                            {/* Active Site ID — safe to show (also in tracking snippets) */}
+                            <div className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-border dark:border-border-dark">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <span className="text-xs font-medium text-text-muted dark:text-text-muted-dark">Active Site ID</span>
+                                        <InfoTooltip content="The currently selected site. All dashboard queries use this ID." size="w-3 h-3" />
                                     </div>
-                                ))}
+                                    <span className="text-sm font-mono text-text-primary dark:text-text-primary-dark break-all">
+                                        {siteId || 'None selected'}
+                                    </span>
+                                </div>
+                                {siteId && <CopyButton value={siteId} size="sm" />}
                             </div>
 
-                            <div className="rounded-lg border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 text-xs text-indigo-700 dark:text-indigo-300">
-                                <strong>To change the API URL:</strong> set the <code className="font-mono bg-indigo-100 dark:bg-indigo-900 px-1 rounded">VITE_API_URL</code> environment variable before building the frontend.
-                                In Docker, edit the <code className="font-mono bg-indigo-100 dark:bg-indigo-900 px-1 rounded">environment:</code> section of <code className="font-mono bg-indigo-100 dark:bg-indigo-900 px-1 rounded">docker-compose.v2.yml</code>.
+                            {/* API status — masked in production; full URL only in dev */}
+                            <div className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-border dark:border-border-dark">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <span className="text-xs font-medium text-text-muted dark:text-text-muted-dark">Backend API</span>
+                                        <InfoTooltip content="Set via VITE_API_URL environment variable at build time." size="w-3 h-3" />
+                                    </div>
+                                    <span className="text-sm text-text-primary dark:text-text-primary-dark">
+                                        {import.meta.env.DEV
+                                            ? <span className="font-mono">{API_BASE}</span>
+                                            : <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                                                Connected
+                                              </span>
+                                        }
+                                    </span>
+                                </div>
+                                {/* Only show copy in dev — never expose production backend URLs */}
+                                {import.meta.env.DEV && <CopyButton value={API_BASE} size="sm" />}
                             </div>
+
+                            {import.meta.env.DEV && (
+                                <div className="rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+                                    <strong>Development mode:</strong> Backend URL is visible here for debugging.
+                                    In production builds this information is hidden.
+                                </div>
+                            )}
                         </div>
                     </Section>
 
                     <Section icon={Database} iconColor="text-purple-500" title="Database Architecture"
-                        subtitle="How InsightTrack stores and queries your data">
+                        subtitle="How InsightsTrack stores and queries your data">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                             <div className="rounded-lg border-2 border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 p-3 space-y-1.5">
                                 <div className="flex items-center gap-2">
@@ -334,7 +331,7 @@ video.addEventListener('timeupdate', () => {
                     <div className="rounded-xl border border-amber-100 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 flex items-start gap-3 text-sm">
                         <Bell className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                         <div className="text-amber-700 dark:text-amber-300">
-                            <strong>Traffic Alerts</strong> — InsightTrack checks your recent visitor count and flags unusual drops or spikes.
+                            <strong>Traffic Alerts</strong> — InsightsTrack checks your recent visitor count and flags unusual drops or spikes.
                             Set your thresholds below. Alerts appear on the main Dashboard and in the Realtime page.
                         </div>
                     </div>
@@ -343,6 +340,8 @@ video.addEventListener('timeupdate', () => {
                     </ErrorBoundary>
                 </div>
             )}
+
         </div>
     );
 }
+

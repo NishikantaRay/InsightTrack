@@ -1,6 +1,6 @@
 # Analytics Dashboard
 
-This package contains the React/Vite frontend for InsightTrack.
+This package contains the React/Vite frontend for InsightsTrack.
 
 ## Development
 

@@ -3,20 +3,18 @@ import * as queries from '../queries/queries.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { analyticsCache, CACHE_TTL } from '../services/cache.js';
 import sitesService from '../services/sitesService.js';
+import { getMemberRole } from '../services/teamService.js';
+import { safeMsg } from '../utils/safeError.js';
 
 const router = express.Router();
 
-const safeError = (error) => {
-    if (process.env.NODE_ENV === 'development') return error.message;
-    return 'An internal error occurred';
-};
+const safeError = (error) => safeMsg(error, 500);
 
-async function cachedQuery(cacheKey, ttl, queryFn) {
-    const cached = analyticsCache.get(cacheKey);
-    if (cached) return cached;
-    const data = await queryFn();
-    analyticsCache.set(cacheKey, data, ttl);
-    return data;
+// Coalesced cache fetch — if the same key is already being fetched by another
+// concurrent request, this awaits that in-flight promise instead of firing a
+// duplicate DuckDB query. Eliminates the thundering herd on cache expiry.
+function cachedQuery(cacheKey, ttl, queryFn) {
+    return analyticsCache.getOrFetch(cacheKey, ttl, queryFn);
 }
 
 const validateSiteId = (req, res, next) => {
@@ -34,10 +32,13 @@ const authorizeSiteAccess = async (req, res, next) => {
         if (!site) {
             return res.status(404).json({ success: false, error: 'Site not found' });
         }
-        if (String(site.user_id) !== String(req.user.id)) {
+        // Multi-user: check site_members table instead of hard owner check
+        const role = await getMemberRole(req.siteId, req.user.id);
+        if (!role) {
             return res.status(403).json({ success: false, error: 'You do not have access to this site' });
         }
-        req.site = site;
+        req.site     = site;
+        req.userRole = role;   // 'owner' | 'admin' | 'viewer' — available to route handlers
         next();
     } catch (error) {
         console.error('Error authorizing analytics access:', error);
