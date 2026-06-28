@@ -49,29 +49,29 @@ export default function Navbar() {
     }, [showNotifications]);
 
     return (
-        <header className="h-16 flex items-center justify-between px-6
+        <header className="h-16 flex items-center justify-between gap-2 pl-16 pr-3 sm:px-6
       border-b border-border dark:border-border-dark
       bg-card/80 dark:bg-card-dark/80 backdrop-blur-sm
       sticky top-0 z-40">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
                 <SiteSwitcher />
                 <div className="w-px h-6 bg-border dark:bg-border-dark hidden sm:block" />
-                <DateFilter />
+                <div className="hidden sm:block"><DateFilter /></div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                 {/* Live visitors */}
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full
           bg-success/10 border border-success/20 text-success text-sm font-medium">
                     <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
                     <span>{activeVisitors} live</span>
                 </div>
 
-                {/* Refresh button */}
+                {/* Refresh button (hidden on small screens to save space) */}
                 <button
                     onClick={handleRefresh}
                     title="Refresh dashboard"
-                    className="p-2 rounded-lg text-text-muted dark:text-text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                    className="hidden sm:block p-2 rounded-lg text-text-muted dark:text-text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                 >
                     <RefreshCw className={`w-5 h-5 ${spinning ? 'animate-spin' : ''}`} />
                 </button>
@@ -91,7 +91,7 @@ export default function Navbar() {
                     </button>
 
                     {showNotifications && (
-                        <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-xl shadow-xl
+                        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-80 max-h-96 overflow-y-auto rounded-xl shadow-xl
                             bg-card dark:bg-card-dark border border-border dark:border-border-dark z-50">
                             <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-border-dark">
                                 <h3 className="text-sm font-semibold">Notifications</h3>
@@ -127,11 +127,11 @@ export default function Navbar() {
 
                 <ThemeToggle />
 
-                {/* Focus mode toggle */}
+                {/* Focus mode toggle (desktop only) */}
                 <button
                     onClick={toggleFocusMode}
                     title={focusMode ? 'Exit focus mode' : 'Enter focus mode — hides page headers'}
-                    className={`p-2 rounded-lg transition-colors ${focusMode
+                    className={`hidden sm:block p-2 rounded-lg transition-colors ${focusMode
                             ? 'text-accent bg-accent/10 dark:bg-accent/20'
                             : 'text-text-muted dark:text-text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5'
                         }`}

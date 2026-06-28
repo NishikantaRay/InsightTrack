@@ -3,7 +3,7 @@ import {
     BarChart3, Globe, Layers, Activity, Settings, FileText,
     ChevronLeft, ChevronRight, GitBranch, BookOpen,
     MousePointerClick, Target, Users, Megaphone, Gauge,
-    LayoutDashboard, Shield, Terminal, Map, Sliders,
+    LayoutDashboard, Shield, Terminal, Map, Sliders, X,
 } from 'lucide-react';
 import { useFeatureStore } from '../../store/useFeatureStore';
 
@@ -27,7 +27,7 @@ const NAV_ITEMS = [
     { key: 'docs',         to: '/docs',         icon: BookOpen,        label: 'Docs' },
 ];
 
-export default function Sidebar({ collapsed, onToggleCollapse }) {
+export default function Sidebar({ collapsed, onToggleCollapse, onClose }) {
     const location = useLocation();
     const isVisible = useFeatureStore((s) => s.isVisible);
     const hiddenCount = useFeatureStore((s) => s.hiddenCount());
@@ -36,7 +36,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
 
     return (
         <aside
-            className={`fixed top-0 left-0 z-40 h-screen flex flex-col border-r
+            className={`fixed top-0 left-0 z-50 h-screen flex flex-col border-r
                 border-border dark:border-border-dark
                 bg-card dark:bg-card-dark
                 transition-all duration-300 ease-in-out
@@ -52,6 +52,17 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                         InsightsTrack
                     </span>
                 )}
+                {/* Mobile-only close button */}
+                {onClose && (
+                    <button
+                        onClick={onClose}
+                        aria-label="Close navigation menu"
+                        className="lg:hidden ml-auto p-1.5 rounded-lg text-text-muted dark:text-text-muted-dark
+                            hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                )}
             </div>
 
             {/* Navigation */}
@@ -64,6 +75,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }) {
                         <NavLink
                             key={key}
                             to={to}
+                            onClick={onClose}
                             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                                 transition-colors duration-150
                                 ${active

@@ -18,7 +18,7 @@ function MobileWarning() {
     if (!visible) return null;
 
     return (
-        <div className="lg:hidden sticky top-0 z-50 flex items-start gap-3 px-4 py-3
+        <div className="lg:hidden sticky top-0 z-30 flex items-start gap-3 pl-16 pr-4 py-3
             bg-amber-50 dark:bg-amber-950/80 border-b border-amber-200 dark:border-amber-800/60
             text-amber-800 dark:text-amber-200 text-sm backdrop-blur-sm">
             <Monitor className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -55,16 +55,18 @@ export default function DashboardLayout({ children }) {
 
     return (
         <div className="flex min-h-screen">
-            {/* Mobile overlay */}
+            {/* Mobile overlay — sits below the drawer (z-50) but above page content */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+                    className="fixed inset-0 bg-black/40 z-40 lg:hidden"
                     onClick={() => setMobileOpen(false)}
+                    aria-hidden="true"
                 />
             )}
 
-            {/* Sidebar - hidden on mobile unless toggled */}
-            <div className={`lg:block ${mobileOpen ? 'block' : 'hidden'}`}>
+            {/* Sidebar — off-canvas drawer on mobile (z-50, above navbar & banner),
+                static rail on desktop. */}
+            <div className={`lg:block ${mobileOpen ? 'block' : 'hidden'} relative z-50`}>
                 <Sidebar
                     collapsed={collapsed}
                     onToggleCollapse={() => setCollapsed(c => !c)}
@@ -73,22 +75,25 @@ export default function DashboardLayout({ children }) {
             </div>
 
             <div
-                className="flex-1 flex flex-col transition-all duration-300 lg:ml-[var(--sidebar-w)]"
+                className="flex-1 min-w-0 flex flex-col transition-all duration-300 lg:ml-[var(--sidebar-w)]"
                 style={{ '--sidebar-w': collapsed ? '72px' : '260px' }}
             >
-                {/* Mobile menu button */}
-                <div className="lg:hidden">
+                {/* Mobile menu button — top z so it's always tappable above the
+                    sticky navbar and warning banner. Hidden while the drawer is open. */}
+                {!mobileOpen && (
                     <button
                         onClick={() => setMobileOpen(true)}
-                        className="fixed top-4 left-4 z-20 p-2 rounded-lg bg-card dark:bg-card-dark
-              border border-border dark:border-border-dark shadow-card"
+                        aria-label="Open navigation menu"
+                        className="lg:hidden fixed top-3 left-3 z-[60] p-2.5 rounded-lg bg-card dark:bg-card-dark
+              border border-border dark:border-border-dark shadow-card
+              active:scale-95 transition-transform"
                     >
                         <Menu className="w-5 h-5" />
                     </button>
-                </div>
+                )}
                 <MobileWarning />
                 <Navbar />
-                <main className="flex-1 p-4 md:p-6 overflow-auto">
+                <main className="flex-1 min-w-0 p-4 md:p-6 overflow-x-hidden">
                     {children}
                 </main>
             </div>
