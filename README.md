@@ -66,8 +66,6 @@ The landing page ships a **live demo instance** so anyone can explore the full p
 1. **Open live dashboard** → log in or sign up → you're dropped straight into a dashboard pre-loaded with demo data (the `hello.com` sample site). Great for evaluating features.
 2. **Set up your own instance** → sign up for a fresh account → onboarding walks you through adding your first site and tracking script.
 
-> Want demo data on your own instance? Run `node scripts/seed-live-demo.js` (see [Seeding demo data](#seeding-demo-data)).
-
 ---
 
 ## 🚀 Quick Start
@@ -221,20 +219,6 @@ npm install && npm run build && npm run preview               # :4173
 
 Full production guide (Nginx, SSL, backups, env vars): [docs/deployment.md](docs/deployment.md)
 
-### Seeding demo data
-
-Populate any instance with realistic sample data so the "Open live dashboard" CTA works:
-
-```bash
-# Local
-node scripts/seed-live-demo.js
-
-# Against a remote backend (e.g. Railway)
-EVENTS=10000 API=https://your-backend.up.railway.app node scripts/seed-live-demo.js
-```
-
-Then set on the backend: `DEMO_SITE_DOMAIN=hello.com` and `APP_BASE_URL=https://your-dashboard-url`.
-
 ---
 
 ## 🔑 Key Environment Variables
@@ -343,12 +327,7 @@ InsightsTrack is free and open source. If it's useful to you, please consider
 **[sponsoring on GitHub](https://github.com/sponsors/NishikantaRay)** — it directly
 funds new features, maintenance, and keeping the project free for everyone.
 
-<a href="https://github.com/sponsors/NishikantaRay">
-  <img src="https://img.shields.io/badge/Sponsor%20on%20GitHub-♥-ea4aaa?style=for-the-badge&logo=githubsponsors" alt="Sponsor NishikantaRay" />
-</a>
-
-<!-- On GitHub this renders the live Sponsor button: -->
-<iframe src="https://github.com/sponsors/NishikantaRay/button" title="Sponsor NishikantaRay" height="32" width="114" style="border: 0; border-radius: 6px;"></iframe>
+[![Sponsor NishikantaRay](https://img.shields.io/badge/Sponsor%20on%20GitHub-♥-ea4aaa?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/NishikantaRay)
 
 A ⭐ on the repo also helps a lot!
 

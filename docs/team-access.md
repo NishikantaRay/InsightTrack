@@ -333,27 +333,12 @@ role back instead of an error or a duplicate membership row.
 }
 ```
 
-Returns `404` if no demo site exists on the instance yet (run the seeder first).
+Returns `404` if no demo site exists on the instance yet.
 
 ### Setup
 
-1. Seed the demo site + sample data:
-   ```bash
-   # local Docker stack
-   node scripts/seed-live-demo.js
-
-   # remote backend
-   API=https://your-backend.example.com node scripts/seed-live-demo.js
-   ```
-   This creates the demo account and the `hello.com` site, inserts sample events,
-   and runs a full PG → DuckDB sync.
-
-2. Point the backend at that site by domain:
-   ```bash
-   DEMO_SITE_DOMAIN=hello.com   # default; override if you seeded a different domain
-   ```
-
-The seeder is repo-agnostic — the same `scripts/seed-live-demo.js` lives in both
-`traffic` and `traffic2` and auto-detects the backend `.env` location, so it runs
-unchanged against `apps`, `appsv2`, or the split `analytics-db` service.
+To enable the live-demo flow, the instance needs a demo site to exist and the
+backend pointed at it via the `DEMO_SITE_DOMAIN` env var (default `hello.com`).
+Once a site with that domain exists, the `/api/demo/join` endpoint grants new
+users read-only access to it automatically.
 
