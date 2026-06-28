@@ -4,6 +4,7 @@ import { BarChart3, Eye, EyeOff, ArrowRight, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { useThemeStore } from '../store/useThemeStore';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ export default function Login() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const setAuth = useAuthStore((s) => s.setAuth);
+    const isDark = useThemeStore((s) => s.theme) === 'dark';
 
     const validate = () => {
         if (!email.trim()) { toast.error('Email is required'); return false; }
@@ -169,7 +171,15 @@ export default function Login() {
                             </Link>
                         </p>
 
-                        <div className="mt-5 flex items-center justify-center">
+                        <div className="mt-5 flex flex-col items-center gap-4">
+                            <a href="https://www.producthunt.com/products/insightstrack?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-insightstrack"
+                                target="_blank" rel="noopener noreferrer">
+                                <img
+                                    src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183103&theme=${isDark ? 'dark' : 'light'}`}
+                                    alt="InsightsTrack on Product Hunt" width="200" height="43"
+                                    style={{ width: 200, height: 43 }}
+                                />
+                            </a>
                             <a href="https://github.com/sponsors/NishikantaRay" target="_blank" rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
                                     border border-pink-200 dark:border-pink-500/30 text-pink-600 dark:text-pink-400

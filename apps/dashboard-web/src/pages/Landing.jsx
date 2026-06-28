@@ -670,6 +670,19 @@ export default function Landing() {
                     </a>
                 </div>
 
+                {/* ── Product Hunt badge ── */}
+                <div className="flex justify-center mb-12" style={{ animation: 'fadeUp 0.7s 0.34s ease-out both' }}>
+                    <a href="https://www.producthunt.com/products/insightstrack?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-insightstrack"
+                        target="_blank" rel="noopener noreferrer">
+                        <img
+                            src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183103&theme=${dark ? 'dark' : 'light'}`}
+                            alt="InsightsTrack - Open-source, privacy-first analytics with a live demo | Product Hunt"
+                            width="250" height="54"
+                            style={{ width: 250, height: 54 }}
+                        />
+                    </a>
+                </div>
+
                 {/* ── Dashboard cluster ──
                     Floating side-widgets show on lg+; on phones the centered
                     main dashboard panel (max-w-responsive) carries the hero. */}
@@ -1450,7 +1463,15 @@ export default function Landing() {
                         <Link to="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white transition-colors">Privacy</Link>
                         <Link to="/terms" className="hover:text-gray-900 dark:hover:text-white transition-colors">Terms</Link>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap justify-center">
+                        <a href="https://www.producthunt.com/products/insightstrack?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-insightstrack"
+                            target="_blank" rel="noopener noreferrer">
+                            <img
+                                src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183103&theme=${dark ? 'dark' : 'light'}`}
+                                alt="InsightsTrack on Product Hunt" width="200" height="43"
+                                style={{ width: 200, height: 43 }}
+                            />
+                        </a>
                         <a href="https://github.com/sponsors/NishikantaRay" target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold
                                 border border-pink-200 dark:border-pink-500/30 text-pink-600 dark:text-pink-400
