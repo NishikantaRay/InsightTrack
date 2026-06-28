@@ -35,6 +35,9 @@ const Heatmap = lazy(() => import('./pages/Heatmap'));
 const SharedDashboard = lazy(() => import('./pages/SharedDashboard'));
 const JoinSite = lazy(() => import('./pages/JoinSite'));
 const DemoLanding = lazy(() => import('./pages/DemoLanding'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const Terms = lazy(() => import('./pages/Terms'));
 
 function ProtectedRoute({ children }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -174,6 +177,10 @@ function AppContent() {
                             {/* Public landing page */}
                             <Route path="/landing" element={<GuestRoute><Landing /></GuestRoute>} />
 
+                            {/* Public legal pages (indexable, no auth) */}
+                            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                            <Route path="/terms" element={<Terms />} />
+
                             {/* Auth routes (no layout) */}
                             <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
                             <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
@@ -221,7 +228,7 @@ function AppContent() {
                                                         <Route path="/docs" element={<Documentation />} />
                                                         <Route path="/sql-editor" element={<SqlEditor />} />
                                                         <Route path="/heatmap" element={<Heatmap />} />
-                                                        <Route path="*" element={<Navigate to="/" replace />} />
+                                                        <Route path="*" element={<NotFound />} />
                                                     </Routes>
                                                 </Suspense>
                                             </ErrorBoundary>

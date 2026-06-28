@@ -123,7 +123,7 @@ function KpiChip({ label, value, trend, up, color }) {
             {/* Sparkline */}
             <svg className="mt-2 w-full h-8" viewBox="0 0 80 24" preserveAspectRatio="none">
                 <path d={up ? "M0,20 L10,16 L20,13 L30,15 L40,9 L50,11 L60,5 L70,7 L80,3"
-                             : "M0,4  L10,7  L20,10 L30,8  L40,14 L50,12 L60,18 L70,16 L80,20"}
+                    : "M0,4  L10,7  L20,10 L30,8  L40,14 L50,12 L60,18 L70,16 L80,20"}
                     fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
             </svg>
         </div>
@@ -148,7 +148,7 @@ function MiniChart({ title, type = 'area' }) {
                     <path d="M0,50 C20,45 35,28 55,32 C75,36 90,18 110,22 C130,26 145,10 165,14 C180,17 195,8 200,5 L200,60 L0,60Z"
                         fill="url(#g1)" />
                 </> : type === 'bar' ? <>
-                    {[42,65,38,80,55,90,48,72,85,60,95,70].map((h, i) => (
+                    {[42, 65, 38, 80, 55, 90, 48, 72, 85, 60, 95, 70].map((h, i) => (
                         <rect key={i} x={i * 17 + 1} y={60 - h * 0.58} width="12" height={h * 0.58}
                             rx="3" fill={i === 11 ? '#6366f1' : '#6366f115'} />
                     ))}
@@ -159,8 +159,8 @@ function MiniChart({ title, type = 'area' }) {
                     <circle cx="40" cy="30" r="22" fill="none" stroke="#f97316" strokeWidth="8" strokeDasharray="22 117" strokeDashoffset="-117" />
                     <text x="40" y="35" textAnchor="middle" fontSize="9" fontWeight="700" fill="#6366f1">62%</text>
                     <g transform="translate(100,4)">
-                        {[['#6366f1','Direct 44%'],['#10b981','Google 18%'],['#f97316','Social 12%']].map(([c,l],i) => (
-                            <g key={i} transform={`translate(0,${i*16})`}>
+                        {[['#6366f1', 'Direct 44%'], ['#10b981', 'Google 18%'], ['#f97316', 'Social 12%']].map(([c, l], i) => (
+                            <g key={i} transform={`translate(0,${i * 16})`}>
                                 <circle cx="5" cy="5" r="4" fill={c} />
                                 <text x="14" y="9" fontSize="8" fill="currentColor" className="text-gray-500">{l}</text>
                             </g>
@@ -177,9 +177,9 @@ function RealtimeWidget() {
     const [count, setCount] = useState(24);
     const [pages, setPages] = useState([
         { path: '/pricing', active: 9 },
-        { path: '/home',    active: 7 },
-        { path: '/docs',    active: 5 },
-        { path: '/blog',    active: 3 },
+        { path: '/home', active: 7 },
+        { path: '/docs', active: 5 },
+        { path: '/blog', active: 3 },
     ]);
     useEffect(() => {
         const t = setInterval(() => {
@@ -222,8 +222,8 @@ function HeatmapWidget() {
         { x: 78, y: 62, r: 18, c: 'rgba(249,115,22,0.6)' },
         { x: 25, y: 70, r: 14, c: 'rgba(234,179,8,0.6)' },
         { x: 40, y: 20, r: 10, c: 'rgba(34,197,94,0.5)' },
-        { x: 85, y: 30, r: 8,  c: 'rgba(99,102,241,0.45)' },
-        { x: 15, y: 45, r: 7,  c: 'rgba(99,102,241,0.4)' },
+        { x: 85, y: 30, r: 8, c: 'rgba(99,102,241,0.45)' },
+        { x: 15, y: 45, r: 7, c: 'rgba(99,102,241,0.4)' },
     ];
     return (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xl shadow-black/10 overflow-hidden">
@@ -237,7 +237,8 @@ function HeatmapWidget() {
                 {/* Dots */}
                 {dots.map((d, i) => (
                     <div key={i} className="absolute rounded-full transition-all duration-500"
-                        style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.r * 2, height: d.r * 2,
+                        style={{
+                            left: `${d.x}%`, top: `${d.y}%`, width: d.r * 2, height: d.r * 2,
                             transform: 'translate(-50%,-50%)', background: d.c,
                             boxShadow: `0 0 ${d.r * 1.4}px ${d.c}`,
                             animation: `float ${2.5 + i * 0.4}s ease-in-out infinite`,
@@ -317,21 +318,21 @@ const FEATURES = [
 ];
 
 const WHY_TABLE = [
-    ['No cookies / no consent banner',  true, false, false],
-    ['Self-hosted — you own all data',  true, false, false],
-    ['Free forever',                    true, false, false],
-    ['Script under 2 KB',               true, false, false],
-    ['Heatmaps included',               true, false, true],
-    ['JS error tracking',               true, false, true],
-    ['SQL editor built-in',             true, false, false],
-    ['Custom drag-drop dashboards',     true, false, false],
-    ['Real-time dashboard',             true, true,  true],
-    ['Core Web Vitals monitoring',      true, false, true],
+    ['No cookies / no consent banner', true, false, false],
+    ['Self-hosted — you own all data', true, false, false],
+    ['Free forever', true, false, false],
+    ['Script under 2 KB', true, false, false],
+    ['Heatmaps included', true, false, true],
+    ['JS error tracking', true, false, true],
+    ['SQL editor built-in', true, false, false],
+    ['Custom drag-drop dashboards', true, false, false],
+    ['Real-time dashboard', true, true, true],
+    ['Core Web Vitals monitoring', true, false, true],
 ];
 
 const HOW_STEPS = [
-    { n: '01', icon: Users,    title: 'Create an account',     desc: 'Sign up, add your website domain. 30 seconds.' },
-    { n: '02', icon: Code,     title: 'Add one script tag',    desc: 'Paste a single <script> into your site\'s <head>. Under 2 KB.' },
+    { n: '01', icon: Users, title: 'Create an account', desc: 'Sign up, add your website domain. 30 seconds.' },
+    { n: '02', icon: Code, title: 'Add one script tag', desc: 'Paste a single <script> into your site\'s <head>. Under 2 KB.' },
     { n: '03', icon: BarChart3, title: 'See everything live', desc: '17 analytics pages ready instantly — no configuration.' },
 ];
 
@@ -514,7 +515,7 @@ export default function Landing() {
                     </div>
 
                     <div className="hidden md:flex items-center gap-7">
-                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#deploy','Deploy'],['#faq','FAQ']].map(([h,l]) => (
+                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
                             <a key={l} href={h} className="text-[13px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
                     </div>
@@ -539,7 +540,7 @@ export default function Landing() {
                 </div>
                 {menuOpen && (
                     <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0a0a0f] px-4 py-4 space-y-1">
-                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#deploy','Deploy'],['#faq','FAQ']].map(([h,l]) => (
+                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
                             <a key={l} href={h} onClick={() => setMenuOpen(false)}
                                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                 <ChevronRight className="w-3.5 h-3.5 text-indigo-500" />{l}
@@ -624,14 +625,14 @@ export default function Landing() {
                 {/* ── Feature pills ── */}
                 <div className="flex flex-wrap justify-center gap-2 mb-8" style={{ animation: 'fadeUp 0.7s 0.22s ease-out both' }}>
                     {[
-                        { icon: Activity,         label: 'Realtime',       color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-                        { icon: MousePointerClick, label: 'Heatmaps',      color: 'text-rose-600 dark:text-rose-400',     bg: 'bg-rose-50 dark:bg-rose-500/10' },
-                        { icon: Layers,            label: 'Funnels',       color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
-                        { icon: Gauge,             label: 'Web Vitals',    color: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-50 dark:bg-amber-500/10' },
-                        { icon: LayoutDashboard,   label: 'Dashboards',    color: 'text-cyan-600 dark:text-cyan-400',     bg: 'bg-cyan-50 dark:bg-cyan-500/10' },
-                        { icon: Terminal,          label: 'SQL Editor',    color: 'text-slate-600 dark:text-slate-400',   bg: 'bg-slate-50 dark:bg-slate-500/10' },
-                        { icon: Target,            label: 'Goals & A/B',  color: 'text-green-600 dark:text-green-400',   bg: 'bg-green-50 dark:bg-green-500/10' },
-                        { icon: GitBranch,         label: 'User Flow',    color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-500/10' },
+                        { icon: Activity, label: 'Realtime', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
+                        { icon: MousePointerClick, label: 'Heatmaps', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-500/10' },
+                        { icon: Layers, label: 'Funnels', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
+                        { icon: Gauge, label: 'Web Vitals', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10' },
+                        { icon: LayoutDashboard, label: 'Dashboards', color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-500/10' },
+                        { icon: Terminal, label: 'SQL Editor', color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-500/10' },
+                        { icon: Target, label: 'Goals & A/B', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
+                        { icon: GitBranch, label: 'User Flow', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-500/10' },
                     ].map(({ icon: Icon, label, color, bg }) => (
                         <span key={label} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold border border-gray-200 dark:border-gray-800 ${bg} ${color}`}>
                             <Icon className="w-3 h-3" />{label}
@@ -687,14 +688,14 @@ export default function Landing() {
                         style={{ animation: 'float 4.5s 0.8s ease-in-out infinite' }}>
                         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xl shadow-black/10 p-4">
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Conversion Funnel</p>
-                            {[['Visit',100,'#6366f1'],['Signup',68,'#8b5cf6'],['Onboard',42,'#a855f7'],['Paid',19,'#ec4899']].map(([s,p,c]) => (
+                            {[['Visit', 100, '#6366f1'], ['Signup', 68, '#8b5cf6'], ['Onboard', 42, '#a855f7'], ['Paid', 19, '#ec4899']].map(([s, p, c]) => (
                                 <div key={s} className="mb-1.5">
                                     <div className="flex justify-between text-[9px] text-gray-400 mb-0.5">
                                         <span className="font-medium text-gray-600 dark:text-gray-300">{s}</span>
                                         <span className="font-bold">{p}%</span>
                                     </div>
                                     <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full" style={{ width:`${p}%`, background:c }} />
+                                        <div className="h-full rounded-full" style={{ width: `${p}%`, background: c }} />
                                     </div>
                                 </div>
                             ))}
@@ -713,12 +714,12 @@ export default function Landing() {
                         style={{ animation: 'float2 5s 1.2s ease-in-out infinite' }}>
                         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xl shadow-black/10 p-4">
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Web Vitals</p>
-                            {[['LCP','1.8s','good'],['FID','82ms','good'],['CLS','0.04','good'],['INP','140ms','warn'],['TTFB','620ms','good']].map(([m,v,s]) => (
+                            {[['LCP', '1.8s', 'good'], ['FID', '82ms', 'good'], ['CLS', '0.04', 'good'], ['INP', '140ms', 'warn'], ['TTFB', '620ms', 'good']].map(([m, v, s]) => (
                                 <div key={m} className="flex items-center gap-2 mb-1.5 last:mb-0">
                                     <span className="text-[9px] font-bold text-gray-400 w-6">{m}</span>
-                                    <div className={`w-2 h-2 rounded-full shrink-0 ${s==='good'?'bg-emerald-500':'bg-amber-400'}`} />
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${s === 'good' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                                     <span className="text-[10px] font-bold text-gray-900 dark:text-white flex-1">{v}</span>
-                                    <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${s==='good'?'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400':'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>{s}</span>
+                                    <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${s === 'good' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>{s}</span>
                                 </div>
                             ))}
                         </div>
@@ -752,7 +753,7 @@ export default function Landing() {
                                 <span className="w-3 h-3 rounded-full bg-yellow-400 shrink-0" />
                                 <span className="w-3 h-3 rounded-full bg-green-400 shrink-0" />
                                 <div className="flex-1 mx-3 h-5 rounded-md bg-gray-200 dark:bg-gray-700 flex items-center px-2.5">
-                                    <span className="text-[10px] text-gray-400">app.insightstrack.io · Dashboard</span>
+                                    <span className="text-[10px] text-gray-400">insightstrack.dev · Dashboard</span>
                                 </div>
                                 <div className="hidden sm:flex items-center gap-3 ml-2">
                                     <span className="text-[10px] text-gray-400">Last 30 days</span>
@@ -769,20 +770,20 @@ export default function Landing() {
                                 {/* KPI row */}
                                 <div className="grid grid-cols-4 gap-2.5 mb-3">
                                     {[
-                                        { l:'Visitors',   v:'12,847', t:'+12.3%', up:true,  c:'stroke-indigo-400',  dot:'bg-indigo-500' },
-                                        { l:'Pageviews',  v:'34.2K',  t:'+8.7%',  up:true,  c:'stroke-emerald-400', dot:'bg-emerald-500' },
-                                        { l:'Bounce',     v:'42.5%',  t:'↓ 2.1%', up:false, c:'stroke-rose-400',    dot:'bg-rose-500' },
-                                        { l:'Avg Session',v:'3m 05s', t:'+5.4%',  up:true,  c:'stroke-amber-400',   dot:'bg-amber-500' },
-                                    ].map((k,i) => (
+                                        { l: 'Visitors', v: '12,847', t: '+12.3%', up: true, c: 'stroke-indigo-400', dot: 'bg-indigo-500' },
+                                        { l: 'Pageviews', v: '34.2K', t: '+8.7%', up: true, c: 'stroke-emerald-400', dot: 'bg-emerald-500' },
+                                        { l: 'Bounce', v: '42.5%', t: '↓ 2.1%', up: false, c: 'stroke-rose-400', dot: 'bg-rose-500' },
+                                        { l: 'Avg Session', v: '3m 05s', t: '+5.4%', up: true, c: 'stroke-amber-400', dot: 'bg-amber-500' },
+                                    ].map((k, i) => (
                                         <div key={i} className="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700/60 p-2.5">
                                             <div className="flex items-center gap-1.5 mb-0.5">
                                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${k.dot}`} />
                                                 <p className="text-[9px] uppercase tracking-widest text-gray-400 font-bold">{k.l}</p>
                                             </div>
                                             <p className="text-sm font-extrabold text-gray-900 dark:text-white">{k.v}</p>
-                                            <span className={`text-[9px] font-bold ${k.up?'text-emerald-500':'text-red-400'}`}>{k.t}</span>
+                                            <span className={`text-[9px] font-bold ${k.up ? 'text-emerald-500' : 'text-red-400'}`}>{k.t}</span>
                                             <svg className="mt-1 w-full h-4" viewBox="0 0 80 16" preserveAspectRatio="none">
-                                                <path d={k.up?"M0,13 L15,10 L28,8 L40,10 L52,5 L64,3 L80,1":"M0,3 L15,5 L28,7 L40,4 L52,9 L64,11 L80,13"}
+                                                <path d={k.up ? "M0,13 L15,10 L28,8 L40,10 L52,5 L64,3 L80,1" : "M0,3 L15,5 L28,7 L40,4 L52,9 L64,11 L80,13"}
                                                     fill="none" className={k.c} strokeWidth="1.5" strokeLinecap="round" />
                                             </svg>
                                         </div>
@@ -832,8 +833,8 @@ export default function Landing() {
                                                 <text x="22" y="26" textAnchor="middle" fontSize="7" fontWeight="800" fill="#6366f1">44%</text>
                                             </svg>
                                             <div className="text-[8px] text-gray-500 dark:text-gray-400 space-y-0.5 flex-1">
-                                                {[['#6366f1','Direct 44%'],['#10b981','Search 26%'],['#f97316','Social 18%'],['#a855f7','Email 12%']].map(([c,l]) => (
-                                                    <div key={l} className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{background:c}} />{l}</div>
+                                                {[['#6366f1', 'Direct 44%'], ['#10b981', 'Search 26%'], ['#f97316', 'Social 18%'], ['#a855f7', 'Email 12%']].map(([c, l]) => (
+                                                    <div key={l} className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c }} />{l}</div>
                                                 ))}
                                             </div>
                                         </div>
@@ -841,11 +842,11 @@ export default function Landing() {
                                         {/* Top pages mini */}
                                         <div className="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700/60 p-2.5 flex-1">
                                             <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Top Pages</p>
-                                            {[{p:'/pricing',w:'88%',v:'4.2K'},{p:'/home',w:'72%',v:'3.5K'},{p:'/docs',w:'45%',v:'2.1K'},{p:'/blog',w:'28%',v:'1.3K'}].map(r => (
+                                            {[{ p: '/pricing', w: '88%', v: '4.2K' }, { p: '/home', w: '72%', v: '3.5K' }, { p: '/docs', w: '45%', v: '2.1K' }, { p: '/blog', w: '28%', v: '1.3K' }].map(r => (
                                                 <div key={r.p} className="flex items-center gap-1.5 mb-1 last:mb-0">
                                                     <span className="text-[8px] text-gray-400 w-12 truncate font-mono">{r.p}</span>
                                                     <div className="flex-1 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-indigo-500/70 rounded-full" style={{width:r.w}} />
+                                                        <div className="h-full bg-indigo-500/70 rounded-full" style={{ width: r.w }} />
                                                     </div>
                                                     <span className="text-[8px] text-gray-500 w-6 text-right">{r.v}</span>
                                                 </div>
@@ -859,7 +860,7 @@ export default function Landing() {
                                     {/* Countries */}
                                     <div className="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700/60 p-2.5">
                                         <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Countries</p>
-                                        {[['🇺🇸','US','38%'],['🇬🇧','UK','18%'],['🇩🇪','DE','12%'],['🇮🇳','IN','9%']].map(([f,c,p]) => (
+                                        {[['🇺🇸', 'US', '38%'], ['🇬🇧', 'UK', '18%'], ['🇩🇪', 'DE', '12%'], ['🇮🇳', 'IN', '9%']].map(([f, c, p]) => (
                                             <div key={c} className="flex items-center gap-1 mb-1 last:mb-0">
                                                 <span className="text-[10px]">{f}</span>
                                                 <span className="text-[8px] text-gray-500 flex-1">{c}</span>
@@ -870,14 +871,14 @@ export default function Landing() {
                                     {/* Devices */}
                                     <div className="bg-white dark:bg-gray-800/80 rounded-xl border border-gray-100 dark:border-gray-700/60 p-2.5">
                                         <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Devices</p>
-                                        {[['Desktop','60%','#3b82f6'],['Mobile','30%','#14b8a6'],['Tablet','10%','#f97316']].map(([d,p,c]) => (
+                                        {[['Desktop', '60%', '#3b82f6'], ['Mobile', '30%', '#14b8a6'], ['Tablet', '10%', '#f97316']].map(([d, p, c]) => (
                                             <div key={d} className="mb-1 last:mb-0">
                                                 <div className="flex justify-between text-[8px] mb-0.5">
                                                     <span className="text-gray-500">{d}</span>
                                                     <span className="font-bold text-gray-700 dark:text-gray-300">{p}</span>
                                                 </div>
                                                 <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                    <div className="h-full rounded-full" style={{width:p, background:c}} />
+                                                    <div className="h-full rounded-full" style={{ width: p, background: c }} />
                                                 </div>
                                             </div>
                                         ))}
@@ -888,11 +889,11 @@ export default function Landing() {
                                             <Terminal className="w-2.5 h-2.5" /> SQL Editor
                                         </p>
                                         <div className="font-mono text-[7px] leading-relaxed">
-                                            <span className="text-purple-400">SELECT </span><span className="text-blue-300">path</span><span className="text-gray-500">,</span><br/>
-                                            <span className="text-blue-300">  COUNT</span><span className="text-gray-300">(</span><span className="text-orange-300">*</span><span className="text-gray-300">) AS views</span><br/>
-                                            <span className="text-purple-400">FROM </span><span className="text-emerald-400">events</span><br/>
-                                            <span className="text-purple-400">WHERE </span><span className="text-gray-300">type=</span><span className="text-yellow-300">'pageview'</span><br/>
-                                            <span className="text-purple-400">GROUP BY </span><span className="text-blue-300">path</span><br/>
+                                            <span className="text-purple-400">SELECT </span><span className="text-blue-300">path</span><span className="text-gray-500">,</span><br />
+                                            <span className="text-blue-300">  COUNT</span><span className="text-gray-300">(</span><span className="text-orange-300">*</span><span className="text-gray-300">) AS views</span><br />
+                                            <span className="text-purple-400">FROM </span><span className="text-emerald-400">events</span><br />
+                                            <span className="text-purple-400">WHERE </span><span className="text-gray-300">type=</span><span className="text-yellow-300">'pageview'</span><br />
+                                            <span className="text-purple-400">GROUP BY </span><span className="text-blue-300">path</span><br />
                                             <div className="mt-1 pt-1 border-t border-gray-700">
                                                 <span className="text-emerald-400">✓ 127 rows · 42ms</span>
                                             </div>
@@ -903,7 +904,7 @@ export default function Landing() {
                                         <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                                             <AlertTriangle className="w-2.5 h-2.5 text-red-400" /> JS Errors
                                         </p>
-                                        {[['TypeError','null read','47×'],['ReferenceError','not defined','12×'],['NetworkErr','fetch fail','8×']].map(([t,m,c]) => (
+                                        {[['TypeError', 'null read', '47×'], ['ReferenceError', 'not defined', '12×'], ['NetworkErr', 'fetch fail', '8×']].map(([t, m, c]) => (
                                             <div key={t} className="mb-1 last:mb-0">
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-[7px] font-mono text-red-400 truncate flex-1">{t}</span>
@@ -933,10 +934,10 @@ export default function Landing() {
             {/* ── STATS STRIP ────────────────────────────────────────────── */}
             <section className="py-14 px-4 sm:px-6 border-y border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40">
                 <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8">
-                    <StatCounter value={17}  suffix="+"  label="Analytics pages"    color="text-indigo-600 dark:text-indigo-400" />
-                    <StatCounter value={2}   suffix=" KB" label="Tracking script"   color="text-emerald-600 dark:text-emerald-400" />
-                    <StatCounter value={100} suffix="×"  label="Faster than GA4"   color="text-amber-600 dark:text-amber-400" />
-                    <StatCounter value={0}   suffix=""   label="Cookies, ever"      color="text-rose-600 dark:text-rose-400" />
+                    <StatCounter value={17} suffix="+" label="Analytics pages" color="text-indigo-600 dark:text-indigo-400" />
+                    <StatCounter value={2} suffix=" KB" label="Tracking script" color="text-emerald-600 dark:text-emerald-400" />
+                    <StatCounter value={100} suffix="×" label="Faster than GA4" color="text-amber-600 dark:text-amber-400" />
+                    <StatCounter value={0} suffix="" label="Cookies, ever" color="text-rose-600 dark:text-rose-400" />
                 </div>
             </section>
 
@@ -1004,7 +1005,7 @@ export default function Landing() {
                                 {activeFeature === 0 && <RealtimeWidget />}
                                 {activeFeature === 1 && (
                                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-2.5">
-                                        {[['No cookies set', true],['No IP stored', true],['DNT respected', true],['GDPR compliant', true],['GPC signal honored', true]].map(([l,v]) => (
+                                        {[['No cookies set', true], ['No IP stored', true], ['DNT respected', true], ['GDPR compliant', true], ['GPC signal honored', true]].map(([l, v]) => (
                                             <div key={l} className="flex items-center gap-2.5 text-sm">
                                                 <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
                                                     <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
@@ -1016,7 +1017,7 @@ export default function Landing() {
                                 )}
                                 {activeFeature === 2 && (
                                     <div className="space-y-3">
-                                        {[['90-day KPI','< 50ms','indigo'],['30-day traffic','< 24ms','emerald'],['Top pages','< 39ms','amber']].map(([l,t,c]) => (
+                                        {[['90-day KPI', '< 50ms', 'indigo'], ['30-day traffic', '< 24ms', 'emerald'], ['Top pages', '< 39ms', 'amber']].map(([l, t, c]) => (
                                             <div key={l} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
                                                 <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{l}</span>
                                                 <span className={`text-sm font-black text-${c}-600 dark:text-${c}-400`}>{t}</span>
@@ -1027,7 +1028,7 @@ export default function Landing() {
                                 {activeFeature === 3 && <HeatmapWidget />}
                                 {activeFeature === 4 && (
                                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4">
-                                        {[['Landing',100,28],['Signup',72,20],['Onboarding',51,14],['Paid',34,9]].map(([step, pct, n]) => (
+                                        {[['Landing', 100, 28], ['Signup', 72, 20], ['Onboarding', 51, 14], ['Paid', 34, 9]].map(([step, pct, n]) => (
                                             <div key={step} className="mb-2 last:mb-0">
                                                 <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
                                                     <span className="font-medium">{step}</span><span>{n} users · {pct}%</span>
@@ -1050,7 +1051,7 @@ export default function Landing() {
                                         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 flex flex-col justify-center items-center">
                                             <p className="text-[10px] text-gray-400 mb-1">Export</p>
                                             <div className="flex gap-1">
-                                                {['PNG','PDF','CSV','JSON'].map(f => (
+                                                {['PNG', 'PDF', 'CSV', 'JSON'].map(f => (
                                                     <span key={f} className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">{f}</span>
                                                 ))}
                                             </div>
@@ -1092,10 +1093,10 @@ export default function Landing() {
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">KPI Overview</p>
                             <div className="space-y-2.5">
                                 {[
-                                    { l:'Visitors', v:'12,847', t:'↑ 12.3%', c:'text-emerald-500', w:'90%', color:'#6366f1' },
-                                    { l:'Pageviews', v:'34,201', t:'↑ 8.7%',  c:'text-emerald-500', w:'75%', color:'#10b981' },
-                                    { l:'Bounce',   v:'42.5%',  t:'↓ 2.1%',  c:'text-red-400',     w:'42%', color:'#f97316' },
-                                    { l:'Avg Time', v:'3m 05s', t:'↑ 5.4%',  c:'text-emerald-500', w:'55%', color:'#a855f7' },
+                                    { l: 'Visitors', v: '12,847', t: '↑ 12.3%', c: 'text-emerald-500', w: '90%', color: '#6366f1' },
+                                    { l: 'Pageviews', v: '34,201', t: '↑ 8.7%', c: 'text-emerald-500', w: '75%', color: '#10b981' },
+                                    { l: 'Bounce', v: '42.5%', t: '↓ 2.1%', c: 'text-red-400', w: '42%', color: '#f97316' },
+                                    { l: 'Avg Time', v: '3m 05s', t: '↑ 5.4%', c: 'text-emerald-500', w: '55%', color: '#a855f7' },
                                 ].map(k => (
                                     <div key={k.l} className="flex items-center gap-3">
                                         <span className="text-[10px] text-gray-400 w-14 shrink-0">{k.l}</span>
@@ -1123,7 +1124,7 @@ export default function Landing() {
                         {/* 4 — Funnel */}
                         <Reveal delay={180} className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm hover:shadow-lg transition-shadow">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Conversion Funnel</p>
-                            {[['Homepage', 2840, 100], ['Pricing', 1920, 68], ['Sign up', 870, 31], ['Activated', 420, 15]].map(([s,n,p]) => (
+                            {[['Homepage', 2840, 100], ['Pricing', 1920, 68], ['Sign up', 870, 31], ['Activated', 420, 15]].map(([s, n, p]) => (
                                 <div key={s} className="mb-2">
                                     <div className="flex justify-between text-[10px] text-gray-500 mb-1">
                                         <span className="font-medium text-gray-700 dark:text-gray-300">{s}</span>
@@ -1131,7 +1132,7 @@ export default function Landing() {
                                     </div>
                                     <div className="h-6 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
                                         <div className="h-full rounded-lg flex items-center pl-2 transition-all duration-700"
-                                            style={{ width:`${p}%`, background:'linear-gradient(90deg,#6366f1,#a855f7)' }}>
+                                            style={{ width: `${p}%`, background: 'linear-gradient(90deg,#6366f1,#a855f7)' }}>
                                             {p > 20 && <span className="text-[9px] text-white font-bold">{p}%</span>}
                                         </div>
                                     </div>
@@ -1148,7 +1149,7 @@ export default function Landing() {
                         <Reveal delay={300} className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm hover:shadow-lg transition-shadow">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Core Web Vitals</p>
                             <div className="space-y-2">
-                                {[['LCP','1.8s','good','bg-emerald-500'],['FID','82ms','good','bg-emerald-500'],['CLS','0.04','good','bg-emerald-500'],['INP','140ms','needs-improvement','bg-amber-400'],['TTFB','620ms','good','bg-emerald-500']].map(([m,v,s,c]) => (
+                                {[['LCP', '1.8s', 'good', 'bg-emerald-500'], ['FID', '82ms', 'good', 'bg-emerald-500'], ['CLS', '0.04', 'good', 'bg-emerald-500'], ['INP', '140ms', 'needs-improvement', 'bg-amber-400'], ['TTFB', '620ms', 'good', 'bg-emerald-500']].map(([m, v, s, c]) => (
                                     <div key={m} className="flex items-center gap-2">
                                         <span className="text-[10px] font-bold text-gray-500 w-8">{m}</span>
                                         <div className={`w-2 h-2 rounded-full ${c} shrink-0`} />
@@ -1206,7 +1207,7 @@ export default function Landing() {
                     <Reveal className="mt-14 text-center">
                         <p className="text-xs text-gray-400 font-semibold uppercase tracking-widest mb-4">Works with</p>
                         <div className="flex flex-wrap justify-center gap-2">
-                            {['WordPress','Next.js','Shopify','Webflow','Squarespace','React','Vue','Nuxt','SvelteKit','Plain HTML'].map(p => (
+                            {['WordPress', 'Next.js', 'Shopify', 'Webflow', 'Squarespace', 'React', 'Vue', 'Nuxt', 'SvelteKit', 'Plain HTML'].map(p => (
                                 <span key={p} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors">
                                     {p}
                                 </span>
@@ -1359,7 +1360,7 @@ export default function Landing() {
                             </div>
 
                             <div className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/55">
-                                {['No cookies','Self-hosted','Open source','GDPR compliant','Free forever'].map(t => (
+                                {['No cookies', 'Self-hosted', 'Open source', 'GDPR compliant', 'Free forever'].map(t => (
                                     <span key={t} className="flex items-center gap-1.5">
                                         <Check className="w-3 h-3 text-emerald-400" />{t}
                                     </span>
@@ -1373,15 +1374,17 @@ export default function Landing() {
             {/* ── FAQ (with FAQPage structured data for AEO) ──────────────── */}
             <section id="faq" className="py-24 px-4 sm:px-6 bg-[#fafafa] dark:bg-[#0a0a0f] border-t border-gray-200 dark:border-gray-800">
                 {/* FAQPage JSON-LD — lets Google & AI answer engines quote these directly */}
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-                    '@context': 'https://schema.org',
-                    '@type': 'FAQPage',
-                    mainEntity: FAQS.map(({ q, a }) => ({
-                        '@type': 'Question',
-                        name: q,
-                        acceptedAnswer: { '@type': 'Answer', text: a },
-                    })),
-                }) }} />
+                <script type="application/ld+json" dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'FAQPage',
+                        mainEntity: FAQS.map(({ q, a }) => ({
+                            '@type': 'Question',
+                            name: q,
+                            acceptedAnswer: { '@type': 'Answer', text: a },
+                        })),
+                    })
+                }} />
 
                 <div className="max-w-3xl mx-auto">
                     <Reveal className="text-center mb-12">
@@ -1440,10 +1443,12 @@ export default function Landing() {
                         <span className="text-xs text-gray-400">· Open-source analytics</span>
                     </div>
                     <div className="flex flex-wrap justify-center gap-x-6 gap-y-1.5 text-sm text-gray-400">
-                        {[['#features','Features'],['#showcase','Showcase'],['#how','Setup'],['#deploy','Deploy'],['#faq','FAQ']].map(([h,l]) => (
+                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
                             <a key={l} href={h} className="hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
                         <Link to="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign in</Link>
+                        <Link to="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white transition-colors">Privacy</Link>
+                        <Link to="/terms" className="hover:text-gray-900 dark:hover:text-white transition-colors">Terms</Link>
                     </div>
                     <div className="flex items-center gap-4">
                         <a href="https://github.com/sponsors/NishikantaRay" target="_blank" rel="noopener noreferrer"
