@@ -38,6 +38,7 @@ const DemoLanding = lazy(() => import('./pages/DemoLanding'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const Terms = lazy(() => import('./pages/Terms'));
+const Blog = lazy(() => import('./pages/Blog'));
 
 function ProtectedRoute({ children }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -180,6 +181,10 @@ function AppContent() {
                             {/* Public legal pages (indexable, no auth) */}
                             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                             <Route path="/terms" element={<Terms />} />
+
+                            {/* Public blog (SEO content, indexable, no auth) */}
+                            <Route path="/blog" element={<Blog />} />
+                            <Route path="/blog/:slug" element={<Blog />} />
 
                             {/* Auth routes (no layout) */}
                             <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />

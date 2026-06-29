@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BarChart3, ArrowLeft } from 'lucide-react';
+import { useSeo } from '../hooks/useSeo';
 
 /**
  * Public Privacy Policy page (/privacy-policy).
@@ -10,6 +11,11 @@ import { BarChart3, ArrowLeft } from 'lucide-react';
  */
 export default function PrivacyPolicy() {
     const updated = 'June 2026';
+    useSeo({
+        title: 'Privacy Policy',
+        description: 'How InsightsTrack handles data: cookieless, no IP storage, no fingerprinting, anonymous visitor IDs, DNT/GPC honored. GDPR-friendly by design.',
+        path: '/privacy-policy',
+    });
     return (
         <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0f] text-gray-900 dark:text-white">
             <header className="border-b border-gray-200 dark:border-gray-800">

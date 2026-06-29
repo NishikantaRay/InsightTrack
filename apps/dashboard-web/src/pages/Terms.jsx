@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BarChart3, ArrowLeft } from 'lucide-react';
+import { useSeo } from '../hooks/useSeo';
 
 /**
  * Public Terms of Service page (/terms).
@@ -9,6 +10,11 @@ import { BarChart3, ArrowLeft } from 'lucide-react';
  */
 export default function Terms() {
     const updated = 'June 2026';
+    useSeo({
+        title: 'Terms of Service',
+        description: 'Terms for using InsightsTrack — the open-source (MIT), self-hosted analytics platform and its live demo.',
+        path: '/terms',
+    });
     return (
         <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0f] text-gray-900 dark:text-white">
             <header className="border-b border-gray-200 dark:border-gray-800">

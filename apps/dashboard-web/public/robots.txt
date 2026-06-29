@@ -4,6 +4,7 @@
 User-agent: *
 Allow: /$
 Allow: /landing
+Allow: /blog
 Allow: /privacy-policy
 Allow: /terms
 

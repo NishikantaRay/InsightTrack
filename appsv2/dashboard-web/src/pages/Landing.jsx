@@ -1459,6 +1459,7 @@ export default function Landing() {
                         {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
                             <a key={l} href={h} className="hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
+                        <Link to="/blog" className="hover:text-gray-900 dark:hover:text-white transition-colors">Blog</Link>
                         <Link to="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign in</Link>
                         <Link to="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white transition-colors">Privacy</Link>
                         <Link to="/terms" className="hover:text-gray-900 dark:hover:text-white transition-colors">Terms</Link>
