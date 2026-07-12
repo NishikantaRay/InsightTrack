@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSiteStore } from '../store/useSiteStore';
 import {
     Copy, Check, Code, Server, Bell, Globe, Info, ChevronDown, ChevronUp,
-    BookOpen, Zap, Database, Shield, AlertTriangle, ExternalLink, Settings as SettingsIcon,
+    BookOpen, Zap, Database, Shield, AlertTriangle, ExternalLink, Settings as SettingsIcon, Sparkles, Plug,
 } from 'lucide-react';
+import AISettings from '../components/settings/AISettings';
+import MCPConnect from '../components/settings/MCPConnect';
 import AlertsPanel from '../components/charts/AlertsPanel';
 import SiteManager from '../components/ui/SiteManager';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
@@ -57,10 +60,20 @@ function Section({ icon: Icon, iconColor = 'text-accent', title, subtitle, child
     );
 }
 
+const VALID_TABS = ['sites', 'tracking', 'config', 'alerts', 'ai'];
+
 export default function Settings() {
     const { siteId, sites } = useSiteStore();
-    const [tab, setTab] = useState('sites');
+    const [searchParams] = useSearchParams();
+    const initialTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'sites';
+    const [tab, setTab] = useState(initialTab);
     const { focusMode } = useFocusModeStore();
+
+    // Honor ?tab= changes even when already on this page (e.g. deep-linked from the AI panel).
+    const tabParam = searchParams.get('tab');
+    useEffect(() => {
+        if (VALID_TABS.includes(tabParam)) setTab(tabParam);
+    }, [tabParam]);
 
     const activeSite = sites?.find(s => s.id === siteId);
     const trackingSnippet = siteId ? `<script src="${API_BASE}/api/sites/${siteId}/script"></script>` : '';
@@ -70,6 +83,7 @@ export default function Settings() {
         { id: 'tracking', label: 'Tracking',    icon: Code },
         { id: 'config',   label: 'Connection',  icon: Server },
         { id: 'alerts',   label: 'Alerts',      icon: Bell },
+        { id: 'ai',       label: 'Pulse AI',    icon: Sparkles },
     ];
 
     return (
@@ -338,6 +352,24 @@ video.addEventListener('timeupdate', () => {
                     <ErrorBoundary fallbackMessage="Failed to load alerts.">
                         <AlertsPanel />
                     </ErrorBoundary>
+                </div>
+            )}
+
+            {/* ── AI tab ── */}
+            {tab === 'ai' && (
+                <div className="space-y-6">
+                    <Section icon={Sparkles} iconColor="text-violet-500" title="Pulse — AI analyst"
+                        subtitle="Choose your AI provider and optionally use your own API key.">
+                        <ErrorBoundary fallbackMessage="Failed to load AI settings.">
+                            <AISettings />
+                        </ErrorBoundary>
+                    </Section>
+                    <Section icon={Plug} iconColor="text-indigo-500" title="Connect a client"
+                        subtitle="Use these analytics tools from Claude Desktop, Cursor, or any MCP client.">
+                        <ErrorBoundary fallbackMessage="Failed to load connections.">
+                            <MCPConnect />
+                        </ErrorBoundary>
+                    </Section>
                 </div>
             )}
 

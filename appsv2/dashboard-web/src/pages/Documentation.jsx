@@ -4,7 +4,8 @@ import {
     Terminal, ChevronDown, ChevronRight, Copy, Check, FileText, MousePointerClick,
     Clock, Eye, BarChart3, Users, Layers, GitBranch, Activity, Settings as SettingsIcon,
     Target, Megaphone, TrendingUp, Map, BookOpen, Lock, Cloud, Gauge,
-    Building2, Briefcase, HelpCircle, CheckCircle2, AlertCircle
+    Building2, Briefcase, HelpCircle, CheckCircle2, AlertCircle,
+    Sparkles, Plug, KeyRound, MessageSquare, Download, Link2
 } from 'lucide-react';
 
 const apiEndpoints = [
@@ -429,6 +430,124 @@ function BusinessOwnerGuide() {
                     </details>
                 </div>
             ))}
+        </div>
+    );
+}
+
+// ─── AI Analyst guide ────────────────────────────────────────────────────────
+function AIAnalystGuide() {
+    const steps = [
+        { icon: MessageSquare, color: 'text-violet-500', title: '1. Open the panel', text: 'Click the “Ask Pulse” button (bottom-right of any dashboard page) to open Pulse — a resizable chat panel on the right.' },
+        { icon: Sparkles, color: 'text-indigo-500', title: '2. Ask in plain English', text: 'e.g. “Top pages last 7 days”, “Where does my traffic come from?”, “Compare this month vs last”. The AI calls read-only analytics tools and answers with real numbers.' },
+        { icon: BarChart3, color: 'text-emerald-500', title: '3. Get charts, tables & CSVs', text: 'Answers render inline as charts, tables, or KPI cards. Download any result as CSV, or click the deep-link chip to jump to the matching dashboard page.' },
+        { icon: Clock, color: 'text-amber-500', title: '4. Conversations are remembered', text: 'Each chat is saved as a thread and reopens where you left off. Follow-up questions keep context. Use “New chat” (＋) to start fresh, or the trash icon to clear.' },
+    ];
+    return (
+        <div className="space-y-6">
+            <p className="text-sm text-text-secondary dark:text-text-secondary-dark leading-relaxed">
+                <strong className="text-text-primary dark:text-text-primary-dark">Pulse</strong> is InsightTrack’s AI analyst — an in-dashboard assistant that answers questions about your traffic in plain English.
+                It uses the same read-only analytics APIs as the dashboard, so it never invents numbers and can never change or delete data.
+                You can use it right inside InsightTrack, or connect the same tools to <strong className="text-text-primary dark:text-text-primary-dark">Claude Desktop</strong>, <strong className="text-text-primary dark:text-text-primary-dark">Cursor</strong>, or any MCP client.
+            </p>
+
+            {/* How to use */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {steps.map(({ icon: Icon, color, title, text }) => (
+                    <div key={title} className="rounded-xl border border-border dark:border-border-dark bg-bg dark:bg-bg-dark p-4">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <Icon className={`w-4 h-4 ${color}`} />
+                            <span className="text-sm font-semibold text-text-primary dark:text-text-primary-dark">{title}</span>
+                        </div>
+                        <p className="text-xs text-text-muted dark:text-text-muted-dark leading-relaxed">{text}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Add your API key */}
+            <div>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2">
+                    <KeyRound className="w-4 h-4 text-amber-500" /> Add your AI provider key
+                </h3>
+                <p className="text-xs text-text-muted dark:text-text-muted-dark leading-relaxed mb-3">
+                    Go to <strong>Settings → Pulse AI</strong>. Pick a provider, paste your API key, and save. The key is encrypted
+                    at rest (AES-256-GCM) and never leaves your server. If the server admin already set a key, you can skip this — the panel works out of the box.
+                </p>
+                <div className="rounded-lg border border-border dark:border-border-dark overflow-hidden">
+                    <table className="w-full text-xs">
+                        <thead className="bg-gray-50 dark:bg-gray-800/50">
+                            <tr>
+                                <th className="text-left font-semibold px-3 py-2 text-text-muted dark:text-text-muted-dark">Provider</th>
+                                <th className="text-left font-semibold px-3 py-2 text-text-muted dark:text-text-muted-dark">Key format</th>
+                                <th className="text-left font-semibold px-3 py-2 text-text-muted dark:text-text-muted-dark">Get one at</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-text-secondary dark:text-text-secondary-dark">
+                            <tr className="border-t border-border dark:border-border-dark">
+                                <td className="px-3 py-2 font-medium">Anthropic (Claude)</td>
+                                <td className="px-3 py-2 font-mono">sk-ant-…</td>
+                                <td className="px-3 py-2">console.anthropic.com</td>
+                            </tr>
+                            <tr className="border-t border-border dark:border-border-dark">
+                                <td className="px-3 py-2 font-medium">OpenAI (GPT)</td>
+                                <td className="px-3 py-2 font-mono">sk-…</td>
+                                <td className="px-3 py-2">platform.openai.com</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p className="text-[11px] text-text-muted dark:text-text-muted-dark mt-2">
+                    Precedence: your saved key → the server’s key. You can also set a specific model (e.g. <code className="font-mono">claude-sonnet-5</code> or <code className="font-mono">gpt-4o-mini</code>) in the same tab.
+                </p>
+            </div>
+
+            {/* Use in Claude Desktop / Cursor / any MCP client */}
+            <div>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2">
+                    <Plug className="w-4 h-4 text-indigo-500" /> Use in Claude Desktop, Cursor &amp; other AI clients
+                </h3>
+                <p className="text-xs text-text-muted dark:text-text-muted-dark leading-relaxed mb-3">
+                    InsightTrack ships an <strong>MCP server</strong> (<code className="font-mono">@insighttrack/mcp-server</code>) that exposes the same analytics tools to any
+                    <a href="https://modelcontextprotocol.io" target="_blank" rel="noreferrer" className="text-accent hover:underline"> Model Context Protocol</a> client.
+                    To connect one:
+                </p>
+                <ol className="list-decimal list-inside text-xs text-text-secondary dark:text-text-secondary-dark space-y-1.5 mb-3">
+                    <li>Open <strong>Settings → Pulse AI → Connect a client</strong> and generate a connect token (it’s shown once).</li>
+                    <li>Copy the config block and paste it into your client’s MCP config, then restart the client.</li>
+                    <li>Ask your assistant about your analytics — the InsightTrack tools appear automatically.</li>
+                </ol>
+                <CodeBlock label="claude_desktop_config.json (or Cursor mcp.json)">{`{
+  "mcpServers": {
+    "insighttrack": {
+      "command": "npx",
+      "args": ["-y", "@insighttrack/mcp-server"],
+      "env": {
+        "INSIGHTTRACK_API_URL": "https://analytics.example.com",
+        "INSIGHTTRACK_TOKEN": "<paste your connect token>"
+      }
+    }
+  }
+}`}</CodeBlock>
+                <ul className="mt-3 space-y-1.5 text-xs text-text-muted dark:text-text-muted-dark">
+                    <li className="flex items-start gap-2"><Lock className="w-3.5 h-3.5 mt-0.5 text-green-500 shrink-0" /> The token is scoped to your account and only your sites. All tools are read-only.</li>
+                    <li className="flex items-start gap-2"><Link2 className="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0" /> Works with any MCP client — Claude Desktop, Cursor, Zed, or your own agent.</li>
+                    <li className="flex items-start gap-2"><AlertCircle className="w-3.5 h-3.5 mt-0.5 text-amber-500 shrink-0" /> Revoke a connection anytime in the same tab — the API rejects it immediately.</li>
+                </ul>
+            </div>
+
+            {/* What it can do */}
+            <div>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-text-primary dark:text-text-primary-dark mb-2">
+                    <Download className="w-4 h-4 text-emerald-500" /> What the AI can pull
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                    {['KPI summary', 'Traffic over time', 'Top pages', 'Traffic sources', 'Devices', 'Countries', 'Conversion funnel', 'Realtime visitors', 'UTM acquisition', 'Engagement', 'Compare date ranges'].map((t) => (
+                        <span key={t} className="text-[11px] px-2 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-text-secondary dark:text-text-secondary-dark">{t}</span>
+                    ))}
+                </div>
+                <p className="text-[11px] text-text-muted dark:text-text-muted-dark mt-2">
+                    Full setup, examples, and security details live in <code className="font-mono">docs/ai-analyst.md</code>.
+                </p>
+            </div>
         </div>
     );
 }
@@ -1080,6 +1199,11 @@ window.trackCheckout([{ name: 'Widget', qty: 1 }]);
 window.trackPurchase(29.99);`}</CodeBlock>
                     </div>
                 </div>
+            </Collapsible>
+
+            {/* Pulse — AI analyst */}
+            <Collapsible title="Pulse — chat with your data (+ Claude Desktop)" icon={Sparkles} color="text-violet-500" defaultOpen>
+                <AIAnalystGuide />
             </Collapsible>
 
             {/* npm scripts reference */}

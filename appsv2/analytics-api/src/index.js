@@ -13,6 +13,8 @@ import goalsRoutes from './routes/goals.js';
 import reportingRoutes from './routes/reporting.js';
 import sqlEditorRoutes from './routes/sqlEditor.js';
 import teamRoutes from './routes/team.js';
+import mcpRoutes from './routes/mcp.js';
+import assistantRoutes from './routes/assistant.js';
 import { safeMsg } from './utils/safeError.js';
 import { closeDuck, initDuckDB } from './db/duckdb.js';
 import { closeConnection } from './db/postgres.js';
@@ -105,6 +107,18 @@ app.use('/api/sql-editor', privateCors, sqlEditorRoutes);
 // Team management + invite acceptance
 app.use('/api/team', privateCors, teamRoutes);
 app.use('/api', privateCors, teamRoutes);   // mounts /api/invite/:token routes
+
+// MCP Toolkit — OpenAPI→MCP tool mapping + Platform Connect signing (see docs/mcp-toolkit.md)
+app.use('/api/mcp', privateCors, mcpRoutes);
+
+// AI Analyst — in-dashboard assistant (LLM + analytics tools, SSE streaming)
+app.use('/api/assistant', privateCors, assistantRoutes);
+
+// Public OpenAPI 3.1 spec of the readable analytics API (docs + MCP tool generation)
+app.get('/api/openapi.json', async (req, res) => {
+    const { OPENAPI_SPEC } = await import('./mcp/openapi/insighttrack-spec.js');
+    res.json(OPENAPI_SPEC);
+});
 
 // Health check — minimal, no internal info
 app.get('/api/health', (req, res) => {

@@ -35,6 +35,16 @@ describe('Sync Utilities', () => {
             expect(serialise(true)).toBe(true);
             expect(serialise(false)).toBe(false);
         });
+
+        it('should handle edge case: empty string', () => {
+            expect(serialise('')).toBe('');
+        });
+
+        it('should handle nested objects', () => {
+            const nested = { a: { b: [1, 2, 3] } };
+            const result = JSON.parse(serialise(nested));
+            expect(result.a.b).toEqual([1, 2, 3]);
+        });
     });
 });
 

@@ -20,6 +20,16 @@ function verifyToken(token) {
     return jwt.verify(token, JWT_SECRET);
 }
 
+// Long-lived, revocable token for external MCP clients (Claude Desktop / Cursor).
+// Carries scope:'mcp' + a jti we track in mcp_connect_tokens for revocation.
+function generateMcpToken(user, jti) {
+    return jwt.sign(
+        { id: user.id, email: user.email, role: user.role, scope: 'mcp', jti },
+        JWT_SECRET,
+        { expiresIn: process.env.MCP_TOKEN_EXPIRES_IN || '365d' }
+    );
+}
+
 export const authService = {
     async register(name, email, password) {
         const existing = await query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
@@ -83,6 +93,7 @@ export const authService = {
     },
 
     verifyToken,
+    generateMcpToken,
 };
 
 export default authService;

@@ -19,11 +19,11 @@ How to contribute to InsightTrack.
 - Keep functions/components small
 
 ## PR Review
-- All PRs require review (see `docs/pr-review.md`)
-- Use the checklist in `docs/code-review.md`
+- All PRs require review — process, risk table, and checklists live in
+  `.claude/skills/insighttrack/references/review-security.md`
 
 ---
 
 ## See Also
 - [testing.md](./testing.md)
-- [code-review.md](./code-review.md)
+- [index.md](./index.md) — full documentation index

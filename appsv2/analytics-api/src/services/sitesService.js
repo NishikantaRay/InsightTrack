@@ -20,11 +20,14 @@ export const sitesService = {
     );
     const site = result.rows[0];
 
-    // Create the owner membership row
-    await query(
-      `INSERT INTO site_members (site_id, user_id, role) VALUES ($1, $2, 'owner')`,
-      [id, userId]
-    );
+    // Create the owner membership row (site_members.user_id is NOT NULL, so
+    // skip for ownerless calls — seed scripts and legacy 2-arg callers).
+    if (userId != null) {
+      await query(
+        `INSERT INTO site_members (site_id, user_id, role) VALUES ($1, $2, 'owner')`,
+        [id, userId]
+      );
+    }
 
     return { ...site, user_role: 'owner' };
   },

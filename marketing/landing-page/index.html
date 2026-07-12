@@ -54,6 +54,61 @@
         .animate-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+
+        /* ── Pulse (AI analyst) section animations ───────────────────────── */
+
+        /* Live waveform bars */
+        @keyframes pulse-wave {
+            0%, 100% { transform: scaleY(0.35); }
+            50%      { transform: scaleY(1); }
+        }
+        .pulse-bar {
+            transform-origin: bottom;
+            animation: pulse-wave 1.15s ease-in-out infinite;
+        }
+
+        /* Streaming reply — chat bubbles fade+rise in sequence, then loop */
+        @keyframes chat-cycle {
+            0%   { opacity: 0; transform: translateY(8px); }
+            6%   { opacity: 1; transform: translateY(0); }
+            88%  { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-4px); }
+        }
+        .chat-step {
+            opacity: 0;
+            animation: chat-cycle 9s ease-in-out infinite;
+        }
+
+        /* Blinking caret while "typing" */
+        @keyframes caret-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+        .typing-caret { animation: caret-blink 0.9s step-end infinite; }
+
+        /* Soft floating for the panel card */
+        @keyframes float-soft {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-8px); }
+        }
+        .float-soft { animation: float-soft 6s ease-in-out infinite; }
+
+        /* Scroll-reveal (JS toggles .in-view) */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .reveal.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-delay-1 { transition-delay: 0.08s; }
+        .reveal-delay-2 { transition-delay: 0.16s; }
+        .reveal-delay-3 { transition-delay: 0.24s; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .pulse-bar, .chat-step, .typing-caret, .float-soft { animation: none !important; }
+            .chat-step { opacity: 1; }
+            .reveal { opacity: 1; transform: none; transition: none; }
+        }
     </style>
 </head>
 
@@ -79,6 +134,8 @@
                 <div class="hidden md:flex items-center gap-8">
                     <a href="#features"
                         class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Features</a>
+                    <a href="#pulse"
+                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Pulse&nbsp;AI</a>
                     <a href="#how-it-works"
                         class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">How
                         It Works</a>
@@ -140,8 +197,9 @@
                         your users</span>
                 </h1>
                 <p class="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                    Powerful, real-time website analytics without cookies or personal data tracking.
-                    Self-hosted, open source, and blazingly fast with DuckDB-powered queries.
+                    Powerful, real-time website analytics without cookies or personal data tracking —
+                    with <span class="font-semibold text-gray-900 dark:text-white">Pulse</span>, an AI analyst you can
+                    just ask. Self-hosted, open source, and blazingly fast with DuckDB-powered queries.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
                     <a href="http://localhost:5173/register"
@@ -425,7 +483,7 @@
         <!-- Features Grid -->
         <section id="features" class="py-24 px-6 bg-gray-50 dark:bg-gray-900/50">
             <div class="max-w-6xl mx-auto">
-                <div class="text-center mb-16">
+                <div class="text-center mb-16 reveal">
                     <h2 class="text-3xl md:text-4xl font-bold mb-4">Everything you need to understand your users</h2>
                     <p class="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">A complete analytics suite that puts
                         you in control — no third-party dependencies.</p>
@@ -521,6 +579,168 @@
                         <h3 class="text-lg font-semibold mb-2">Multi-Site Support</h3>
                         <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Manage unlimited websites
                             from a single dashboard. Switch between sites instantly.</p>
+                    </div>
+                    <!-- Feature 7 — Pulse AI (highlighted) -->
+                    <a href="#pulse"
+                        class="md:col-span-2 lg:col-span-3 bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-emerald-500/10 rounded-2xl border border-violet-200 dark:border-violet-500/20 p-6 hover:shadow-lg transition-shadow group flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                        <div
+                            class="w-12 h-12 shrink-0 rounded-xl bg-white/70 dark:bg-white/5 flex items-center justify-center">
+                            <span class="inline-flex items-end gap-[3px] h-5">
+                                <span class="pulse-bar w-[3px] h-2.5 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:0s"></span>
+                                <span class="pulse-bar w-[3px] h-4 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.12s"></span>
+                                <span class="pulse-bar w-[3px] h-5 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.24s"></span>
+                                <span class="pulse-bar w-[3px] h-4 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.36s"></span>
+                                <span class="pulse-bar w-[3px] h-2.5 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.48s"></span>
+                            </span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold mb-1">Pulse — your AI analyst
+                                <span class="ml-1 align-middle text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300">New</span>
+                            </h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Ask questions in plain
+                                English and get live charts, tables, and CSVs. Works right in the dashboard — or from
+                                Claude Desktop &amp; Cursor over MCP.</p>
+                        </div>
+                        <span class="text-sm font-semibold text-violet-600 dark:text-violet-400 group-hover:translate-x-0.5 transition-transform whitespace-nowrap">Meet Pulse →</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Pulse (AI Analyst + MCP) ─────────────────────────────────── -->
+        <section id="pulse" class="py-24 px-6 relative overflow-hidden">
+            <div class="absolute inset-0 -z-10">
+                <div class="absolute top-1/4 right-0 w-[600px] h-[500px] bg-gradient-to-bl from-violet-500/15 via-emerald-500/5 to-transparent rounded-full blur-3xl"></div>
+            </div>
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16 reveal">
+                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 mb-5">
+                        <!-- mini animated waveform -->
+                        <span class="inline-flex items-end gap-[2px] h-3">
+                            <span class="pulse-bar w-[2px] h-1.5 rounded-full bg-violet-500" style="animation-delay:0s"></span>
+                            <span class="pulse-bar w-[2px] h-2.5 rounded-full bg-violet-500" style="animation-delay:.12s"></span>
+                            <span class="pulse-bar w-[2px] h-3 rounded-full bg-emerald-400" style="animation-delay:.24s"></span>
+                            <span class="pulse-bar w-[2px] h-2.5 rounded-full bg-violet-500" style="animation-delay:.36s"></span>
+                            <span class="pulse-bar w-[2px] h-1.5 rounded-full bg-violet-500" style="animation-delay:.48s"></span>
+                        </span>
+                        <span class="text-xs font-semibold text-violet-700 dark:text-violet-300">New · Pulse AI</span>
+                    </div>
+                    <h2 class="text-3xl md:text-5xl font-bold mb-4">Ask your analytics anything</h2>
+                    <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg">
+                        <span class="font-semibold text-gray-900 dark:text-white">Pulse</span> is your built-in AI analyst.
+                        Ask in plain English and get real charts, tables, and CSVs — backed by live data, never made up.
+                    </p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <!-- Left: animated Pulse panel mockup -->
+                    <div class="reveal order-2 lg:order-1">
+                        <div class="float-soft max-w-md mx-auto lg:mx-0 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl shadow-violet-500/10 overflow-hidden">
+                            <!-- Panel header -->
+                            <div class="flex items-center gap-2.5 px-4 h-[52px] border-b border-gray-100 dark:border-gray-800">
+                                <span class="inline-flex items-end gap-[3px] h-4">
+                                    <span class="pulse-bar w-[3px] h-2 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:0s"></span>
+                                    <span class="pulse-bar w-[3px] h-3 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.12s"></span>
+                                    <span class="pulse-bar w-[3px] h-4 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.24s"></span>
+                                    <span class="pulse-bar w-[3px] h-3 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.36s"></span>
+                                    <span class="pulse-bar w-[3px] h-2 rounded-full bg-gradient-to-t from-indigo-500 to-emerald-400" style="animation-delay:.48s"></span>
+                                </span>
+                                <span class="font-semibold text-sm">Pulse</span>
+                                <span class="inline-flex items-center gap-1.5 pl-2 pr-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                    <span class="relative inline-flex h-2 w-2">
+                                        <span class="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70 animate-pulse"></span>
+                                        <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                                    </span>
+                                    <span class="text-[11px] font-semibold">Live</span>
+                                </span>
+                            </div>
+                            <!-- gradient hairline -->
+                            <div class="h-px bg-gradient-to-r from-indigo-500/70 via-violet-500/40 to-emerald-400/50"></div>
+
+                            <!-- Chat body (looping) -->
+                            <div class="p-4 space-y-4 min-h-[300px]">
+                                <!-- user bubble -->
+                                <div class="chat-step flex justify-end" style="animation-delay:0s">
+                                    <div class="max-w-[80%] rounded-2xl rounded-br-md bg-indigo-500/10 dark:bg-indigo-500/20 px-3.5 py-2 text-[13px]">
+                                        Top pages last 7 days?
+                                    </div>
+                                </div>
+                                <!-- assistant text -->
+                                <div class="chat-step text-[13px] text-gray-700 dark:text-gray-300" style="animation-delay:1.2s">
+                                    Your top page was <span class="font-semibold text-gray-900 dark:text-white">/pricing</span> with 6,046 views.
+                                    <span class="typing-caret inline-block w-1 h-3.5 -mb-0.5 bg-indigo-500 rounded-sm"></span>
+                                </div>
+                                <!-- result card -->
+                                <div class="chat-step rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 overflow-hidden" style="animation-delay:2.2s">
+                                    <div class="p-3 space-y-1.5">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] w-16 text-gray-500 dark:text-gray-400">/pricing</span>
+                                            <div class="flex-1 h-2 rounded-full bg-indigo-500" style="width:100%"></div>
+                                            <span class="text-[11px] font-semibold">6,046</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] w-16 text-gray-500 dark:text-gray-400">/docs</span>
+                                            <div class="flex-1 h-2 rounded-full bg-indigo-500/70" style="width:88%"></div>
+                                            <span class="text-[11px] font-semibold">5,979</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] w-16 text-gray-500 dark:text-gray-400">/about</span>
+                                            <div class="flex-1 h-2 rounded-full bg-indigo-500/50" style="width:82%"></div>
+                                            <span class="text-[11px] font-semibold">5,976</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-700">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-600 text-[10px] text-gray-500 dark:text-gray-400">⤓ CSV</span>
+                                        <span class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-semibold">Open pages →</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- composer -->
+                            <div class="px-3 pb-3">
+                                <div class="flex items-center gap-2 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2">
+                                    <span class="text-[13px] text-gray-400 dark:text-gray-500 flex-1">Ask Pulse about your analytics…</span>
+                                    <span class="w-7 h-7 grid place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs">↑</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: copy + capabilities -->
+                    <div class="order-1 lg:order-2 space-y-5">
+                        <div class="reveal reveal-delay-1 flex gap-4">
+                            <div class="w-10 h-10 shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 grid place-items-center text-indigo-600 dark:text-indigo-400">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold mb-1">Plain-English questions, real answers</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">“Where's my traffic from?”, “How's my funnel?”, “Compare this month vs last.” Pulse calls 17 read-only analytics tools and answers with numbers you can trust.</p>
+                            </div>
+                        </div>
+                        <div class="reveal reveal-delay-2 flex gap-4">
+                            <div class="w-10 h-10 shrink-0 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 grid place-items-center text-emerald-600 dark:text-emerald-400">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold mb-1">Charts, tables & one-click CSV</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Every answer renders as a chart, table, or KPI card — switch the view, export to CSV, or deep-link straight to the matching dashboard page.</p>
+                            </div>
+                        </div>
+                        <div class="reveal reveal-delay-3 flex gap-4">
+                            <div class="w-10 h-10 shrink-0 rounded-xl bg-violet-50 dark:bg-violet-500/10 grid place-items-center text-violet-600 dark:text-violet-400">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold mb-1">Works in Claude Desktop & Cursor (MCP)</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">The same tools connect to any <span class="font-medium text-gray-900 dark:text-white">Model Context Protocol</span> client. Ask Claude Desktop about your traffic and it queries InsightTrack directly — remote URL or local bridge.</p>
+                            </div>
+                        </div>
+                        <div class="reveal reveal-delay-3 pt-2">
+                            <span class="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                Bring your own key — Anthropic, OpenAI, or Google Gemini. Stored encrypted, never leaves your server.
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1035,6 +1255,21 @@
             } else if (saved === 'dark' || !saved) {
                 document.documentElement.classList.add('dark');
             }
+        })();
+
+        // Scroll-reveal: fade+rise elements as they enter the viewport.
+        (function () {
+            const els = document.querySelectorAll('.reveal');
+            if (!('IntersectionObserver' in window) || !els.length) {
+                els.forEach((el) => el.classList.add('in-view'));
+                return;
+            }
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach((e) => {
+                    if (e.isIntersecting) { e.target.classList.add('in-view'); io.unobserve(e.target); }
+                });
+            }, { threshold: 0.15 });
+            els.forEach((el) => io.observe(el));
         })();
     </script>
 </body>

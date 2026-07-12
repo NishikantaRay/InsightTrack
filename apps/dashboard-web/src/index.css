@@ -71,3 +71,8 @@
 svg * {
     transition: none !important;
 }
+/* ── Pulse (AI analyst) — live-signal waveform ─────────────────────────── */
+@keyframes pulse-wave {
+    0%, 100% { transform: scaleY(0.35); }
+    50%      { transform: scaleY(1); }
+}

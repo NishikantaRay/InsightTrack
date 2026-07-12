@@ -8,6 +8,7 @@ import {
     TrendingUp, TrendingDown, Star, RefreshCw, Layers,
     Terminal, FileText, Map, GitBranch, AlertTriangle,
     Github, PlayCircle, Mail, ExternalLink, Box, Heart, ChevronDown, HelpCircle,
+    Sparkles, Plug,
 } from 'lucide-react';
 import { useThemeStore } from '../store/useThemeStore';
 
@@ -24,6 +25,13 @@ const ANIM_CSS = `
 @keyframes ticker   { from{ opacity:0;transform:translateY(8px) } to{ opacity:1;transform:translateY(0) } }
 @keyframes gradShift{ 0%,100%{ background-position:0% 50% } 50%{ background-position:100% 50% } }
 @keyframes spin-slow{ to{ transform:rotate(360deg) } }
+@keyframes pulse-wave { 0%,100%{ transform:scaleY(0.35) } 50%{ transform:scaleY(1) } }
+@keyframes chat-cycle { 0%{ opacity:0;transform:translateY(8px) } 6%{ opacity:1;transform:translateY(0) } 88%{ opacity:1;transform:translateY(0) } 100%{ opacity:0;transform:translateY(-4px) } }
+@keyframes caret-blink { 0%,49%{ opacity:1 } 50%,100%{ opacity:0 } }
+.pulse-bar { transform-origin:bottom; animation:pulse-wave 1.15s ease-in-out infinite; }
+.chat-step { opacity:0; animation:chat-cycle 9s ease-in-out infinite; }
+.typing-caret { animation:caret-blink 0.9s step-end infinite; }
+@media (prefers-reduced-motion: reduce) { .pulse-bar,.chat-step,.typing-caret{ animation:none !important } .chat-step{ opacity:1 } }
 .reveal { opacity:0; transform:translateY(24px); transition:opacity 0.6s cubic-bezier(.22,1,.36,1), transform 0.6s cubic-bezier(.22,1,.36,1); }
 .reveal.visible { opacity:1; transform:translateY(0); }
 .reveal-scale { opacity:0; transform:scale(0.94); transition:opacity 0.5s cubic-bezier(.22,1,.36,1), transform 0.5s cubic-bezier(.22,1,.36,1); }
@@ -252,9 +260,115 @@ function HeatmapWidget() {
     );
 }
 
+// ─── Pulse (AI analyst) chat mock — loops a question → streamed answer → card ──
+function Waveform({ size = 'sm' }) {
+    const h = size === 'lg' ? [8, 16, 22, 16, 8] : [5, 9, 13, 9, 5];
+    const w = size === 'lg' ? 'w-[3px]' : 'w-[3px]';
+    return (
+        <span className="inline-flex items-end gap-[3px]" aria-hidden="true">
+            {h.map((height, i) => (
+                <span key={i} className={`pulse-bar ${w} rounded-full bg-gradient-to-t from-indigo-500 via-violet-500 to-emerald-400`}
+                    style={{ height, animationDelay: `${i * 0.12}s` }} />
+            ))}
+        </span>
+    );
+}
+
+function PulseChat() {
+    return (
+        <div className="bg-white dark:bg-[#161822] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl shadow-violet-500/20 overflow-hidden max-w-md w-full">
+            {/* header */}
+            <div className="flex items-center gap-2.5 px-4 h-[52px]">
+                <Waveform />
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">Pulse</span>
+                <span className="inline-flex items-center gap-1.5 pl-2 pr-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <span className="relative inline-flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70 animate-ping" style={{ animationDuration: '1.4s' }} />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                    </span>
+                    <span className="text-[11px] font-semibold">Live</span>
+                </span>
+            </div>
+            <div className="h-px bg-gradient-to-r from-indigo-500/70 via-violet-500/40 to-emerald-400/50" />
+
+            {/* looping conversation */}
+            <div className="p-4 space-y-3.5 min-h-[264px]">
+                <div className="chat-step flex justify-end" style={{ animationDelay: '0s' }}>
+                    <div className="max-w-[80%] rounded-2xl rounded-br-md bg-indigo-500/10 dark:bg-indigo-500/20 text-gray-900 dark:text-white px-3.5 py-2 text-[13px]">
+                        Top pages last 7 days?
+                    </div>
+                </div>
+                <div className="chat-step text-[13px] text-gray-700 dark:text-gray-300 leading-relaxed" style={{ animationDelay: '1.2s' }}>
+                    Your top page was <strong className="text-gray-900 dark:text-white">/pricing</strong> with 6,046 views.
+                    <span className="typing-caret inline-block w-1 h-3.5 -mb-0.5 ml-0.5 bg-indigo-500 rounded-sm align-middle" />
+                </div>
+                <div className="chat-step rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.04] overflow-hidden" style={{ animationDelay: '2.2s' }}>
+                    <div className="p-3 space-y-1.5">
+                        {[['/pricing', '6,046', '100%'], ['/docs', '5,979', '88%'], ['/about', '5,976', '82%']].map(([p, v, w]) => (
+                            <div key={p} className="flex items-center gap-2">
+                                <span className="text-[11px] w-14 text-gray-500 dark:text-gray-400 font-mono">{p}</span>
+                                <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700/50 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: w }} />
+                                </div>
+                                <span className="text-[11px] font-semibold text-gray-900 dark:text-white w-10 text-right">{v}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-200 dark:border-white/[0.08]">
+                        <span className="inline-flex gap-1 text-gray-400">
+                            <span className="w-6 h-5 grid place-items-center rounded bg-indigo-500/15 text-indigo-500 text-[9px]">▦</span>
+                            <span className="w-6 h-5 grid place-items-center rounded text-[9px]">▮</span>
+                            <span className="w-6 h-5 grid place-items-center rounded text-[9px]">◔</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-gray-200 dark:border-white/[0.12] text-[10px] text-gray-500 dark:text-gray-400">⤓ CSV</span>
+                        <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-semibold">Open pages →</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* composer */}
+            <div className="px-3 pb-3">
+                <div className="flex items-center gap-2 rounded-2xl border border-gray-200 dark:border-white/[0.1] bg-gray-50 dark:bg-white/[0.04] px-3 py-2">
+                    <span className="text-[13px] text-gray-400 dark:text-gray-500 flex-1">Ask Pulse about your analytics…</span>
+                    <span className="w-7 h-7 grid place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs">↑</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Brand logos (inline, monochrome — inherit currentColor) ──────────────────
+const Logo = {
+    anthropic: (p) => (
+        <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
+            <path d="M16.8 3h-3.2l5.7 18h3.2L16.8 3zM7.2 3L1.5 21h3.26l1.17-3.78h5.96L13.06 21h3.26L10.62 3H7.2zm-.13 11.3l1.94-6.28 1.94 6.28H7.07z" />
+        </svg>
+    ),
+    openai: (p) => (
+        <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
+            <path d="M22.28 9.82a5.98 5.98 0 0 0-.52-4.91 6.05 6.05 0 0 0-6.51-2.9A6.07 6.07 0 0 0 4.98 4.18a5.98 5.98 0 0 0-3.99 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.52 2.9A5.98 5.98 0 0 0 13.26 24a6.06 6.06 0 0 0 5.77-4.21 5.99 5.99 0 0 0 3.99-2.9 6.06 6.06 0 0 0-.74-7.07zM13.26 22.43a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.79.79 0 0 0 .39-.68v-6.74l2.02 1.17a.07.07 0 0 1 .04.05v5.58a4.5 4.5 0 0 1-4.49 4.5zM3.6 18.3a4.47 4.47 0 0 1-.54-3.01l.14.09 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33a.08.08 0 0 1-.03.06L9.74 19.95a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.48 4.48 0 0 1 2.34-1.97V11.6a.77.77 0 0 0 .39.68l5.81 3.35-2.02 1.17a.07.07 0 0 1-.07 0l-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9zm16.6 3.86l-5.84-3.39L15.12 7.2a.07.07 0 0 1 .07 0l4.83 2.78a4.49 4.49 0 0 1-.68 8.1v-5.66a.79.79 0 0 0-.4-.67zm2.01-3.02l-.14-.09-4.77-2.78a.78.78 0 0 0-.79 0L9.42 9.24V6.9a.07.07 0 0 1 .03-.06l4.83-2.79a4.49 4.49 0 0 1 6.67 4.65zM8.32 12.87L6.3 11.7a.08.08 0 0 1-.04-.06V6.08a4.49 4.49 0 0 1 7.37-3.45l-.14.08L8.71 5.47a.79.79 0 0 0-.39.68v6.72zm1.1-2.37L12 8.99l2.6 1.5v3l-2.6 1.5-2.6-1.5v-3z" />
+        </svg>
+    ),
+    gemini: (p) => (
+        <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
+            <path d="M12 0c.4 6.3 5.7 11.6 12 12-6.3.4-11.6 5.7-12 12-.4-6.3-5.7-11.6-12-12C6.3 11.6 11.6 6.3 12 0z" />
+        </svg>
+    ),
+};
+
 // ─── Feature showcase interactive card ───────────────────────────────────────
 
 const FEATURES = [
+    {
+        icon: Sparkles,
+        accent: '#8b5cf6',
+        bg: 'from-violet-500/10 to-emerald-500/5',
+        border: 'border-violet-200 dark:border-violet-500/20',
+        label: 'Pulse AI · MCP',
+        title: 'Just ask — Pulse answers',
+        desc: 'A built-in AI analyst. Ask in plain English and get real charts, tables, and CSVs. The same read-only tools work from Claude Desktop & Cursor over MCP.',
+        metric: { value: '17', label: 'AI tools', up: true },
+    },
     {
         icon: Activity,
         accent: '#6366f1',
@@ -318,6 +432,8 @@ const FEATURES = [
 ];
 
 const WHY_TABLE = [
+    ['Built-in AI analyst (ask in plain English)', true, false, false],
+    ['MCP — query from Claude Desktop / Cursor', true, false, false],
     ['No cookies / no consent banner', true, false, false],
     ['Self-hosted — you own all data', true, false, false],
     ['Free forever', true, false, false],
@@ -404,6 +520,14 @@ const FAQS = [
     {
         q: 'How do I install InsightsTrack?',
         a: 'Self-host the stack with one Docker command (git clone, then docker-compose up), create a site in Settings, and paste a single ~2 KB <script> tag into your website’s <head>. Tracking starts immediately — setup takes under 15 minutes.',
+    },
+    {
+        q: 'What is Pulse, the AI analyst?',
+        a: 'Pulse is InsightsTrack’s built-in AI analyst. Ask questions about your traffic in plain English — "top pages last 7 days", "where is my traffic from?", "how is my funnel doing?" — and get real charts, tables, and CSV exports. It is read-only: Pulse calls 17 analytics tools to fetch live numbers and can never change or delete data. Bring your own Anthropic, OpenAI, or Google Gemini key, stored encrypted on your own server.',
+    },
+    {
+        q: 'Can I use InsightsTrack from Claude Desktop or Cursor (MCP)?',
+        a: 'Yes. InsightsTrack exposes its analytics tools over the Model Context Protocol (MCP), so any MCP client — Claude Desktop, Cursor, Zed, or your own agent — can query your traffic directly. Connect with a remote HTTP URL (nothing to install) or a local bridge, then ask your assistant about your analytics and it fetches live data. All tools are read-only and scoped to your account.',
     },
     {
         q: 'Does InsightsTrack work with React and Next.js?',
@@ -515,7 +639,7 @@ export default function Landing() {
                     </div>
 
                     <div className="hidden md:flex items-center gap-7">
-                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
+                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#pulse', 'Pulse AI'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
                             <a key={l} href={h} className="text-[13px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
                     </div>
@@ -540,7 +664,7 @@ export default function Landing() {
                 </div>
                 {menuOpen && (
                     <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0a0a0f] px-4 py-4 space-y-1">
-                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
+                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#pulse', 'Pulse AI'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
                             <a key={l} href={h} onClick={() => setMenuOpen(false)}
                                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                 <ChevronRight className="w-3.5 h-3.5 text-indigo-500" />{l}
@@ -601,7 +725,7 @@ export default function Landing() {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                         <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
                     </span>
-                    Open-source · Self-hosted · Privacy-first
+                    New · Ask your data with Pulse AI &amp; MCP
                 </div>
 
                 {/* ── Headline ── */}
@@ -618,13 +742,16 @@ export default function Landing() {
                 {/* ── Sub ── */}
                 <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 max-w-lg text-center leading-relaxed mb-8"
                     style={{ animation: 'fadeUp 0.7s 0.16s ease-out both' }}>
-                    Real-time analytics without cookies, consent banners, or data selling.
-                    Self-hosted, free forever, and 100× faster than GA4 with DuckDB.
+                    Cookieless, real-time analytics you can just <span className="font-semibold text-gray-700 dark:text-gray-200">ask</span> —
+                    with <span className="font-semibold text-gray-700 dark:text-gray-200">Pulse AI</span> in the dashboard and over MCP.
+                    Self-hosted, open source, and free forever.
                 </p>
 
                 {/* ── Feature pills ── */}
                 <div className="flex flex-wrap justify-center gap-2 mb-8" style={{ animation: 'fadeUp 0.7s 0.22s ease-out both' }}>
                     {[
+                        { icon: Sparkles, label: 'Pulse AI', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
+                        { icon: Plug, label: 'MCP', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-500/10' },
                         { icon: Activity, label: 'Realtime', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
                         { icon: MousePointerClick, label: 'Heatmaps', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-500/10' },
                         { icon: Layers, label: 'Funnels', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10' },
@@ -1176,6 +1303,116 @@ export default function Landing() {
                 </div>
             </section>
 
+            {/* ── PULSE (AI analyst + MCP) ────────────────────────────────── */}
+            <section id="pulse" className="py-24 px-4 sm:px-6 relative overflow-hidden bg-white dark:bg-[#0d0e14]">
+                <div className="absolute inset-0 -z-10 pointer-events-none">
+                    <div className="absolute top-1/4 right-0 w-[600px] h-[500px] bg-gradient-to-bl from-violet-500/15 via-emerald-500/8 to-transparent rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-1/4 w-[500px] h-[400px] bg-gradient-to-tr from-indigo-500/10 to-transparent rounded-full blur-3xl" />
+                </div>
+                <div className="max-w-6xl mx-auto">
+                    <Reveal className="text-center mb-14">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/8 mb-4">
+                            <Waveform />
+                            <span className="text-[11px] font-semibold text-violet-700 dark:text-violet-300 uppercase tracking-wide">New · Pulse AI</span>
+                        </div>
+                        <h2 className="text-3xl sm:text-5xl font-black tracking-tight mb-4">Skip the dashboards. Just ask.</h2>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base max-w-2xl mx-auto">
+                            <span className="font-semibold text-gray-900 dark:text-white">Pulse</span> is your built-in AI analyst — ask a
+                            question in plain English and get a real answer: live charts, tables, and CSVs, every number backed by your own data.
+                        </p>
+                    </Reveal>
+
+                    <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
+                        {/* animated Pulse panel */}
+                        <Reveal type="scale" className="order-2 lg:order-1 flex justify-center lg:justify-end">
+                            <div className="relative w-full max-w-md">
+                                <div className="absolute -inset-6 -z-10 bg-gradient-to-tr from-indigo-500/10 via-violet-500/10 to-emerald-500/10 blur-2xl rounded-[2rem]" />
+                                <PulseChat />
+                            </div>
+                        </Reveal>
+
+                        {/* capabilities — bordered cards */}
+                        <div className="order-1 lg:order-2 flex flex-col gap-3.5">
+                            {[
+                                { c: 'indigo', t: 'Plain-English questions, real answers', d: '“Where’s my traffic from?” · “How’s my funnel?” · “Compare this month vs last.” Pulse calls 17 read-only tools and answers with numbers you can trust.', icon: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> },
+                                { c: 'emerald', t: 'Charts, tables & one-click CSV', d: 'Every answer renders as a chart, table, or KPI card. Switch the view, export to CSV, or deep-link to the matching dashboard page.', icon: <><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></> },
+                                { c: 'violet', t: 'Works in Claude Desktop & Cursor', badge: 'MCP', d: 'The same tools connect to any Model Context Protocol client. Ask Claude Desktop about your traffic and it queries InsightTrack directly.', icon: <><path d="M4 17l6-6-6-6" /><line x1="12" y1="19" x2="20" y2="19" /></> },
+                            ].map((f, i) => (
+                                <Reveal key={f.t} delay={i * 80}>
+                                    <div className="group flex gap-4 p-4 rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] hover:border-gray-300 dark:hover:border-white/[0.14] hover:bg-gray-50 dark:hover:bg-white/[0.05] hover:shadow-lg transition-all">
+                                        <div className={`w-10 h-10 shrink-0 rounded-xl grid place-items-center
+                                            ${f.c === 'indigo' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                                                : f.c === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                    : 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'}`}>
+                                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{f.icon}</svg>
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h3 className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                                                {f.t}
+                                                {f.badge && <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300">{f.badge}</span>}
+                                            </h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{f.d}</p>
+                                        </div>
+                                    </div>
+                                </Reveal>
+                            ))}
+                            <Reveal delay={240}>
+                                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/15 text-xs text-emerald-800 dark:text-emerald-300">
+                                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                                    Bring your own key — Anthropic, OpenAI, or Gemini. Stored encrypted, never leaves your server.
+                                </div>
+                            </Reveal>
+                        </div>
+                    </div>
+
+                    {/* Providers + MCP clients — compact support strip */}
+                    <Reveal delay={100} className="mt-8">
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            {/* Powered by — AI providers */}
+                            <div className="rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] p-5">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Bring your own model</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        { name: 'Anthropic', sub: 'Claude', Icon: Logo.anthropic, color: 'text-[#d97757]' },
+                                        { name: 'OpenAI', sub: 'GPT', Icon: Logo.openai, color: 'text-gray-900 dark:text-white' },
+                                        { name: 'Google', sub: 'Gemini', Icon: Logo.gemini, color: 'text-[#4285f4]' },
+                                    ].map(({ name, sub, Icon, color }) => (
+                                        <span key={name} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-gray-50 dark:bg-white/[0.04]">
+                                            <Icon className={`w-4 h-4 shrink-0 ${color}`} />
+                                            <span className="leading-tight">
+                                                <span className="block text-xs font-semibold text-gray-900 dark:text-white">{name}</span>
+                                                <span className="block text-[10px] text-gray-500 dark:text-gray-400">{sub}</span>
+                                            </span>
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 flex items-center gap-1.5">
+                                    <svg className="w-3 h-3 shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                                    Encrypted at rest · never leaves your server
+                                </p>
+                            </div>
+
+                            {/* Connect via MCP — clients */}
+                            <div className="rounded-2xl border border-violet-200 dark:border-violet-500/25 bg-gradient-to-br from-violet-50/80 to-white dark:from-violet-500/[0.09] dark:to-white/[0.02] p-5">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-violet-500 dark:text-violet-400 mb-3 flex items-center gap-1.5">
+                                    <Plug className="w-3 h-3" /> Connect over MCP
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Claude Desktop', 'Cursor', 'Zed', 'Windsurf', 'Any MCP client'].map((c) => (
+                                        <span key={c} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.06] text-xs font-medium text-gray-700 dark:text-gray-200">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />{c}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3">
+                                    Remote HTTP URL (nothing to install) or a local bridge · 17 read-only tools, scoped to your account.
+                                </p>
+                            </div>
+                        </div>
+                    </Reveal>
+                </div>
+            </section>
+
             {/* ── SETUP ──────────────────────────────────────────────────── */}
             <section id="how" className="py-24 px-4 sm:px-6 bg-[#fafafa] dark:bg-[#0a0a0f]">
                 <div className="max-w-4xl mx-auto">
@@ -1456,7 +1693,7 @@ export default function Landing() {
                         <span className="text-xs text-gray-400">· Open-source analytics</span>
                     </div>
                     <div className="flex flex-wrap justify-center gap-x-6 gap-y-1.5 text-sm text-gray-400">
-                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
+                        {[['#features', 'Features'], ['#showcase', 'Showcase'], ['#pulse', 'Pulse AI'], ['#how', 'Setup'], ['#deploy', 'Deploy'], ['#faq', 'FAQ']].map(([h, l]) => (
                             <a key={l} href={h} className="hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
                         <Link to="/blog" className="hover:text-gray-900 dark:hover:text-white transition-colors">Blog</Link>

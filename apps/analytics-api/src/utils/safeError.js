@@ -18,6 +18,7 @@ const SAFE_4XX_PATTERNS = [
     /already exists/i,
     /is required/i,
     /invalid/i,
+    /unknown/i,
     /not found/i,
     /forbidden/i,
     /only .+ can/i,

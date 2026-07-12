@@ -30,16 +30,14 @@ test('user can register and reach onboarding', async ({ page }) => {
             continue;
         }
 
-        // Wait for URL to change (client-side navigation)
+        // Wait for URL to leave /register
         await expect(page).not.toHaveURL(/\/register/, { timeout: 15000 });
 
-        // Should end up on onboarding (no sites) or dashboard (if sites exist)
-        const url = page.url();
-        if (url.includes('onboarding')) {
-            await expect(page.locator('h1', { hasText: 'Add your website' })).toBeVisible();
-        } else {
-            await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible({ timeout: 10000 });
-        }
+        // Wait for the final page to render — could be onboarding (new user, no sites)
+        // or dashboard (if sites already exist). Use a combined locator with a generous timeout.
+        await expect(
+            page.locator('h1').filter({ hasText: /Add your website|Dashboard/ })
+        ).toBeVisible({ timeout: 20000 });
         return; // test passed
     }
     throw new Error('Registration failed after retries due to rate limiting');

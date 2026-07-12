@@ -293,4 +293,89 @@ test.describe('Authenticated Pages', () => {
         await page.waitForTimeout(500);
         await viewportScreenshot(page, '26-landing-dark-mode');
     });
+
+    // ─── New feature pages ───────────────────────────────────────
+
+    test('Engagement - Full Page', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/engagement');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(1000);
+        await fullPageScreenshot(page, '27-engagement-full');
+    });
+
+    test('Engagement - Scroll Depth section', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/engagement');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
+        await page.evaluate(() => {
+            const h = Array.from(document.querySelectorAll('h2,h3')).find(el => /scroll/i.test(el.textContent || ''));
+            h?.scrollIntoView({ block: 'center' });
+        });
+        await page.waitForTimeout(300);
+        await viewportScreenshot(page, '28-engagement-scroll-depth');
+    });
+
+    test('Engagement - Rage Click section', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/engagement');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
+        await page.evaluate(() => {
+            const h = Array.from(document.querySelectorAll('h2,h3')).find(el => /rage/i.test(el.textContent || ''));
+            h?.scrollIntoView({ block: 'center' });
+        });
+        await page.waitForTimeout(300);
+        await viewportScreenshot(page, '29-engagement-rage-clicks');
+    });
+
+    test('Visual Heatmap - Full Page', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/heatmap');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(1000);
+        await fullPageScreenshot(page, '30-heatmap-full');
+    });
+
+    test('Visual Heatmap - How It Works note', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/heatmap');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
+        // Expand the PageNote if collapsed
+        const noteToggle = page.locator('[data-pagenote-toggle], button[aria-expanded]').first();
+        if (await noteToggle.isVisible()) await noteToggle.click();
+        await page.waitForTimeout(300);
+        await viewportScreenshot(page, '31-heatmap-how-it-works');
+    });
+
+    test('Performance - Full Page', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/performance');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(1000);
+        await fullPageScreenshot(page, '32-performance-full');
+    });
+
+    test('Performance - Web Vitals section', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/performance');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
+        await viewportScreenshot(page, '33-performance-web-vitals');
+    });
+
+    test('Performance - JS Errors section', async ({ page }) => {
+        await loginPage(page);
+        await page.goto('/performance');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
+        await page.evaluate(() => {
+            const h = Array.from(document.querySelectorAll('h2,h3')).find(el => /error/i.test(el.textContent || ''));
+            h?.scrollIntoView({ block: 'center' });
+        });
+        await page.waitForTimeout(300);
+        await viewportScreenshot(page, '34-performance-js-errors');
+    });
 });

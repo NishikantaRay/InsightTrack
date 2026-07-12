@@ -1,0 +1,110 @@
+<svg width="760" height="560" viewBox="0 0 760 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pulse AI analyst panel — asking about top pages and getting a chart answer" font-family="ui-sans-serif,-apple-system,'Segoe UI',Roboto,sans-serif">
+  <defs>
+    <linearGradient id="wave" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366f1"/><stop offset="0.5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="send" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="760" height="560" rx="16" fill="#0f1117"/>
+  <rect x="0.5" y="0.5" width="759" height="559" rx="16" fill="none" stroke="#232838"/>
+
+  <!-- Header -->
+  <g transform="translate(20,18)">
+    <!-- waveform -->
+    <rect x="0"  y="8"  width="3" height="8"  rx="1.5" fill="url(#wave)"/>
+    <rect x="6"  y="4"  width="3" height="16" rx="1.5" fill="url(#wave)"/>
+    <rect x="12" y="0"  width="3" height="24" rx="1.5" fill="url(#wave)"/>
+    <rect x="18" y="4"  width="3" height="16" rx="1.5" fill="url(#wave)"/>
+    <rect x="24" y="8"  width="3" height="8"  rx="1.5" fill="url(#wave)"/>
+    <text x="40" y="18" font-size="16" font-weight="700" fill="#f8fafc">Pulse</text>
+    <!-- live badge -->
+    <g transform="translate(96,4)">
+      <rect width="62" height="20" rx="10" fill="#10b98122"/>
+      <circle cx="12" cy="10" r="3.5" fill="#10b981"/>
+      <text x="22" y="14" font-size="11" font-weight="600" fill="#34d399">Live</text>
+    </g>
+    <!-- header icons -->
+    <g fill="none" stroke="#5b6478" stroke-width="1.6" stroke-linecap="round" transform="translate(560,4)">
+      <circle cx="8" cy="10" r="7"/><path d="M8 6v4l2.5 2"/>
+      <g transform="translate(40,0)"><path d="M8 4v12M2 10h12"/></g>
+      <g transform="translate(80,0)"><path d="M4 12L2 16l4-2M4 12l8-8 4 4-8 8"/></g>
+      <g transform="translate(120,2)"><path d="M2 2l12 12M14 2L2 14"/></g>
+    </g>
+  </g>
+  <rect x="0" y="52" width="760" height="2" fill="url(#hair)" opacity="0.8"/>
+
+  <!-- user bubble -->
+  <g transform="translate(430,84)">
+    <rect width="310" height="38" rx="14" fill="#6366f126"/>
+    <text x="20" y="24" font-size="14" fill="#e6e9f0">What were my top pages last 7 days?</text>
+  </g>
+
+  <!-- assistant text -->
+  <g transform="translate(20,150)">
+    <text font-size="14" fill="#cdd3e0">
+      <tspan x="0" y="0">Your top page was </tspan><tspan font-weight="700" fill="#fff">/pricing</tspan><tspan> with 6,046 views,</tspan>
+      <tspan x="0" y="22">followed by /docs (5,979) and /about (5,976).</tspan>
+    </text>
+  </g>
+
+  <!-- result card -->
+  <g transform="translate(20,196)">
+    <rect width="500" height="196" rx="12" fill="#151925" stroke="#232838"/>
+    <!-- header row -->
+    <text x="16" y="26" font-size="11" fill="#8b93a7">PAGE</text>
+    <text x="330" y="26" font-size="11" fill="#8b93a7">VIEWS</text>
+    <text x="420" y="26" font-size="11" fill="#8b93a7">VISITORS</text>
+    <line x1="16" y1="36" x2="484" y2="36" stroke="#232838"/>
+    <!-- rows with bars -->
+    <g font-size="13" fill="#e6e9f0">
+      <text x="16" y="60">/pricing</text>
+      <rect x="120" y="51" width="180" height="8" rx="4" fill="#6366f1"/>
+      <text x="330" y="60" font-weight="600">6,046</text><text x="420" y="60" fill="#9aa2b6">4,452</text>
+
+      <text x="16" y="90">/docs</text>
+      <rect x="120" y="81" width="158" height="8" rx="4" fill="#6366f1cc"/>
+      <text x="330" y="90" font-weight="600">5,979</text><text x="420" y="90" fill="#9aa2b6">4,497</text>
+
+      <text x="16" y="120">/about</text>
+      <rect x="120" y="111" width="148" height="8" rx="4" fill="#6366f199"/>
+      <text x="330" y="120" font-weight="600">5,976</text><text x="420" y="120" fill="#9aa2b6">4,375</text>
+
+      <text x="16" y="150">/blog</text>
+      <rect x="120" y="141" width="140" height="8" rx="4" fill="#6366f166"/>
+      <text x="330" y="150" font-weight="600">5,934</text><text x="420" y="150" fill="#9aa2b6">4,373</text>
+    </g>
+    <line x1="0" y1="164" x2="500" y2="164" stroke="#232838"/>
+    <!-- footer: view toggles + csv + deep link -->
+    <g transform="translate(16,174)">
+      <rect width="96" height="18" rx="5" fill="none" stroke="#2c3346"/>
+      <rect x="1" y="1" width="22" height="16" rx="4" fill="#6366f126"/>
+      <g stroke="#8b93a7" stroke-width="1.4" fill="none">
+        <rect x="6" y="6" width="12" height="7" rx="1" stroke="#818cf8"/>
+        <g transform="translate(28,4)"><path d="M1 10V4M5 10V1M9 10V6"/></g>
+        <g transform="translate(52,4)"><path d="M1 9l3-4 2 2 3-5"/></g>
+        <g transform="translate(76,3)"><circle cx="4.5" cy="4.5" r="4.5"/></g>
+      </g>
+      <rect x="108" y="0" width="52" height="18" rx="5" fill="none" stroke="#2c3346"/>
+      <text x="120" y="13" font-size="10" fill="#9aa2b6">⤓ CSV</text>
+      <g transform="translate(380,0)">
+        <rect width="104" height="18" rx="5" fill="#6366f11f"/>
+        <text x="12" y="13" font-size="10" font-weight="600" fill="#818cf8">Open pages →</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- composer -->
+  <g transform="translate(20,470)">
+    <rect width="720" height="44" rx="14" fill="#151925" stroke="#2c3346"/>
+    <text x="18" y="28" font-size="14" fill="#5b6478">Ask Pulse about your analytics…</text>
+    <rect x="676" y="8" width="28" height="28" rx="9" fill="url(#send)"/>
+    <path d="M690 30v-14M684 22l6-6 6 6" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="380" y="536" text-anchor="middle" font-size="11" fill="#5b6478">Pulse answers from live data — verify big decisions.</text>
+</svg>

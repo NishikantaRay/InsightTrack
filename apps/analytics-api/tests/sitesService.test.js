@@ -18,11 +18,11 @@ describe('sitesService', () => {
 
     describe('createSite', () => {
         it('should create a site with generated id', async () => {
-            const site = await sitesService.createSite('My Blog', 'myblog.com');
+            const site = await sitesService.createSite('My Blog', 'myblog.test.example.com');
             expect(site).toBeDefined();
             expect(site.id).toMatch(/^site_/);
             expect(site.name).toBe('My Blog');
-            expect(site.domain).toBe('myblog.com');
+            expect(site.domain).toBe('myblog.test.example.com');
             expect(site.created_at).toBeDefined();
         });
     });

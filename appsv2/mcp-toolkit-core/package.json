@@ -1,0 +1,17 @@
+{
+  "name": "mcp-toolkit-core",
+  "version": "0.1.0",
+  "description": "Provider-agnostic engine (plain JS/ESM): OpenAPI->MCP tool mapping and Platform Connect signing.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

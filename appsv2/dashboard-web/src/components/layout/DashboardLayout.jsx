@@ -3,6 +3,8 @@ import Navbar from './Navbar';
 import { useState, useEffect, useRef } from 'react';
 import { Menu, Monitor, X } from 'lucide-react';
 import { useFocusModeStore } from '../../store/useFocusModeStore';
+import { useAssistantStore } from '../../store/useAssistantStore';
+import AssistantPanel from '../assistant/AssistantPanel';
 
 // ── Mobile warning banner ─────────────────────────────────────────────────────
 // InsightsTrack's analytics dashboard is designed for desktop/laptop use.
@@ -41,6 +43,7 @@ export default function DashboardLayout({ children }) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const { focusMode } = useFocusModeStore();
+    const { open: assistantOpen, toggle: toggleAssistant } = useAssistantStore();
     // remember sidebar state before focus mode collapses it
     const preCollapseRef = useRef(false);
 
@@ -97,6 +100,27 @@ export default function DashboardLayout({ children }) {
                     {children}
                 </main>
             </div>
+
+            {/* ── Pulse (AI analyst) — flexible right-side chat drawer + floating trigger ── */}
+            {!assistantOpen && (
+                <button
+                    onClick={toggleAssistant}
+                    aria-label="Open Pulse, the AI analyst"
+                    className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2.5 pl-3.5 pr-4 py-3 rounded-full
+                        text-sm font-semibold text-white shadow-xl shadow-indigo-500/30
+                        bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500
+                        hover:-translate-y-0.5 active:scale-95 transition-all"
+                >
+                    <span className="inline-flex items-end gap-[2.5px]" aria-hidden="true">
+                        {[5, 9, 13, 9, 5].map((h, i) => (
+                            <span key={i} className="w-[2.5px] rounded-full bg-white/90 origin-bottom"
+                                style={{ height: h, animation: `pulse-wave 1.15s ease-in-out ${i * 0.12}s infinite` }} />
+                        ))}
+                    </span>
+                    Ask Pulse
+                </button>
+            )}
+            <AssistantPanel />
         </div>
     );
 }

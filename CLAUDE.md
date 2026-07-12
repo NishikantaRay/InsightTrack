@@ -21,6 +21,15 @@ InsightTrack — self-hosted web analytics platform with a dual-database archite
 6. **All new UI must support dark mode** via Tailwind `dark:` variants.
 7. **Use `useAnalytics` hook for data fetching** in React components, not raw `useEffect` + axios.
 8. **Update `docs/` after completing any feature.** If a feature has a doc file in `docs/` (e.g. `docs/sql-editor.md`, `docs/custom-dashboards.md`), update it to reflect the current implementation state. If no doc exists for a significant new feature, create one.
+9. **Port every change to all three copies.** The product lives in `apps/` (this repo), `appsv2/` (this repo), and the sibling `traffic/` repo — keep them byte-identical after every feature (mapping: `dashboard-web ⇄ analytics-dashboard`, `analytics-api ⇄ analytics-db`). Sync procedure: `.claude/skills/insighttrack/references/workflows.md`.
+
+## Project Skill
+
+The canonical project knowledge lives in the **`insighttrack` skill** at
+`.claude/skills/insighttrack/SKILL.md` (auto-discovered by Claude Code): repo
+layout map, architecture, coding patterns, workflows, and the three-copy sync
+procedure. Read it before non-trivial work. Usage & maintenance guide:
+`docs/claude-skill.md`.
 
 ## Package Structure
 
@@ -59,14 +68,14 @@ cd apps/analytics-api && npm run migrate && npm run seed && npm run init
 
 ## Skills
 
-Detailed skill files are in `.claude/skills/`:
-- `code-review.md` — Code review checklist and patterns
-- `pr-review.md` — PR review process and templates
-- `coding-guidelines.md` — Coding conventions and patterns
-- `security-audit.md` — OWASP security audit checklist
-- `debugging.md` — Debugging decision trees and commands
-- `feature-development.md` — Feature development workflow
-- `testing.md` — Testing conventions and examples
+One skill holds all project knowledge — `.claude/skills/insighttrack/` (see `.claude/README.md`):
+- `SKILL.md` — layout map, invariants, canonical patterns, commands
+- `references/architecture.md` — request lifecycle, sync engine, hot/cold storage, AI/MCP
+- `references/patterns.md` — implementation examples per layer + testing conventions
+- `references/workflows.md` — feature workflow, debugging, three-copy sync procedure
+- `references/review-security.md` — code/PR review checklists, threat model, OWASP audit
+
+When the skill and the code disagree, the code wins — fix the skill in the same change.
 
 ## Feature Docs
 
@@ -76,3 +85,6 @@ Implementation guides are in `docs/`:
 - `docs/reporting-studio.md` — Reporting Studio & export architecture
 - `docs/hot-cold-analytics-architecture.md` — DuckDB hot+cold data layer
 - `docs/pg-duckdb-sync.md` — PostgreSQL → DuckDB sync pipeline
+- `docs/ai-analyst.md` — Pulse (AI analyst) user guide (in-panel use, BYO key, Claude Desktop/MCP setup)
+- `docs/mcp-toolkit.md` — MCP toolkit architecture & build phases (registry, assistant service, MCP server)
+

@@ -406,6 +406,107 @@ export async function initializeDatabase() {
     `);
     console.log('  ✓ site_members.custom_role_id column ready');
 
+    // ── AI Analyst memory (Phase 4) ────────────────────────────────────────────
+    // A thread is one conversation, scoped to a user + site. Messages persist so
+    // the panel resumes on reload and follow-ups keep context.
+    await query(`
+      CREATE TABLE IF NOT EXISTS assistant_threads (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        site_id    VARCHAR(64) REFERENCES sites(id) ON DELETE CASCADE,
+        title      VARCHAR(200),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_assistant_threads_user ON assistant_threads(user_id, updated_at DESC)`);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS assistant_messages (
+        id         SERIAL PRIMARY KEY,
+        thread_id  INTEGER     NOT NULL REFERENCES assistant_threads(id) ON DELETE CASCADE,
+        role       VARCHAR(16) NOT NULL CHECK (role IN ('user','assistant')),
+        text       TEXT        NOT NULL DEFAULT '',
+        cards      JSONB       NOT NULL DEFAULT '[]',   -- rendered tool result envelopes
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_assistant_messages_thread ON assistant_messages(thread_id, created_at)`);
+
+    // Per-user durable preferences the assistant should remember (default range,
+    // main site, focus metric…). One row per user, free-form JSONB.
+    await query(`
+      CREATE TABLE IF NOT EXISTS assistant_memory (
+        user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        prefs      JSONB       NOT NULL DEFAULT '{}',
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('  ✓ assistant memory (threads, messages, prefs)');
+
+    // Per-user AI provider settings (Phase 6): which provider + an optional
+    // bring-your-own API key, stored AES-GCM-encrypted (never in plaintext).
+    await query(`
+      CREATE TABLE IF NOT EXISTS assistant_settings (
+        user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        provider    VARCHAR(16) NOT NULL DEFAULT 'anthropic' CHECK (provider IN ('anthropic','openai','gemini')),
+        key_cipher  TEXT,                       -- encrypted BYO key; NULL = use server key
+        key_hint    VARCHAR(32),                -- masked display hint, e.g. "sk-…a1b2"
+        model       VARCHAR(64),                -- optional model override
+        updated_at  TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    // Migration: widen the provider CHECK to include 'gemini' on existing DBs
+    // (the CREATE above only applies to fresh installs). Swap the constraint.
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE assistant_settings DROP CONSTRAINT IF EXISTS assistant_settings_provider_check;
+        ALTER TABLE assistant_settings ADD CONSTRAINT assistant_settings_provider_check
+          CHECK (provider IN ('anthropic','openai','gemini'));
+      END $$
+    `);
+    console.log('  ✓ assistant AI settings (BYO key)');
+
+    // Per-message usage metering (N6): one row per assistant /chat turn —
+    // tokens in/out, provider/model, latency, tool-call count, whether the
+    // user's own key paid. Foundation for cost dashboards, quotas, and billing.
+    await query(`
+      CREATE TABLE IF NOT EXISTS assistant_usage (
+        id            SERIAL PRIMARY KEY,
+        user_id       INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        site_id       VARCHAR(64),
+        thread_id     INTEGER,                    -- soft ref; thread may be deleted
+        provider      VARCHAR(16),
+        model         VARCHAR(64),
+        tokens_in     INTEGER     NOT NULL DEFAULT 0,
+        tokens_out    INTEGER     NOT NULL DEFAULT 0,
+        tool_calls    SMALLINT    NOT NULL DEFAULT 0,
+        rounds        SMALLINT    NOT NULL DEFAULT 0,
+        latency_ms    INTEGER,
+        own_key       BOOLEAN     NOT NULL DEFAULT FALSE,
+        request_id    VARCHAR(40),
+        created_at    TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_assistant_usage_user ON assistant_usage(user_id, created_at DESC)`);
+    console.log('  ✓ assistant usage metering');
+
+    // MCP connect tokens (Phase 7): long-lived, revocable tokens a user pastes
+    // into Claude Desktop / Cursor so the external MCP server can call our tools
+    // on their behalf. We store only the jti; the JWT itself is shown once.
+    await query(`
+      CREATE TABLE IF NOT EXISTS mcp_connect_tokens (
+        jti         UUID PRIMARY KEY,
+        user_id     INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        label       VARCHAR(80),
+        created_at  TIMESTAMPTZ DEFAULT NOW(),
+        last_used_at TIMESTAMPTZ,
+        revoked_at  TIMESTAMPTZ
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_mcp_connect_user ON mcp_connect_tokens(user_id, created_at DESC)`);
+    console.log('  ✓ MCP connect tokens');
+
     console.log('✅ All PostgreSQL tables initialized');
 }
 

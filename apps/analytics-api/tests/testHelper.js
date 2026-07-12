@@ -27,6 +27,9 @@ export async function cleanTestDB() {
     await pool.query('DELETE FROM funnels WHERE site_id LIKE $1', ['site_test%']);
     await pool.query('DELETE FROM daily_stats WHERE site_id LIKE $1', ['site_test%']);
     await pool.query('DELETE FROM sites WHERE id LIKE $1', ['site_test%']);
+    // Sites created THROUGH the API in tests get random ids — catch them by
+    // their test-scoped domain so runs never leak rows into the shared dev DB.
+    await pool.query('DELETE FROM sites WHERE domain LIKE $1', ['%.test.example.com']);
     await pool.query('DELETE FROM users WHERE email LIKE $1', ['%@test.example.com']);
 }
 
@@ -35,12 +38,12 @@ export async function closeTestDB() {
     initialized = false;
 }
 
-export async function insertTestSite(id = TEST_SITE_ID, name = 'Test Site', domain = 'test.example.com') {
+export async function insertTestSite(id = TEST_SITE_ID, name = 'Test Site', domain = 'test.example.com', userId = null) {
     const pool = getPool();
     await pool.query(
-        `INSERT INTO sites (id, name, domain, created_at) VALUES ($1, $2, $3, NOW())
+        `INSERT INTO sites (id, name, domain, user_id, created_at) VALUES ($1, $2, $3, $4, NOW())
          ON CONFLICT (id) DO NOTHING`,
-        [id, name, domain]
+        [id, name, domain, userId]
     );
 }
 

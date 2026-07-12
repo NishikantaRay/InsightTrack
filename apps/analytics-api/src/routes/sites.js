@@ -1,6 +1,7 @@
 import express from 'express';
 import sitesService from '../services/sitesService.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { getMemberRole } from '../services/teamService.js';
 import { sendError, safeMsg } from '../utils/safeError.js';
 
 const router = express.Router();
@@ -43,7 +44,11 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/:siteId', authMiddleware, async (req, res) => {
     try {
         const site = await sitesService.getSiteById(req.params.siteId);
-        if (!site || site.user_id !== req.user.id) {
+        // Access = membership (owner/admin/viewer), same model as every other
+        // site-scoped route. The old strict user_id compare also broke on
+        // types: sites.user_id is VARCHAR, the JWT id is a number.
+        const role = site ? await getMemberRole(site.id, req.user.id) : null;
+        if (!site || (!role && String(site.user_id) !== String(req.user.id))) {
             return res.status(404).json({ error: 'Site not found' });
         }
         res.json({ success: true, data: site });
