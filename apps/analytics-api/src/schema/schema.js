@@ -83,6 +83,20 @@ CREATE TABLE IF NOT EXISTS data_retention_policies (
   last_cleanup_at TIMESTAMP, created_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS sentry_issues (
+  issue_id VARCHAR PRIMARY KEY, site_id VARCHAR NOT NULL, sentry_id VARCHAR NOT NULL,
+  short_id VARCHAR, title VARCHAR, culprit VARCHAR, level VARCHAR, status VARCHAR,
+  is_unhandled BOOLEAN DEFAULT FALSE, count INTEGER DEFAULT 0, user_count INTEGER DEFAULT 0,
+  permalink VARCHAR, project_slug VARCHAR, stale BOOLEAN DEFAULT FALSE,
+  is_regression BOOLEAN DEFAULT FALSE, last_release VARCHAR,
+  first_seen TIMESTAMP, last_seen TIMESTAMP, updated_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sentry_stats (
+  stat_id VARCHAR PRIMARY KEY, site_id VARCHAR NOT NULL, project_slug VARCHAR,
+  date DATE NOT NULL, events INTEGER DEFAULT 0, updated_at TIMESTAMP
+);
+
 -- ── DuckDB ART indexes ────────────────────────────────────────────────────────
 -- These dramatically speed up the WHERE site_id=? AND timestamp>=? pattern
 -- that every analytics query uses. DuckDB's columnar format already helps,
@@ -103,6 +117,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_site_ts
 
 CREATE INDEX IF NOT EXISTS idx_daily_stats_site_date
   ON daily_stats(site_id, date);
+
+CREATE INDEX IF NOT EXISTS idx_sentry_issues_site_seen
+  ON sentry_issues(site_id, last_seen);
+
+CREATE INDEX IF NOT EXISTS idx_sentry_stats_site_date
+  ON sentry_stats(site_id, date);
 `;
 
 export const SYNCABLE_TABLES = [
@@ -121,4 +141,9 @@ export const SYNCABLE_TABLES = [
   { table: 'report_schedules', tsColumn: 'created_at', idColumn: 'id' },
   { table: 'custom_dashboards', tsColumn: 'created_at', idColumn: 'id' },
   { table: 'data_retention_policies', tsColumn: 'created_at', idColumn: 'id' },
+  // Sentry issues are upserted by the poll loop (last_seen/count change on
+  // re-poll), so this is a mutable table synced on its updated_at watermark.
+  { table: 'sentry_issues', tsColumn: 'updated_at', idColumn: 'issue_id' },
+  // Sentry daily event counts, upserted each poll — mutable, updated_at watermark.
+  { table: 'sentry_stats', tsColumn: 'updated_at', idColumn: 'stat_id' },
 ];

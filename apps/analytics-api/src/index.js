@@ -15,6 +15,7 @@ import sqlEditorRoutes from './routes/sqlEditor.js';
 import teamRoutes from './routes/team.js';
 import mcpRoutes from './routes/mcp.js';
 import assistantRoutes from './routes/assistant.js';
+import integrationsRoutes from './routes/integrations.js';
 import { safeMsg } from './utils/safeError.js';
 import { closeDuck, initDuckDB } from './db/duckdb.js';
 import { closeConnection } from './db/postgres.js';
@@ -83,6 +84,11 @@ const limiter = rateLimit({
     skip: (req) => req.path === '/api/health' || req.path.endsWith('/pixel.gif'),
 });
 app.use('/api/', limiter);
+
+// Public integration webhooks — mounted BEFORE the global json parser so the
+// route can capture the raw body for HMAC signature verification. Public CORS
+// (called by Sentry, not the browser app); authenticated by per-integration HMAC.
+app.use('/api/integrations', publicCors, integrationsRoutes);
 
 // Body parsing
 app.use(express.json({ limit: '1mb' }));
@@ -216,6 +222,25 @@ async function start() {
                 console.warn('⚠  Periodic sync failed:', err.message);
             }
         }, SYNC_INTERVAL);
+
+        // Periodic integration poll: pull each connected provider's issues into
+        // PostgreSQL (from where the sync loop above carries them to DuckDB).
+        // Provider-generic via the integration registry (P3.1) — each adapter's
+        // pollAll is a no-op when that provider has no integrations. Defaults to
+        // every 5 minutes.
+        const SENTRY_POLL_INTERVAL = parseInt(process.env.SENTRY_POLL_INTERVAL_MS) || 300_000;
+        const { allAdapters } = await import('./integrations/registry.js');
+        const pollAllProviders = async ({ silent }) => {
+            for (const adapter of allAdapters()) {
+                try {
+                    await adapter.pollAll({ silent });
+                } catch (err) {
+                    console.warn(`⚠  ${adapter.label} poll failed:`, err.message);
+                }
+            }
+        };
+        pollAllProviders({ silent: false }).catch(() => {});
+        setInterval(() => { pollAllProviders({ silent: true }).catch(() => {}); }, SENTRY_POLL_INTERVAL);
 
         app.listen(PORT, () => {
             console.log(`\n🚀 InsightsTrack server running on http://localhost:${PORT}`);

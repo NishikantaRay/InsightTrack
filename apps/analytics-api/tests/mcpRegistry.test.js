@@ -19,6 +19,8 @@ vi.mock('../src/queries/queries.js', () => ({
     getJSErrors: vi.fn(async () => [{ message: 'TypeError: x is undefined', page: '/', occurrences: 7, affectedUsers: 4 }]),
     getWebVitalsOverview: vi.fn(async () => ({ LCP: { avg: 2100, p75: 2500, samples: 50 } })),
     getPageActions: vi.fn(async (_s, _p, _r, limit) => Array.from({ length: Math.min(limit, 2) }, (_, i) => ({ text: `Btn ${i}`, selector: `#b${i}`, tag: 'button', clicks: 20 - i, uniqueUsers: 10 - i }))),
+    getSentrySummary: vi.fn(async () => ({ totalIssues: 3, unresolved: 2, regressions: 1, totalEvents: 40, usersAffected: 12, byLevel: { fatal: 0, error: 2, warning: 1 } })),
+    getSentryIssues: vi.fn(async (_s, _r, limit = 25) => Array.from({ length: Math.min(limit, 2) }, (_, i) => ({ sentryId: String(i), title: `Error ${i}`, level: 'error', status: 'unresolved', count: 10 - i, userCount: 5 - i, isRegression: i === 0, lastRelease: '1.0.0' }))),
 }));
 
 // Sites service is mocked too, since list_sites reads getSitesForUser.
@@ -49,6 +51,8 @@ describe('MCP tool registry', () => {
                 // P2.1 additions
                 'list_sites', 'get_goals', 'get_user_flow', 'get_js_errors',
                 'get_performance', 'get_page_detail',
+                // Sentry error tools (P3.2)
+                'get_error_summary', 'get_error_issues',
             ]);
         });
 
@@ -151,6 +155,29 @@ describe('MCP tool registry', () => {
             queries.getJSErrors.mockResolvedValueOnce([]);
             const env = await runTool('get_js_errors', {}, { siteId: 'site_clean' });
             expect(env.summary).toContain('No JavaScript errors');
+        });
+    });
+
+    describe('Sentry error tools (P3.2)', () => {
+        it('get_error_summary reports unresolved + regressions and is site-scoped', async () => {
+            const env = await runTool('get_error_summary', { dateRange: '7d' }, { siteId: 'site_sx' });
+            expect(queries.getSentrySummary).toHaveBeenCalledWith('site_sx', '7d');
+            expect(env.summary).toContain('2 unresolved');
+            expect(env.summary).toContain('1 regressed');
+            expect(env.deepLink.to).toContain('/errors');
+        });
+
+        it('get_error_issues surfaces the top issue and passes the limit', async () => {
+            const env = await runTool('get_error_issues', { limit: 5 }, { siteId: 'site_sy' });
+            expect(queries.getSentryIssues).toHaveBeenCalledWith('site_sy', '30d', 5);
+            expect(env.summary).toContain('Error 0');
+            expect(env.render.type).toBe('table');
+        });
+
+        it('get_error_issues handles a site with no Sentry connected (empty)', async () => {
+            queries.getSentryIssues.mockResolvedValueOnce([]);
+            const env = await runTool('get_error_issues', {}, { siteId: 'site_none' });
+            expect(env.summary).toContain('No Sentry issues');
         });
     });
 

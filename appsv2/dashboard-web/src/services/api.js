@@ -193,6 +193,17 @@ export const analyticsAPI = {
     // Annotations
     getAnnotations: (siteId, dateRange) =>
         api.get(`/analytics/${siteId}/annotations`, { params: { dateRange } }),
+
+    // Sentry errors (populated from each site's connected Sentry project)
+    getSentryIssues: (siteId, dateRange) =>
+        api.get(`/analytics/${siteId}/sentry/issues`, { params: { dateRange } }),
+    getSentrySummary: (siteId, dateRange) =>
+        api.get(`/analytics/${siteId}/sentry/summary`, { params: { dateRange } }),
+    getSentryTrend: (siteId, dateRange) =>
+        api.get(`/analytics/${siteId}/sentry/trend`, { params: { dateRange } }),
+    // Live drill-down for one issue's newest event (not part of useAnalytics).
+    getSentryLatestEvent: (siteId, sentryId) =>
+        api.get(`/analytics/${siteId}/sentry/issues/${sentryId}/latest-event`),
 };
 
 // Sites endpoints
@@ -202,6 +213,12 @@ export const sitesAPI = {
     create: (data) => api.post('/sites', data),
     update: (siteId, data) => api.put(`/sites/${siteId}`, data),
     delete: (siteId) => api.delete(`/sites/${siteId}`),
+
+    // Sentry integration management (per site; a site may connect N projects)
+    getSentryIntegrations: (siteId) => api.get(`/sites/${siteId}/integrations/sentry`),
+    saveSentryIntegration: (siteId, data) => api.put(`/sites/${siteId}/integrations/sentry`, data),
+    testSentryIntegration: (siteId, integrationId) => api.post(`/sites/${siteId}/integrations/sentry/${integrationId}/test`),
+    deleteSentryIntegration: (siteId, integrationId) => api.delete(`/sites/${siteId}/integrations/sentry/${integrationId}`),
 };
 
 // Goals & A/B Tests endpoints (write operations)

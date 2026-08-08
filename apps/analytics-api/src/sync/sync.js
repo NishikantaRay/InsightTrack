@@ -102,6 +102,19 @@ async function ensureSchema() {
     try {
         await duckRun(`ALTER TABLE _sync_meta ADD COLUMN IF NOT EXISTS last_id BIGINT DEFAULT 0`);
     } catch { /* older DuckDB without IF NOT EXISTS — ignore if already present */ }
+    // Migrations for sentry_issues columns added after the table first shipped.
+    try {
+        await duckRun(`ALTER TABLE sentry_issues ADD COLUMN IF NOT EXISTS stale BOOLEAN DEFAULT FALSE`);
+    } catch { /* column already present — ignore */ }
+    try {
+        await duckRun(`ALTER TABLE sentry_issues ADD COLUMN IF NOT EXISTS is_regression BOOLEAN DEFAULT FALSE`);
+    } catch { /* column already present — ignore */ }
+    try {
+        await duckRun(`ALTER TABLE sentry_issues ADD COLUMN IF NOT EXISTS last_release VARCHAR`);
+    } catch { /* column already present — ignore */ }
+    try {
+        await duckRun(`ALTER TABLE sentry_stats ADD COLUMN IF NOT EXISTS project_slug VARCHAR`);
+    } catch { /* column already present — ignore */ }
 }
 
 // Timestamp watermark for mutable tables.

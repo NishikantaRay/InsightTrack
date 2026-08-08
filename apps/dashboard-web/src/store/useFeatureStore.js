@@ -14,6 +14,7 @@ export const ALL_NAV_FEATURES = [
     { key: 'audience',    label: 'Audience',      group: 'Analytics',   protected: false },
     { key: 'acquisition', label: 'Acquisition',   group: 'Analytics',   protected: false },
     { key: 'performance', label: 'Performance',   group: 'Analytics',   protected: false },
+    { key: 'errors',      label: 'Errors',        group: 'Analytics',   protected: false },
     { key: 'funnels',     label: 'Funnels',       group: 'Conversions', protected: false },
     { key: 'conversions', label: 'Conversions',   group: 'Conversions', protected: false },
     { key: 'user-flow',   label: 'User Flow',     group: 'Conversions', protected: false },

@@ -1094,6 +1094,33 @@ export async function getAlerts(siteId, dateRange = '30d') {
         }
     }
 
+    // Error-event spikes (from Sentry stats, when a project is connected). Same
+    // rolling-window z-score approach as traffic, so they render in the same
+    // AlertsPanel with type='error_spike'. No-op when sentry_stats is empty.
+    try {
+        const statRows = await duckAll(
+            `SELECT date, SUM(events) AS events FROM sentry_stats
+             WHERE site_id = ? AND date >= ? AND date <= ?
+             GROUP BY date ORDER BY date`,
+            [siteId, start.split('T')[0], end.split('T')[0]],
+        );
+        const es = statRows.map(r => ({ date: toDateStr(r.date), events: Number(r.events) || 0 }));
+        for (let i = 3; i < es.length; i++) {
+            const win = es.slice(Math.max(0, i - 7), i);
+            const avg = win.reduce((s, d) => s + d.events, 0) / win.length;
+            const sd = Math.sqrt(win.reduce((s, d) => s + Math.pow(d.events - avg, 2), 0) / win.length);
+            const cur = es[i];
+            if (sd > 0 && avg > 0 && cur.events > avg + 2 * sd) {
+                alerts.push({
+                    type: 'error_spike', severity: 'error', date: cur.date,
+                    message: `Error spike: ${cur.events} events (avg: ${Math.round(avg)})`,
+                    value: cur.events, average: Math.round(avg),
+                    change: Math.round(((cur.events - avg) / avg) * 100),
+                });
+            }
+        }
+    } catch { /* sentry_stats absent or unqueryable — skip error alerts */ }
+
     return alerts.reverse();
 }
 
@@ -2137,6 +2164,102 @@ export async function getJSErrorsOverTime(siteId, dateRange = '30d') {
         date: toDateStr(r.date),
         errors: Number(r.errors),
         affectedUsers: Number(r.affected_users),
+    }));
+}
+
+/**
+ * GET /api/analytics/:siteId/sentry/issues — Sentry issues for a site.
+ * Reads the sentry_issues table (populated by the Sentry poll loop and synced
+ * PG → DuckDB). Filtered by last_seen within the selected date range.
+ */
+export async function getSentryIssues(siteId, dateRange = '30d', limit = 100) {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT sentry_id, short_id, title, culprit, level, status, is_unhandled,
+                count, user_count, permalink, project_slug, is_regression, last_release,
+                first_seen, last_seen
+         FROM sentry_issues
+         WHERE site_id = ? AND COALESCE(stale, FALSE) = FALSE
+           AND last_seen >= ? AND last_seen <= ?
+         ORDER BY is_regression DESC, last_seen DESC, count DESC
+         LIMIT ?`,
+        [siteId, start, end, limit],
+    );
+    return rows.map(r => ({
+        sentryId: r.sentry_id,
+        shortId: r.short_id || '',
+        title: r.title || 'Unknown error',
+        culprit: r.culprit || '',
+        level: r.level || 'error',
+        status: r.status || 'unresolved',
+        isUnhandled: !!r.is_unhandled,
+        count: Number(r.count) || 0,
+        userCount: Number(r.user_count) || 0,
+        permalink: r.permalink || null,
+        project: r.project_slug || null,
+        isRegression: !!r.is_regression,
+        lastRelease: r.last_release || null,
+        firstSeen: r.first_seen,
+        lastSeen: r.last_seen,
+    }));
+}
+
+/**
+ * GET /api/analytics/:siteId/sentry/summary — Aggregate Sentry health for a site:
+ * total issues, unresolved count, total events, users affected, level breakdown.
+ */
+export async function getSentrySummary(siteId, dateRange = '30d') {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT
+           COUNT(*) AS total_issues,
+           COUNT(CASE WHEN status = 'unresolved' THEN 1 END) AS unresolved,
+           COUNT(CASE WHEN is_regression THEN 1 END) AS regressions,
+           COALESCE(SUM(count), 0) AS total_events,
+           COALESCE(SUM(user_count), 0) AS users_affected,
+           COUNT(CASE WHEN level = 'fatal' THEN 1 END) AS fatal,
+           COUNT(CASE WHEN level = 'error' THEN 1 END) AS error,
+           COUNT(CASE WHEN level = 'warning' THEN 1 END) AS warning
+         FROM sentry_issues
+         WHERE site_id = ? AND COALESCE(stale, FALSE) = FALSE
+           AND last_seen >= ? AND last_seen <= ?`,
+        [siteId, start, end],
+    );
+    const r = rows[0] || {};
+    return {
+        totalIssues: Number(r.total_issues) || 0,
+        unresolved: Number(r.unresolved) || 0,
+        regressions: Number(r.regressions) || 0,
+        totalEvents: Number(r.total_events) || 0,
+        usersAffected: Number(r.users_affected) || 0,
+        byLevel: {
+            fatal: Number(r.fatal) || 0,
+            error: Number(r.error) || 0,
+            warning: Number(r.warning) || 0,
+        },
+    };
+}
+
+/**
+ * GET /api/analytics/:siteId/sentry/trend — daily Sentry event counts for the
+ * error-trend chart. Reads sentry_stats (populated from Sentry's project stats
+ * API by the poll loop and synced PG → DuckDB).
+ */
+export async function getSentryTrend(siteId, dateRange = '30d') {
+    const { start, end } = getDateRange(dateRange);
+    const startDate = start.split('T')[0];
+    const endDate = end.split('T')[0];
+    const rows = await duckAll(
+        `SELECT date, SUM(events) AS events
+         FROM sentry_stats
+         WHERE site_id = ? AND date >= ? AND date <= ?
+         GROUP BY date
+         ORDER BY date`,
+        [siteId, startDate, endDate],
+    );
+    return rows.map(r => ({
+        date: toDateStr(r.date),
+        events: Number(r.events) || 0,
     }));
 }
 

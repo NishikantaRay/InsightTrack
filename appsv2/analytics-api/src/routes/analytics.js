@@ -3,6 +3,7 @@ import * as queries from '../queries/queries.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { analyticsCache, CACHE_TTL } from '../services/cache.js';
 import sitesService from '../services/sitesService.js';
+import sentryService from '../services/sentryService.js';
 import { getMemberRole } from '../services/teamService.js';
 import { safeMsg } from '../utils/safeError.js';
 
@@ -690,6 +691,63 @@ router.get('/:siteId/performance/errors-over-time', validateSiteId, async (req, 
     } catch (error) {
         console.error('Error fetching JS errors over time:', error);
         res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// ─── Sentry Errors Endpoints (read from DuckDB) ─────────────────
+
+// GET /api/analytics/:siteId/sentry/issues — polled Sentry issues for the site
+router.get('/:siteId/sentry/issues', validateSiteId, async (req, res) => {
+    try {
+        const { dateRange = '30d' } = req.query;
+        const cacheKey = analyticsCache.key('sentry-issues', req.siteId, dateRange);
+        const data = await cachedQuery(cacheKey, CACHE_TTL.GENERAL, () =>
+            queries.getSentryIssues(req.siteId, dateRange));
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching Sentry issues:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// GET /api/analytics/:siteId/sentry/summary — aggregate Sentry health
+router.get('/:siteId/sentry/summary', validateSiteId, async (req, res) => {
+    try {
+        const { dateRange = '30d' } = req.query;
+        const cacheKey = analyticsCache.key('sentry-summary', req.siteId, dateRange);
+        const data = await cachedQuery(cacheKey, CACHE_TTL.GENERAL, () =>
+            queries.getSentrySummary(req.siteId, dateRange));
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching Sentry summary:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// GET /api/analytics/:siteId/sentry/trend — daily error event counts (chart)
+router.get('/:siteId/sentry/trend', validateSiteId, async (req, res) => {
+    try {
+        const { dateRange = '30d' } = req.query;
+        const cacheKey = analyticsCache.key('sentry-trend', req.siteId, dateRange);
+        const data = await cachedQuery(cacheKey, CACHE_TTL.GENERAL, () =>
+            queries.getSentryTrend(req.siteId, dateRange));
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching Sentry trend:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// GET /api/analytics/:siteId/sentry/issues/:sentryId/latest-event — live drill-down.
+// Fetched from Sentry on demand (never stored); not cached (event context changes).
+router.get('/:siteId/sentry/issues/:sentryId/latest-event', validateSiteId, async (req, res) => {
+    try {
+        const data = await sentryService.getLatestEvent(req.siteId, req.params.sentryId);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching Sentry latest event:', error);
+        const status = error.status || 500;
+        res.status(status).json({ success: false, error: safeError(error) });
     }
 });
 

@@ -1,10 +1,32 @@
 import express from 'express';
 import sitesService from '../services/sitesService.js';
+import sentryService from '../services/sentryService.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { getMemberRole } from '../services/teamService.js';
+import { getMemberRole, roleAtLeast } from '../services/teamService.js';
 import { sendError, safeMsg } from '../utils/safeError.js';
 
 const router = express.Router();
+
+// Site-scoped integration guard: verifies the caller is a member and (for
+// mutating verbs) has at least `minRole`. Attaches req.userRole. Mirrors the
+// authorizeSiteAccess pattern in routes/analytics.js.
+function requireSiteRole(minRole = 'viewer') {
+    return async (req, res, next) => {
+        try {
+            const site = await sitesService.getSiteById(req.params.siteId);
+            if (!site) return res.status(404).json({ error: 'Site not found' });
+            const role = await getMemberRole(site.id, req.user.id);
+            if (!role) return res.status(403).json({ error: 'You do not have access to this site' });
+            if (!roleAtLeast(role, minRole)) {
+                return res.status(403).json({ error: `This action requires ${minRole} access` });
+            }
+            req.userRole = role;
+            next();
+        } catch (error) {
+            sendError(res, error);
+        }
+    };
+}
 
 // GET /api/sites — list sites for the authenticated user
 router.get('/', authMiddleware, async (req, res) => {
@@ -117,6 +139,60 @@ router.get('/:siteId/snippet', async (req, res) => {
     } catch (error) {
         console.error('Error fetching snippet:', error);
         sendError(res, error);
+    }
+});
+
+// ─── Sentry integration (per-site) ─────────────────────────────────────────
+// Connect a site's Sentry project(s) so the poll loop pulls their issues into
+// the Errors page. A site may connect MULTIPLE projects (P2.3). Tokens are stored
+// AES-256-GCM-encrypted (secretBox); never returned to the client — only a masked
+// hint and connection status are. Each integration is addressed by its id.
+
+// GET /api/sites/:siteId/integrations/sentry — list all connected projects
+router.get('/:siteId/integrations/sentry', authMiddleware, requireSiteRole('viewer'), async (req, res) => {
+    try {
+        const integrations = await sentryService.getIntegrations(req.params.siteId);
+        res.json({ success: true, data: integrations });
+    } catch (error) {
+        console.error('Error fetching Sentry integrations:', error);
+        sendError(res, error);
+    }
+});
+
+// PUT /api/sites/:siteId/integrations/sentry — connect a new project or update
+// an existing one (pass body.id to target a specific integration) (admin+)
+router.put('/:siteId/integrations/sentry', authMiddleware, requireSiteRole('admin'), async (req, res) => {
+    try {
+        const { id, token, org, project, baseUrl, enabled } = req.body || {};
+        const integration = await sentryService.upsertIntegration(req.params.siteId, {
+            id, token, org, project, baseUrl, enabled,
+        });
+        res.json({ success: true, data: integration });
+    } catch (error) {
+        console.error('Error saving Sentry integration:', error);
+        sendError(res, error, error.status || 500);
+    }
+});
+
+// POST /api/sites/:siteId/integrations/sentry/:integrationId/test — live check (admin+)
+router.post('/:siteId/integrations/sentry/:integrationId/test', authMiddleware, requireSiteRole('admin'), async (req, res) => {
+    try {
+        const result = await sentryService.testIntegration(req.params.integrationId, req.params.siteId);
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('Error testing Sentry integration:', error);
+        sendError(res, error, error.status || 502);
+    }
+});
+
+// DELETE /api/sites/:siteId/integrations/sentry/:integrationId — disconnect (admin+)
+router.delete('/:siteId/integrations/sentry/:integrationId', authMiddleware, requireSiteRole('admin'), async (req, res) => {
+    try {
+        await sentryService.deleteIntegration(req.params.integrationId, req.params.siteId);
+        res.json({ success: true, message: 'Sentry integration removed' });
+    } catch (error) {
+        console.error('Error deleting Sentry integration:', error);
+        sendError(res, error, error.status || 500);
     }
 });
 

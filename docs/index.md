@@ -20,8 +20,6 @@ Start here. Docs are grouped by what you're trying to do.
 | [backend-architecture.md](backend-architecture.md) | Express API, services, routes |
 | [frontend-structure.md](frontend-structure.md) | React app layout, stores, hooks |
 | [pg-duckdb-sync.md](pg-duckdb-sync.md) | PostgreSQL → DuckDB sync pipeline |
-| [hot-cold-analytics-architecture.md](hot-cold-analytics-architecture.md) | DuckDB hot tables + Parquet cold data lake |
-| [performance-architecture.md](performance-architecture.md) | Performance design notes |
 | [duckdb-guide.md](duckdb-guide.md) | DuckDB usage and query layer |
 | [caching.md](caching.md) | Coalesced analytics cache & TTLs |
 | [post-caching-struggles.md](post-caching-struggles.md) | War story: cache pitfalls & fixes |
@@ -33,7 +31,6 @@ Start here. Docs are grouped by what you're trying to do.
 |-----|----------------|
 | [features.md](features.md) | Feature overview |
 | [tracking-script.md](tracking-script.md) | The embeddable tracker & event payloads |
-| [geoip-tracking.md](geoip-tracking.md) | GeoIP resolution |
 | [sql-editor.md](sql-editor.md) | SQL Editor (API, security model, schema) |
 | [custom-dashboards.md](custom-dashboards.md) | Dashboard builder (widgets, grid layout) |
 | [reporting-studio.md](reporting-studio.md) | Reporting Studio & exports |
@@ -41,10 +38,14 @@ Start here. Docs are grouped by what you're trying to do.
 | [mcp-toolkit.md](mcp-toolkit.md) | MCP toolkit architecture & build phases |
 | [mcp-improvement-plan.md](mcp-improvement-plan.md) | MCP/AI Analyst audit findings & prioritized improvement roadmap |
 | [team-access.md](team-access.md) | Multi-user sites, roles, invites |
+| [alerts.md](alerts.md) | Alerts panel |
 | [heatmap.md](heatmap.md) | Heatmap page |
 | [engagement.md](engagement.md) | Engagement metrics |
+| [focus-mode.md](focus-mode.md) | Focus mode |
+| [js-errors.md](js-errors.md) | JS error tracking |
+| [sentry-errors.md](sentry-errors.md) | Sentry integration — pull each site's Sentry issues into the Errors page |
+| [sentry-improvement-plan.md](sentry-improvement-plan.md) | Sentry integration — code-review findings & prioritized improvement roadmap |
 | [dashboard-pages/](dashboard-pages/) | Per-page dashboard guides |
-| [blogs/](blogs/) | Public blog content |
 
 ## Reference & operations
 
@@ -52,7 +53,6 @@ Start here. Docs are grouped by what you're trying to do.
 |-----|----------------|
 | [api-reference.md](api-reference.md) | REST API reference |
 | [testing.md](testing.md) | Test strategy: Vitest, Testing Library, Playwright |
-| [README.md](README.md) | Passmark AI test suite (`appsv2/passmark-tests/`) |
 | [deployment.md](deployment.md) | Production deployment notes |
 | [claude-skill.md](claude-skill.md) | The `insighttrack` Claude Code skill: usage & maintenance |
 | [posthog-gap-analysis.md](posthog-gap-analysis.md) | Feature comparison vs PostHog + prioritized roadmap of gaps |
@@ -62,5 +62,5 @@ Start here. Docs are grouped by what you're trying to do.
 `CLAUDE.md` (repo root) holds the always-loaded critical rules; the full
 project skill lives at `.claude/skills/insighttrack/SKILL.md` with deep-dive
 references. Keep both — and this index — updated when features land, and
-mirror doc changes across the three copies (`apps/`, `appsv2/`, and the
-sibling `traffic/` repo).
+mirror doc changes across the three copies (`traffic/`, `traffic2/apps`,
+`traffic2/appsv2` — shared `traffic2/docs/`).

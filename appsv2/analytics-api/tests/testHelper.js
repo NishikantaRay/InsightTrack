@@ -1,5 +1,5 @@
 /**
- * Test helper for apps/analytics-api tests.
+ * Test helper for analytics-db tests.
  *
  * Uses the SAME PostgreSQL database (analytics_db on port 5432)
  * but cleans up test data before/after each suite.
@@ -26,6 +26,12 @@ export async function cleanTestDB() {
     await pool.query('DELETE FROM sessions WHERE site_id LIKE $1', ['site_test%']);
     await pool.query('DELETE FROM funnels WHERE site_id LIKE $1', ['site_test%']);
     await pool.query('DELETE FROM daily_stats WHERE site_id LIKE $1', ['site_test%']);
+    // Sentry integration rows: site_integrations cascades on the sites delete
+    // below, but sentry_issues has no FK, so clear it explicitly. Guard each in
+    // case the tables predate these migrations in a given dev DB.
+    await pool.query('DELETE FROM sentry_issues WHERE site_id LIKE $1', ['site_test%']).catch(() => {});
+    await pool.query('DELETE FROM sentry_stats WHERE site_id LIKE $1', ['site_test%']).catch(() => {});
+    await pool.query('DELETE FROM site_integrations WHERE site_id LIKE $1', ['site_test%']).catch(() => {});
     await pool.query('DELETE FROM sites WHERE id LIKE $1', ['site_test%']);
     // Sites created THROUGH the API in tests get random ids — catch them by
     // their test-scoped domain so runs never leak rows into the shared dev DB.

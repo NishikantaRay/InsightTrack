@@ -440,6 +440,46 @@ export const TOOLS = [
             };
         },
     },
+    {
+        name: 'get_error_summary',
+        description:
+            "Get a summary of the site's Sentry errors for a time range: unresolved issue count, regressions, total error events, users affected, and a severity breakdown. Use for \"how many errors\", \"is the site healthy\", \"any regressions\", \"what's breaking\" overview questions. Empty if the site hasn't connected Sentry.",
+        inputSchema: schema(),
+        async run(args, ctx) {
+            const d = await cached(analyticsCache.key('sentry-summary', ctx.siteId, dr(args)), CACHE_TTL.GENERAL,
+                () => queries.getSentrySummary(ctx.siteId, dr(args)));
+            return {
+                summary: `${fmt(d.unresolved)} unresolved issue${d.unresolved === 1 ? '' : 's'}` +
+                    `${d.regressions ? `, ${fmt(d.regressions)} regressed` : ''}` +
+                    `, ${fmt(d.totalEvents)} events, ${fmt(d.usersAffected)} users affected (${dr(args)}).`,
+                data: d,
+                render: { type: 'kpi' },
+                download: null,
+                deepLink: linkTo('/errors', args),
+            };
+        },
+    },
+    {
+        name: 'get_error_issues',
+        description:
+            'Get the site\'s Sentry error issues for a time range: title, level, status, event count, users affected, whether it regressed, the release it was last seen in, and first/last seen. Use for "what errors do I have", "top errors", "recent crashes", "what broke after the last deploy". Empty if the site hasn\'t connected Sentry.',
+        inputSchema: schema({ limit: { type: 'integer', minimum: 1, maximum: 100, description: 'How many issues (default 25).' } }),
+        async run(args, ctx) {
+            const limit = args?.limit ?? 25;
+            const rows = await cached(analyticsCache.key('sentry-issues', ctx.siteId, dr(args), limit), CACHE_TTL.GENERAL,
+                () => queries.getSentryIssues(ctx.siteId, dr(args), limit));
+            const top = rows?.[0];
+            return {
+                summary: top
+                    ? `${fmt(rows.length)} issue${rows.length === 1 ? '' : 's'}; top: "${top.title}" (${fmt(top.count)} events${top.isRegression ? ', regressed' : ''}, ${dr(args)}).`
+                    : `No Sentry issues in this period (${dr(args)}).`,
+                data: rows,
+                render: { type: 'table', columns: ['title', 'level', 'count', 'userCount'] },
+                download: { csv: true, filename: `sentry-issues-${dr(args)}.csv` },
+                deepLink: linkTo('/errors', args),
+            };
+        },
+    },
 ];
 
 /** Map of name → tool for O(1) lookup. */

@@ -64,6 +64,8 @@ function AlertsPanel() {
                 <div className="space-y-3 max-h-[480px] overflow-y-auto pr-0.5">
                     {pageAlerts.map((alert, i) => {
                         const isSpike = alert.type === 'spike';
+                        const isUp = isSpike || alert.type === 'error_spike';
+                        const label = alert.type === 'error_spike' ? 'Error Spike' : alert.type;
                         return (
                             <div
                                 key={i}
@@ -77,8 +79,8 @@ function AlertsPanel() {
                                     ? 'bg-amber-100 dark:bg-amber-900/30'
                                     : 'bg-red-100 dark:bg-red-900/30'
                                     }`}>
-                                    {isSpike
-                                        ? <TrendingUp className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                    {isUp
+                                        ? <TrendingUp className={`w-4 h-4 ${isSpike ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`} />
                                         : <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
                                     }
                                 </div>
@@ -86,7 +88,7 @@ function AlertsPanel() {
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className={`text-xs font-semibold uppercase tracking-wide
                                             ${isSpike ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
-                                            {alert.type}
+                                            {label}
                                         </span>
                                         <span className="text-xs text-text-muted dark:text-text-muted-dark">
                                             {formatDate(alert.date)}

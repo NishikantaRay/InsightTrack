@@ -1,0 +1,30 @@
+{
+  // AEO edge worker for insightstrack.dev.
+  // Deploy from the analytics-dashboard/ directory:
+  //   npm run build:seo          # vite build + prerender -> dist/
+  //   npx wrangler deploy -c aeo/wrangler.jsonc
+  "name": "insightstrack-aeo",
+  "main": "./worker.js",
+  "compatibility_date": "2026-05-04",
+
+  // Bind the production domain. Remove/adjust if the domain is attached via the
+  // Cloudflare dashboard instead. If insightstrack.dev is currently served by a
+  // Pages project, detach it there first or Pages keeps winning the route.
+  "routes": [
+    { "pattern": "insightstrack.dev", "custom_domain": true }
+  ],
+
+  // Serve the Vite build (path is relative to this jsonc file -> ../dist).
+  // run_worker_first: true is REQUIRED — without it Cloudflare serves matching
+  // assets directly and skips the worker, so no AEO headers/negotiation run.
+  "assets": {
+    "directory": "../dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+
+  // Analytics Engine dataset for AI-agent request telemetry.
+  "analytics_engine_datasets": [
+    { "binding": "AI_AGENT_ANALYTICS", "dataset": "ai_events" }
+  ]
+}

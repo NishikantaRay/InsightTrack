@@ -274,6 +274,125 @@ export async function initializeDatabase() {
   `);
     console.log('  ✓ data_retention_policies');
 
+    // ── Site integrations (Sentry, etc.) ──────────────────────────────────────
+    // One row per (site, provider). Secrets (Sentry auth token) are stored
+    // AES-256-GCM-encrypted in token_cipher via src/utils/secretBox.js — never
+    // in plaintext. config JSONB holds non-secret settings (org/project slug,
+    // instance base URL). status/last_error/last_synced_at surface poll health.
+    await query(`
+    CREATE TABLE IF NOT EXISTS site_integrations (
+      id VARCHAR(64) PRIMARY KEY,
+      site_id VARCHAR(64) NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      provider VARCHAR(32) NOT NULL,
+      token_cipher TEXT,
+      config JSONB DEFAULT '{}'::jsonb,
+      enabled BOOLEAN DEFAULT TRUE,
+      status VARCHAR(16) DEFAULT 'pending',
+      last_error TEXT,
+      last_synced_at TIMESTAMPTZ,
+      next_poll_at TIMESTAMPTZ,
+      idle_polls INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+    // Migration: a site may now connect MULTIPLE projects per provider (P2.3),
+    // so drop the old one-row-per-(site,provider) unique constraint if present.
+    // Dedup on (org, project) is enforced in sentryService instead.
+    await query(`ALTER TABLE site_integrations DROP CONSTRAINT IF EXISTS site_integrations_site_id_provider_key`);
+    // Migrations: adaptive-cadence columns added after the table first shipped.
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE site_integrations ADD COLUMN next_poll_at TIMESTAMPTZ;
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
+    `);
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE site_integrations ADD COLUMN idle_polls INTEGER DEFAULT 0;
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_site_integrations_site ON site_integrations(site_id)`);
+    console.log('  ✓ site_integrations');
+
+    // ── Sentry issues (polled from each site's Sentry project) ─────────────────
+    // Normalized issue rows fetched by the Sentry poll loop and upserted by
+    // (site_id, sentry_id). This is the analytics source for the Errors page;
+    // it is synced PG → DuckDB (mutable table, watermark = updated_at) so reads
+    // follow the normal DuckDB read path. issue_id is the app-scoped PK.
+    await query(`
+    CREATE TABLE IF NOT EXISTS sentry_issues (
+      issue_id VARCHAR(96) PRIMARY KEY,
+      site_id VARCHAR(64) NOT NULL,
+      sentry_id VARCHAR(64) NOT NULL,
+      short_id VARCHAR(64),
+      title TEXT,
+      culprit TEXT,
+      level VARCHAR(16),
+      status VARCHAR(16),
+      is_unhandled BOOLEAN DEFAULT FALSE,
+      count INTEGER DEFAULT 0,
+      user_count INTEGER DEFAULT 0,
+      permalink TEXT,
+      project_slug VARCHAR(128),
+      stale BOOLEAN DEFAULT FALSE,
+      is_regression BOOLEAN DEFAULT FALSE,
+      last_release VARCHAR(255),
+      first_seen TIMESTAMPTZ,
+      last_seen TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+    // Migration: add columns to tables created before these fields existed.
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE sentry_issues ADD COLUMN stale BOOLEAN DEFAULT FALSE;
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
+    `);
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE sentry_issues ADD COLUMN is_regression BOOLEAN DEFAULT FALSE;
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
+    `);
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE sentry_issues ADD COLUMN last_release VARCHAR(255);
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_sentry_issues_site ON sentry_issues(site_id, last_seen)`);
+    console.log('  ✓ sentry_issues');
+
+    // ── Sentry daily stats (event counts over time, per project) ───────────────
+    // One row per (site_id, project, date), upserted from Sentry's project stats
+    // API each poll. Powers the error-trend chart (the read SUMs across a site's
+    // projects per day). Synced PG → DuckDB as a mutable table (watermark =
+    // updated_at). stat_id is the app-scoped PK ("{site}:{project}:{date}").
+    await query(`
+    CREATE TABLE IF NOT EXISTS sentry_stats (
+      stat_id VARCHAR(160) PRIMARY KEY,
+      site_id VARCHAR(64) NOT NULL,
+      project_slug VARCHAR(128),
+      date DATE NOT NULL,
+      events INTEGER DEFAULT 0,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+    // Migration: add project_slug + drop the old one-row-per-(site,date) unique
+    // constraint so multiple projects can each store their own daily counts.
+    await query(`
+      DO $$ BEGIN
+        ALTER TABLE sentry_stats ADD COLUMN project_slug VARCHAR(128);
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END $$
+    `);
+    await query(`ALTER TABLE sentry_stats DROP CONSTRAINT IF EXISTS sentry_stats_site_id_date_key`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_sentry_stats_site ON sentry_stats(site_id, date)`);
+    console.log('  ✓ sentry_stats');
+
     // Saved UTM links table
     await query(`
     CREATE TABLE IF NOT EXISTS utm_links (
@@ -368,15 +487,27 @@ export async function initializeDatabase() {
     await query(`CREATE INDEX IF NOT EXISTS idx_invitations_site  ON site_invitations(site_id)`);
     console.log('  ✓ site_invitations');
 
-    // Backfill: for every existing site, ensure the owner has an 'owner' row in site_members
+    // Backfill: for every existing site, ensure the owner has an 'owner' row in
+    // site_members. Guard against legacy/dirty data: only backfill sites whose
+    // user_id is numeric (older rows may hold a UUID → would fail ::INTEGER) AND
+    // references a real users row (site_members.user_id has an FK to users.id, so
+    // an orphaned owner id would violate site_members_user_id_fkey). Such sites
+    // are simply left without an auto-owner row rather than crashing startup.
     await query(`
+      WITH owned AS (
+        -- Filter to numeric user_ids FIRST (in a CTE) so the ::INTEGER cast below
+        -- never sees a non-numeric value (would raise 22P02 otherwise).
+        SELECT s.id AS site_id, s.user_id::INTEGER AS uid, s.created_at
+        FROM   sites s
+        WHERE  s.user_id IS NOT NULL AND s.user_id ~ '^[0-9]+$'
+      )
       INSERT INTO site_members (site_id, user_id, role, created_at)
-      SELECT s.id, s.user_id::INTEGER, 'owner', s.created_at
-      FROM   sites s
-      WHERE  s.user_id IS NOT NULL
-        AND  NOT EXISTS (
+      SELECT o.site_id, o.uid, 'owner', o.created_at
+      FROM   owned o
+      JOIN   users u ON u.id = o.uid           -- only owners that exist (FK-safe)
+      WHERE  NOT EXISTS (
                SELECT 1 FROM site_members m
-               WHERE m.site_id = s.id AND m.user_id = s.user_id::INTEGER
+               WHERE m.site_id = o.site_id AND m.user_id = o.uid
              )
     `);
     console.log('  ✓ site_members backfill complete');

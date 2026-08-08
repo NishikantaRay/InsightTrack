@@ -3,10 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { useSiteStore } from '../store/useSiteStore';
 import {
     Copy, Check, Code, Server, Bell, Globe, Info, ChevronDown, ChevronUp,
-    BookOpen, Zap, Database, Shield, AlertTriangle, ExternalLink, Settings as SettingsIcon, Sparkles, Plug,
+    BookOpen, Zap, Database, Shield, AlertTriangle, ExternalLink, Settings as SettingsIcon, Sparkles, Plug, Bug,
 } from 'lucide-react';
 import AISettings from '../components/settings/AISettings';
 import MCPConnect from '../components/settings/MCPConnect';
+import SentryIntegration from '../components/settings/SentryIntegration';
 import AlertsPanel from '../components/charts/AlertsPanel';
 import SiteManager from '../components/ui/SiteManager';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
@@ -60,7 +61,7 @@ function Section({ icon: Icon, iconColor = 'text-accent', title, subtitle, child
     );
 }
 
-const VALID_TABS = ['sites', 'tracking', 'config', 'alerts', 'ai'];
+const VALID_TABS = ['sites', 'tracking', 'config', 'alerts', 'integrations', 'ai'];
 
 export default function Settings() {
     const { siteId, sites } = useSiteStore();
@@ -83,6 +84,7 @@ export default function Settings() {
         { id: 'tracking', label: 'Tracking',    icon: Code },
         { id: 'config',   label: 'Connection',  icon: Server },
         { id: 'alerts',   label: 'Alerts',      icon: Bell },
+        { id: 'integrations', label: 'Integrations', icon: Plug },
         { id: 'ai',       label: 'Pulse AI',    icon: Sparkles },
     ];
 
@@ -352,6 +354,24 @@ video.addEventListener('timeupdate', () => {
                     <ErrorBoundary fallbackMessage="Failed to load alerts.">
                         <AlertsPanel />
                     </ErrorBoundary>
+                </div>
+            )}
+
+            {/* ── Integrations tab ── */}
+            {tab === 'integrations' && (
+                <div className="space-y-4">
+                    {!siteId && (
+                        <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-start gap-3 text-sm">
+                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-amber-700 dark:text-amber-300">No site selected. Go to the <button onClick={() => setTab('sites')} className="underline font-medium">Sites tab</button> to add or select a site first.</p>
+                        </div>
+                    )}
+                    <Section icon={Bug} iconColor="text-red-500" title="Sentry"
+                        subtitle="Connect this site's Sentry project to see its runtime errors on the Errors page.">
+                        <ErrorBoundary fallbackMessage="Failed to load Sentry integration.">
+                            <SentryIntegration />
+                        </ErrorBoundary>
+                    </Section>
                 </div>
             )}
 

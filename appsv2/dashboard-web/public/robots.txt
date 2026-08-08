@@ -3,10 +3,29 @@
 
 User-agent: *
 Allow: /$
+Allow: /index.md
 Allow: /landing
 Allow: /blog
 Allow: /privacy-policy
 Allow: /terms
+
+# AI answer engines — allowed to read the site and its Markdown twins (.md).
+# The twins carry X-Robots-Tag: noindex, so they inform answers without
+# competing with the HTML pages in search indexes.
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Claude-Web
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
 
 # Don't index the authenticated dashboard or auth flows
 Disallow: /login

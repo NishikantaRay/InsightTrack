@@ -97,6 +97,8 @@ export const OPENAPI_SPEC = {
         '/analytics/{siteId}/performance/errors': op('get_js_errors', 'JavaScript errors (message, source, occurrences, affected users)', { params: [dateRangeParam, limitParam] }),
         '/analytics/{siteId}/performance/web-vitals': op('get_performance', 'Core Web Vitals (LCP, CLS, INP, FCP, TTFB) — avg + p75', { params: [dateRangeParam] }),
         '/analytics/{siteId}/pages/detail': op('get_page_detail', 'Click detail for one page path (elements clicked most)', { params: [dateRangeParam, pathParam, limitParam] }),
+        '/analytics/{siteId}/sentry/summary': op('get_error_summary', 'Sentry error summary (unresolved, regressions, events, users affected)', { params: [dateRangeParam] }),
+        '/analytics/{siteId}/sentry/issues': op('get_error_issues', 'Sentry error issues (title, level, count, users, regression, release)', { params: [dateRangeParam, limitParam] }),
     },
 };
 

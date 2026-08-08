@@ -1,0 +1,18 @@
+{
+  "name": "insightstrack-aeo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AEO (Dualmark) edge worker for insightstrack.dev — serves the Vite build with Markdown twins + content negotiation",
+  "scripts": {
+    "dev": "wrangler dev -c wrangler.jsonc",
+    "deploy": "wrangler deploy -c wrangler.jsonc"
+  },
+  "dependencies": {
+    "@dualmark/cloudflare": "^0.10.0",
+    "@dualmark/core": "^0.10.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

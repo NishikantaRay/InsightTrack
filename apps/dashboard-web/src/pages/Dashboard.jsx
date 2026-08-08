@@ -4,6 +4,7 @@ import FocusToggleButton from '../components/ui/FocusToggleButton';
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import MetricCard from '../components/ui/MetricCard';
+import DashboardErrorsTile from '../components/ui/DashboardErrorsTile';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import TrafficChart from '../components/charts/TrafficChart';
 import PageviewsChart from '../components/charts/PageviewsChart';
@@ -148,6 +149,11 @@ export default function Dashboard() {
                     />
                 </div>
             )}
+
+            {/* Errors tile — only renders when this site has Sentry connected */}
+            <ErrorBoundary fallbackMessage="">
+                <DashboardErrorsTile />
+            </ErrorBoundary>
 
             {/* Main charts row */}
             <ErrorBoundary fallbackMessage="Failed to load charts.">
