@@ -27,5 +27,9 @@ keywords:
   - OLAP
   - privacy
 license: MIT
-# `version` and `date-released` are intentionally omitted until the first
-# tagged release; add them (and the Zenodo DOI as `doi:`) at that point.
+version: 1.0.0
+date-released: "2026-08-28"
+# After the first Zenodo deposit, add the concept DOI here as:
+#   doi: "10.5281/zenodo.XXXXXXX"
+# Use the *concept* DOI (the one that always resolves to the latest version),
+# not the version-specific DOI.

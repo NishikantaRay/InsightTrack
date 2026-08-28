@@ -1,0 +1,28 @@
+{
+  "title": "InsightTrack: a self-hosted web analytics platform with a dual-database architecture",
+  "description": "<p>InsightTrack is a self-hosted web analytics platform that separates its write path from its read path across two databases. PostgreSQL is the system of record for tracking events, authentication and site management; an embedded DuckDB instance, kept current by an incremental sync process, serves every analytics query. The split lets the transactional store stay normalised and write-optimised while analytical aggregations run against a columnar engine in the same process, with no separate warehouse to operate.</p><p>The platform includes an allowlist-validated SQL editor scoped to a single tenant, configurable retention that deletes from both stores, and honours Do Not Track and Global Privacy Control signals. It ships with a reproducible engine benchmark harness (seeded datasets, n=30 measured runs per query) comparing PostgreSQL and DuckDB execution times at 100K, 1M and 5M rows.</p>",
+  "upload_type": "software",
+  "license": "MIT",
+  "access_right": "open",
+  "creators": [
+    {
+      "name": "Ray, Nishikanta"
+    }
+  ],
+  "keywords": [
+    "web analytics",
+    "self-hosted",
+    "DuckDB",
+    "PostgreSQL",
+    "OLAP",
+    "privacy",
+    "dual-database architecture"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/NishikantaRay/InsightTrack",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
