@@ -7,9 +7,32 @@
 import http from 'node:http';
 
 const API     = 'http://localhost:3001';
-const EMAIL   = 'nishikantaray1@gmail.com';
-const PASS    = '123456';
-const SITE    = 'site_98182e60';
+
+// Credentials and target site are supplied via the environment — never hardcoded.
+// See docs/benchmarking.md for the required variables.
+const EMAIL   = process.env.BENCHMARK_EMAIL;
+const PASS    = process.env.BENCHMARK_PASSWORD;
+const SITE    = process.env.BENCHMARK_SITE_ID;
+
+// Fail fast with an actionable message rather than a confusing 401 mid-run.
+const missing = [
+    ['BENCHMARK_EMAIL',    EMAIL],
+    ['BENCHMARK_PASSWORD', PASS],
+    ['BENCHMARK_SITE_ID',  SITE],
+].filter(([, v]) => !v).map(([k]) => k);
+
+if (missing.length > 0) {
+    console.error(`\n\u274c Missing required environment variable(s): ${missing.join(', ')}\n`);
+    console.error('The benchmark authenticates against a running InsightTrack instance.');
+    console.error('Supply a benchmark account and the site to measure, for example:\n');
+    console.error('  export BENCHMARK_EMAIL="benchmark@example.com"');
+    console.error('  export BENCHMARK_PASSWORD="<password>"');
+    console.error('  export BENCHMARK_SITE_ID="site_xxxxxxxx"');
+    console.error('  node scripts/benchmark.js\n');
+    console.error('Use a dedicated benchmark account, not a personal one.');
+    console.error('See docs/benchmarking.md for details.\n');
+    process.exit(1);
+}
 
 function req(method, path, body, token) {
     return new Promise((res, rej) => {

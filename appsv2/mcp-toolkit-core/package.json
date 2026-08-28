@@ -1,6 +1,7 @@
 {
   "name": "mcp-toolkit-core",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Provider-agnostic engine (plain JS/ESM): OpenAPI->MCP tool mapping and Platform Connect signing.",
   "type": "module",
   "main": "src/index.js",

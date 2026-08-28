@@ -27,7 +27,7 @@ InsightTrack uses a **write-read split** across two databases:
 | **PostgreSQL** | Source of truth | Tracking events, auth, sites, funnels |
 | **DuckDB** | Analytics engine | All 17 analytics GET endpoints |
 
-**Why?** PostgreSQL (row-store) excels at ACID writes. DuckDB (column-store) excels at analytical aggregations — scanning specific columns across millions of rows 10-100× faster.
+**Why?** PostgreSQL (row-store) excels at ACID writes. DuckDB (column-store) is designed for analytical aggregations — it reads only the columns a query touches, rather than whole rows. This repository does not contain a reproducible PostgreSQL baseline, so no speed multiple is claimed.
 
 Data flows: Website → Tracking API → PostgreSQL → (sync) → DuckDB → Analytics API → Dashboard.
 

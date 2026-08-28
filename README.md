@@ -27,11 +27,11 @@ InsightsTrack is a complete, production-grade web analytics platform you run you
 
 **Why teams choose it:**
 
-- 🔒 **Privacy by design** — no cookies, no fingerprinting, anonymous visitor IDs, GDPR-compliant, DNT/GPC honored.
-- ⚡ **Fast at any scale** — a dual-database design (PostgreSQL for writes, DuckDB for reads) answers 90-day queries in under 100 ms even over millions of events.
+- 🔒 **Privacy by design** — no cookies, no fingerprinting, pseudonymous visitor IDs, no stored IP addresses, and DNT/GPC opt-out honored in both the tracking script and the API. GDPR-friendly by design; compliance depends on your deployment.
+- ⚡ **Built for analytical reads** — a dual-database design (PostgreSQL for writes, DuckDB for reads). In an isolated local test with ~101K events, representative 90-day analytics requests completed in well under 100 ms measured at the **HTTP/API layer** (which includes the application response cache). That is not a measurement of DuckDB execution time and is not a guarantee at larger datasets — see [`docs/PERFORMANCE_BENCHMARK_AUDIT.md`](docs/PERFORMANCE_BENCHMARK_AUDIT.md).
 - 🧩 **Everything in one place** — 17 analytics pages: dashboard, pages, realtime, funnels, heatmaps, engagement, performance, audience, acquisition, conversions, user flow, reporting studio, SQL editor, and more.
 - 🤖 **Pulse, your AI analyst** — ask your data anything in plain English and get real charts, tables, and CSVs. Also works from Claude Desktop & Cursor over MCP. [Jump to Pulse →](#-pulse--your-ai-analyst)
-- 🪶 **Lightweight** — a single ~2 KB `<script>` tag, works with any site (WordPress, Next.js, Shopify, plain HTML…).
+- 🪶 **Single tag** — one `<script>` tag (~7.5 KB gzipped in the current build; exact size varies with build and transfer encoding), works with any site (WordPress, Next.js, Shopify, plain HTML…).
 - 👥 **Team-ready** — invite teammates, assign roles, build custom permission roles, and control which pages each member sees.
 - 💸 **Free forever** — MIT licensed, self-hosted, no seat limits.
 
@@ -40,7 +40,7 @@ InsightsTrack is a complete, production-grade web analytics platform you run you
 ```
 ┌──────────────┐   POST /api/track/*    ┌──────────────────────────────┐
 │  Your website│──────────────────────▶ │  Backend API (Express, :3001)│
-│  (2 KB tag)  │                        │                              │
+│  (one tag)   │                        │                              │
 └──────────────┘                        │  ┌──────────┐   ┌──────────┐ │
                                         │  │ Postgres │──▶│  DuckDB  │ │
 ┌──────────────┐  GET /api/analytics/*  │  │ (writes) │sync│ (reads)  │ │
@@ -49,12 +49,13 @@ InsightsTrack is a complete, production-grade web analytics platform you run you
 └──────────────┘
 ```
 
-All **writes** (tracking events, auth, sites) go to **PostgreSQL**. A background sync streams them into **DuckDB**, an embedded columnar engine that powers every **analytics read** 10–100× faster than a row store. The dashboard never queries PostgreSQL directly.
+All **writes** (tracking events, auth, sites) go to **PostgreSQL**. A background sync streams them into **DuckDB**, an embedded columnar engine that powers every **analytics read**. Columnar storage suits the wide aggregations analytics dashboards issue; actual performance depends on workload, dataset, hardware, and query shape. A reproducible benchmark comparing both engines on identical generated data — including the methodology, its limitations, and the raw measurements — is in [`docs/PERFORMANCE_BENCHMARK.md`](docs/PERFORMANCE_BENCHMARK.md). The dashboard never queries PostgreSQL directly.
 
 > **Project layout.** This repository uses a split-service layout:
-> - **`analytics-db/`** — the analytics backend (DuckDB reads + the PostgreSQL→DuckDB sync worker). This is the service the dashboard talks to (`:3001`).
-> - **`analytics-dashboard/`** — the React dashboard (`:4173`).
-> - **`analytics-server/`** — the legacy write/auth service, retained for reference.
+> - **`apps/analytics-api/`** — the unified backend: Express API, PostgreSQL writes, DuckDB analytics reads, and the PostgreSQL→DuckDB sync worker (`:3001`).
+> - **`apps/dashboard-web/`** — the React dashboard (`:4173`).
+> - **`archive/analytics-api-legacy/`** — the legacy write/auth service, retained for reference only.
+> - **`appsv2/`** — a secondary working copy kept in sync with `apps/`. **`apps/` is canonical**; despite the name, `appsv2/` is not a newer version. See [`appsv2/README.md`](appsv2/README.md).
 
 ---
 
@@ -102,22 +103,35 @@ Open the dashboard, register an account, and you're live.
 
 ### Manual setup (no Docker)
 
-```bash
-# 1. Backend (analytics-db) — DuckDB reads + PG→DuckDB sync
-cd analytics-db
-npm install
-npm run migrate     # create PostgreSQL tables
-npm run seed        # generate sample data (optional)
-npm run init        # create DuckDB tables
-npm run sync        # sync PostgreSQL → DuckDB
-npm start           # → http://localhost:3001
+Requires **Node.js 20+** and a running **PostgreSQL**.
 
-# 2. Dashboard (analytics-dashboard)
-cd ../analytics-dashboard
+```bash
+# 1. Backend — Express + PostgreSQL (writes) + DuckDB (analytics reads)
+cd apps/analytics-api
 npm install
-# create .env with: VITE_API_URL=http://localhost:3001
-npm run dev         # → http://localhost:5173 (dev) / 4173 (preview)
+cp .env.example .env   # PG_*, JWT_SECRET, and everything else — see below
+npm run migrate        # create PostgreSQL tables
+npm run seed           # generate sample data (optional)
+npm run init           # create DuckDB tables
+npm run sync           # sync PostgreSQL → DuckDB
+npm start              # → http://localhost:3001
+
+# 2. Dashboard — in a second terminal
+cd apps/dashboard-web
+npm install
+cp .env.example .env   # sets VITE_API_URL=http://localhost:3001
+npm run dev            # → http://localhost:5173 (dev) / 4173 (preview)
 ```
+
+> **Full walkthrough**, including starting PostgreSQL in a container and the
+> troubleshooting steps, is in **[docs/running-locally.md](docs/running-locally.md)**.
+> That document is the authoritative manual-setup reference.
+
+**Configuration:** [`apps/analytics-api/.env.example`](apps/analytics-api/.env.example)
+is the complete backend configuration reference — PostgreSQL connection, JWT,
+DuckDB path, sync tuning, cache TTLs, rate limits, and optional integrations.
+The root [`.env.example`](.env.example) configures the **Docker Compose** stack
+only and is not a substitute for it.
 
 ### Add tracking to your website
 
@@ -141,7 +155,7 @@ Pageviews, sessions, clicks, scroll depth, Web Vitals, JS errors, and heatmap da
 **Ask your analytics anything in plain English.** Pulse is a built-in AI analyst that turns questions into real answers — *"top pages last 7 days"*, *"where's my traffic from?"*, *"how's my funnel doing?"* — backed by live data, never invented.
 
 - **Real charts, tables & CSV** — every answer renders as a chart, table, or KPI card. Switch the view (table ↔ bar ↔ line ↔ donut), export to CSV, or deep-link straight to the matching dashboard page.
-- **Read-only & safe** — Pulse calls 17 read-only analytics tools. It can query, but can never change settings or delete data, and every number is backed by a real tool call.
+- **Read-only & safe** — Pulse calls a fixed catalogue of read-only analytics tools. It can query, but can never change settings or delete data, and every number is backed by a real tool call.
 - **Works in Claude Desktop, Cursor & any MCP client** — the same tools are exposed over the [Model Context Protocol](https://modelcontextprotocol.io). Connect via a remote URL or a local bridge, then ask Claude Desktop about your traffic and it queries InsightTrack directly. See [`docs/ai-analyst.md`](docs/ai-analyst.md) and [`docs/mcp-toolkit.md`](docs/mcp-toolkit.md).
 - **Bring your own key** — Anthropic (Claude), OpenAI (GPT), or Google (Gemini). Stored encrypted at rest (AES-256-GCM), never leaves your server. Or set a server key so the panel just works.
 - **Session memory** — every conversation is saved and resumes where you left off; follow-ups keep context.
@@ -228,25 +242,25 @@ cp .env.example .env
 docker-compose up --build -d
 ```
 
-This builds the `analytics-db` backend (`:3001`), the `analytics-dashboard` UI (`:4173`), a demo site (`:8080`), PostgreSQL (`:5432`), and pgAdmin (`:5050`).
+This builds the `apps/analytics-api` backend (`:3001`), the `apps/dashboard-web` UI (`:4173`), a demo site (`:8080`), PostgreSQL (`:5432`), and pgAdmin (`:5050`).
 
 ### Manual
 
 ```bash
 # Backend
-cd analytics-db
+cd apps/analytics-api
 cp .env.example .env        # set PG_* / DATABASE_URL, JWT_SECRET, APP_BASE_URL
 npm install && npm run migrate && npm run init && npm start   # :3001
 
 # Frontend
-cd ../analytics-dashboard
+cd apps/dashboard-web
 npm install && npm run build && npm run preview               # :4173
 ```
 
 ### Cloud (Railway / Render + Vercel / Cloudflare Pages)
 
-- **Backend** → Railway or Render. Add a PostgreSQL plugin (sets `DATABASE_URL`), set Root Dir to `analytics-db`, Start command `npm run migrate && npm run init && npm start`, and attach a volume at `/data` for the DuckDB file.
-- **Frontend** → Vercel, Cloudflare Pages, or Netlify. Root Dir `analytics-dashboard`, build `npm run build`, output `dist`, and set `VITE_API_URL` to your backend URL.
+- **Backend** → Railway or Render. Add a PostgreSQL plugin (sets `DATABASE_URL`), set Root Dir to `apps/analytics-api`, Start command `npm run migrate && npm run init && npm start`, and attach a volume at `/data` for the DuckDB file.
+- **Frontend** → Vercel, Cloudflare Pages, or Netlify. Root Dir `apps/dashboard-web`, build `npm run build`, output `dist`, and set `VITE_API_URL` to your backend URL.
 
 Full production guide (Nginx, SSL, backups, env vars): [docs/deployment.md](docs/deployment.md)
 
@@ -272,11 +286,14 @@ Full production guide (Nginx, SSL, backups, env vars): [docs/deployment.md](docs
 
 ```
 InsightsTrack/
-├── analytics-db/                  # Backend: DuckDB reads + PG→DuckDB sync (:3001)
-│   └── src/{db,routes,services,queries,sync,schema}/
-├── analytics-dashboard/           # React 18 + Vite + Tailwind dashboard (:4173)
-├── analytics-server/              # Legacy write/auth service (reference)
-├── demo-blog/ · demo-site/ · demo-website/   # Demo sites with the tracking script
+├── apps/
+│   ├── analytics-api/             # Backend: Express + PostgreSQL + DuckDB (:3001)
+│   │   └── src/{db,routes,services,queries,sync,schema,mcp}/
+│   ├── dashboard-web/             # React 18 + Vite + Tailwind dashboard (:4173)
+│   ├── mcp-server/                # stdio MCP bridge (Claude Desktop / Cursor)
+│   └── mcp-toolkit-core/          # OpenAPI→MCP mapping engine
+├── archive/analytics-api-legacy/  # Legacy write/auth service (reference)
+├── examples/                      # demo-blog · demo-site · demo-website
 ├── scripts/                       # seed-live-demo.js, helpers
 ├── screenshots/                   # Product screenshots used in this README
 ├── docs/                          # Full documentation
@@ -336,9 +353,9 @@ Full reference: [docs/api-reference.md](docs/api-reference.md)
 ## Running Tests
 
 ```bash
-cd analytics-db && npm test                       # backend (Vitest + Supertest)
-cd analytics-dashboard && npm test                # frontend unit tests
-cd analytics-dashboard && npx playwright test     # end-to-end
+cd apps/analytics-api && npm test                 # backend (Vitest + Supertest)
+cd apps/dashboard-web && npm test                 # frontend unit tests
+cd apps/dashboard-web && npm run test:e2e         # end-to-end (needs the stack running)
 ```
 
 ---

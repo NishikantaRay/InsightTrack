@@ -134,7 +134,7 @@ All analytics endpoints follow the pattern:
 GET /api/analytics/:siteId/<endpoint>?dateRange=<range>
 ```
 
-> **Note**: All analytics endpoints are powered by **DuckDB** — an embedded columnar OLAP engine that provides 10-100× faster aggregation queries compared to traditional row-store databases. Data is synced from PostgreSQL to DuckDB via incremental sync. See [duckdb-guide.md](./duckdb-guide.md) for details.
+> **Note**: All analytics endpoints are powered by **DuckDB** — an embedded columnar OLAP engine suited to aggregation queries compared to traditional row-store databases. Data is synced from PostgreSQL to DuckDB via incremental sync. See [duckdb-guide.md](./duckdb-guide.md) for details.
 
 **Date range options**: `today`, `7d`, `30d`, `90d`, `custom:YYYY-MM-DD:YYYY-MM-DD`
 

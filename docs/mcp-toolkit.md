@@ -253,7 +253,7 @@ Consistent across all three backends.
   **demos**, now gated behind `MCP_TOOLKIT_DEMOS=1` (404 by default, P1.2).
 
 ### ✅ Everything for the AI Analyst is now built
-- Tool registry backed by real endpoints (17 read-only tools)
+- Tool registry backed by real endpoints (read-only analytics tools)
 - OpenAPI spec of our API (`/api/openapi.json`, kept in sync via a test, P1.4)
 - Assistant service (LLM loop, **token streaming**, tool execution, memory)
 - Provider abstraction + BYO key + per-user cost fences

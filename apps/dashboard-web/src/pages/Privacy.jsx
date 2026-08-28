@@ -117,25 +117,25 @@ function PrivacyFeaturesTab() {
             icon: Globe,
             color: 'text-green-500',
             bg: 'bg-green-500/10',
-            title: 'No Cookies — No Consent Banner Required',
-            business: 'You do not need to show a GDPR cookie banner. InsightsTrack uses first-party localStorage to generate anonymous visitor IDs — no cookies means no cookie law obligations in most jurisdictions.',
-            dev: 'Visitor ID is generated as a UUID stored in localStorage under the key _itv. This is cleared when the user clears browser storage. No Set-Cookie headers are ever sent by the tracking endpoints.',
+            title: 'No Cookies',
+            business: 'InsightsTrack sets no cookies. It uses first-party localStorage to generate a pseudonymous visitor identifier. Whether that removes a consent-banner obligation depends on your jurisdiction and deployment — consult applicable privacy/ePrivacy requirements.',
+            dev: 'The visitor identifier is a random (not cryptographically random, and not a UUID) string stored in localStorage under the key _analytics_uid. It is cleared when the visitor clears browser storage. No Set-Cookie headers are sent by the tracking endpoints.',
         },
         {
             icon: Lock,
             color: 'text-indigo-500',
             bg: 'bg-indigo-500/10',
             title: 'Do Not Track (DNT) & Global Privacy Control (GPC)',
-            business: 'Visitors who have told their browser "do not track me" are automatically excluded from all tracking. This respects user preference without any action needed from you.',
-            dev: 'The tracking script checks navigator.doNotTrack === "1" and navigator.globalPrivacyControl === true at initialisation. If either is set, the script exits immediately — no events or sessions are created.',
+            business: 'Visitors who have told their browser "do not track me" are excluded from tracking. This respects the browser signal without any action needed from you.',
+            dev: 'The script checks navigator.doNotTrack === "1" and navigator.globalPrivacyControl === true before any storage or network access. If either is set it exits immediately — no visitor id, session id, or request is created. The tracking API additionally declines to persist requests carrying DNT: 1 or Sec-GPC: 1, covering cached scripts and direct API calls.',
         },
         {
             icon: Database,
             color: 'text-violet-500',
             bg: 'bg-violet-500/10',
             title: 'Self-Hosted — Your Data, Your Servers',
-            business: 'All visitor data stays on your own infrastructure. Nothing is sent to any third-party analytics company. You own the database. You control access. You can delete everything at any time.',
-            dev: 'The backend is a standard Express + PostgreSQL + DuckDB stack. Deploy to any VPS, Docker host, or cloud provider. No external network calls are made from the backend. The tracking script calls your own domain, not a third-party CDN.',
+            business: 'Visitor data stays on your own infrastructure. The tracking pipeline sends nothing to any third-party analytics company. You own the database and control access. Optional integrations you enable — Pulse AI providers, Sentry, S3/R2 storage — send data to those services by design.',
+            dev: 'The backend is a standard Express + PostgreSQL + DuckDB stack. Deploy to any VPS, Docker host, or cloud provider. The tracking script calls your own domain, not a third-party CDN. The backend makes outbound calls only for integrations you configure (AI providers, Sentry, S3/R2).',
         },
         {
             icon: Shield,
@@ -149,8 +149,8 @@ function PrivacyFeaturesTab() {
             icon: Eye,
             color: 'text-blue-500',
             bg: 'bg-blue-500/10',
-            title: 'Anonymous Visitor IDs Only',
-            business: 'Visitor IDs are random UUIDs with no connection to any personal information. They cannot be traced back to a specific person, email address, or account.',
+            title: 'Pseudonymous Visitor IDs Only',
+            business: 'Visitor IDs are random identifiers with no connection to any personal information. They cannot be traced back to a specific person, email address, or account.',
             dev: 'IDs are generated using crypto.randomUUID() in the tracking script. They are stored only in the events and sessions tables alongside behavioural data. There is no users table in the analytics database — only the auth database has user records.',
         },
         {
@@ -188,22 +188,22 @@ function PrivacyFeaturesTab() {
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <CheckCircle2 className="w-5 h-5 text-green-500" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white">GDPR / CCPA / PECR Compliance Summary</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Privacy Properties</h3>
                     <InfoTooltip
-                        title="What are these regulations?"
-                        content="GDPR (Europe), CCPA (California), and PECR (UK) are data privacy laws that regulate how websites can collect and use visitor data. Most analytics tools require cookie consent banners to comply. InsightsTrack is designed to be compliant without needing consent banners."
+                        title="How to read this"
+                        content="These are technical properties of the implementation, not a compliance determination. Regulations such as GDPR (Europe), CCPA (California) and PECR (UK) apply to your deployment as a whole — your lawful basis, notices, and processes. Consult applicable privacy/ePrivacy requirements for your situation."
                     />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
-                        { ok: true, text: 'No cookie consent banner needed' },
-                        { ok: true, text: 'No personal data collected or stored' },
+                        { ok: true, text: 'No cookies set' },
+                        { ok: true, text: 'No name, email, or IP address stored' },
                         { ok: true, text: 'No cross-site tracking' },
                         { ok: true, text: 'Visitor data stays on your servers' },
-                        { ok: true, text: 'Automatic data retention & deletion' },
+                        { ok: true, text: 'Configurable retention with manual cleanup' },
                         { ok: true, text: 'DNT and GPC signals respected' },
-                        { ok: true, text: 'No third-party data processors' },
-                        { ok: true, text: 'Right to erasure: delete any site\'s data instantly' },
+                        { ok: true, text: 'No third-party processors in the tracking pipeline' },
+                        { ok: true, text: 'Per-site data deletion (not per-visitor erasure)' },
                     ].map(({ ok, text }) => (
                         <div key={text} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                             <CheckCircle2 className={`w-4 h-4 shrink-0 ${ok ? 'text-green-500' : 'text-red-400'}`} />
@@ -276,7 +276,7 @@ function PrivacyFeaturesTab() {
                                 { field: 'Country (from timezone)', example: 'India', personal: false },
                                 { field: 'Screen resolution', example: '1920×1080', personal: false },
                                 { field: 'UTM parameters', example: 'utm_source=google', personal: false },
-                                { field: 'Anonymous visitor ID', example: 'a3f9b2c1-...', personal: false, note: 'Random UUID, no link to real identity' },
+                                { field: 'Pseudonymous visitor ID', example: 'u_k3f9b2c1', personal: false, note: 'Random identifier; persists on the device until storage is cleared' },
                                 { field: 'Session ID', example: 'sess_a1b2c3', personal: false },
                                 { field: 'Event type & timestamp', example: 'pageview at 14:32', personal: false },
                                 { field: 'Scroll depth', example: '75%', personal: false },

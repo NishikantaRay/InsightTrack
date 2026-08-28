@@ -132,7 +132,7 @@ Once connected, the analytics tools appear automatically. Ask your assistant thi
 | `get_performance` | “How fast is my site? (Core Web Vitals)” |
 | `get_page_detail` | “What do visitors click on /pricing?” |
 
-**17 tools in total.** Each returns a structured result the dashboard renders as a chart/table/KPI with a CSV download and a deep-link to the matching page. `list_sites` is account-scoped (no site needed); every other tool is scoped to a single site you can access.
+**Each tool** is read-only and site-scoped. Each returns a structured result the dashboard renders as a chart/table/KPI with a CSV download and a deep-link to the matching page. `list_sites` is account-scoped (no site needed); every other tool is scoped to a single site you can access.
 
 ---
 

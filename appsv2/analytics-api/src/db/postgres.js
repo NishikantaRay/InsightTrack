@@ -724,7 +724,7 @@ export async function generateSampleData() {
 
             for (let v = 0; v < dailyVisitors; v++) {
                 const userId = userPool[Math.floor(Math.random() * userPool.length)];
-                const sessionId = `s_${uuidv4().slice(0, 8)}`;
+                const sessionId = `s_${uuidv4()}`;
                 const device = weightedRandom(devices, deviceWeights);
                 const country = weightedRandom(countries, countryWeights);
                 const referrer = weightedRandom(referrers, referrerWeights);
@@ -855,7 +855,7 @@ export async function generateSampleData() {
 
             for (let v = 0; v < dailyVisitors; v++) {
                 const userId = blogUserPool[Math.floor(Math.random() * blogUserPool.length)];
-                const sessionId = `s_${uuidv4().slice(0, 8)}`;
+                const sessionId = `s_${uuidv4()}`;
                 const device = weightedRandom(devices, deviceWeights);
                 const country = weightedRandom(countries, countryWeights);
                 const referrer = weightedRandom(blogReferrers, blogReferrerWeights);

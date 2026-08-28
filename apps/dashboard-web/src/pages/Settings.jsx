@@ -177,7 +177,7 @@ export default function Settings() {
                                         {[
                                             { icon: Zap, color: 'text-amber-500', label: 'Auto-tracked', items: ['Pageviews & SPA nav', 'Clicks & outbound links', 'Form submissions', 'Scroll depth (25/50/75/100%)', 'Rage clicks', 'Core Web Vitals (LCP/CLS/INP)', 'JS errors'] },
                                             { icon: Code, color: 'text-indigo-500', label: 'Custom events API', items: ['window.trackEvent(name, props)', 'window.trackAddToCart(product, price)', 'window.trackCheckout(items)', 'window.trackPurchase(amount)'] },
-                                            { icon: Shield, color: 'text-emerald-500', label: 'Privacy-safe', items: ['No cookies set', 'No IP addresses stored', 'Anonymous visitor ID only', 'Respects DNT & GPC signals', 'Script size < 5 KB'] },
+                                            { icon: Shield, color: 'text-emerald-500', label: 'Privacy-safe', items: ['No cookies set', 'No IP addresses stored', 'Pseudonymous visitor ID only', 'Respects DNT & GPC signals', '~7.5 KB gzipped'] },
                                         ].map(({ icon: Icon, color, label, items }) => (
                                             <div key={label} className="rounded-lg border border-border dark:border-border-dark p-3 space-y-1.5">
                                                 <div className="flex items-center gap-1.5 mb-2">

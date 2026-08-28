@@ -71,6 +71,36 @@ function invalidateSiteCache(siteId) {
     }
 }
 
+// ── Server-side privacy opt-out (defence in depth) ─────────────────────────────
+// The generated tracking script exits before collecting anything when DNT/GPC is
+// set (see sitesService.getRawTrackingScript). This is the server-side backstop
+// for the cases the client guard cannot cover:
+//   • a visitor still holding a CACHED copy of a pre-fix script (the script is
+//     served with max-age=3600, so that window is real after a deploy),
+//   • direct calls to /api/track/* that bypass the script entirely.
+//
+// Browsers attach these headers themselves — they are not custom headers, so no
+// CORS allowlist entry is required:
+//   DNT: 1        — Do Not Track
+//   Sec-GPC: 1    — Global Privacy Control
+//
+// Only the explicit opt-out value counts. "0", absent, or any other value is NOT
+// treated as opt-out, matching the client-side rule exactly.
+//
+// A request from an opted-out visitor is acknowledged normally (2xx) rather than
+// rejected: the visitor's browser gets a clean response, nothing is persisted,
+// and the caller learns nothing about the decision.
+function isOptedOut(req) {
+    return req.get('DNT') === '1' || req.get('Sec-GPC') === '1';
+}
+
+// Applied to every ingest route below. Returns the endpoint's normal-looking
+// success shape so a stale client script behaves exactly as it would on success.
+function honourOptOut(req, res, next) {
+    if (!isOptedOut(req)) return next();
+    res.status(200).json({ success: true, optedOut: true });
+}
+
 // ── Route helpers ──────────────────────────────────────────────────────────────
 
 function enrichGeo(eventData, req) {
@@ -87,7 +117,7 @@ function enrichGeo(eventData, req) {
 // ── Routes ─────────────────────────────────────────────────────────────────────
 
 // POST /api/track/event
-router.post('/event', async (req, res) => {
+router.post('/event', honourOptOut, async (req, res) => {
     try {
         const eventData = enrichGeo(req.body, req);
         const result = await trackingService.trackEvent(eventData);
@@ -100,7 +130,7 @@ router.post('/event', async (req, res) => {
 });
 
 // POST /api/track/pageview
-router.post('/pageview', async (req, res) => {
+router.post('/pageview', honourOptOut, async (req, res) => {
     try {
         const eventData = enrichGeo({ ...req.body, type: 'pageview' }, req);
         const result = await trackingService.trackEvent(eventData);
@@ -113,7 +143,7 @@ router.post('/pageview', async (req, res) => {
 });
 
 // POST /api/track/session
-router.post('/session', async (req, res) => {
+router.post('/session', honourOptOut, async (req, res) => {
     try {
         const sessionData = enrichGeo(req.body, req);
         const result = await trackingService.upsertSession(sessionData);
@@ -125,7 +155,7 @@ router.post('/session', async (req, res) => {
 });
 
 // POST /api/track/session/end
-router.post('/session/end', async (req, res) => {
+router.post('/session/end', honourOptOut, async (req, res) => {
     try {
         const { sessionId, duration } = req.body;
         if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
@@ -138,7 +168,7 @@ router.post('/session/end', async (req, res) => {
 });
 
 // POST /api/track/batch
-router.post('/batch', async (req, res) => {
+router.post('/batch', honourOptOut, async (req, res) => {
     try {
         const { events } = req.body;
         if (!Array.isArray(events) || events.length === 0) {
@@ -164,7 +194,9 @@ router.post('/batch', async (req, res) => {
 router.get('/pixel.gif', async (req, res) => {
     try {
         const { siteId, userId, event = 'impression' } = req.query;
-        if (siteId && userId) {
+        // Honour DNT/GPC here too, but still return the GIF so the <img> renders
+        // normally — the opt-out must not be visible as a broken image.
+        if (siteId && userId && !isOptedOut(req)) {
             trackingService.trackEvent({
                 siteId, userId, type: event,
                 referrer: req.get('Referer'),
@@ -182,7 +214,7 @@ router.get('/pixel.gif', async (req, res) => {
 });
 
 // POST /api/track/  (catch-all alias)
-router.post('/', async (req, res) => {
+router.post('/', honourOptOut, async (req, res) => {
     try {
         const eventData = enrichGeo(req.body, req);
         const result = await trackingService.trackEvent(eventData);

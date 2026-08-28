@@ -131,7 +131,7 @@ Key columns on `sessions`:
 | Column | Type | Notes |
 |---|---|---|
 | `site_id` | VARCHAR | Filter by this |
-| `user_id` | VARCHAR | Anonymous visitor ID |
+| `user_id` | VARCHAR | Pseudonymous visitor ID |
 | `started_at` | TIMESTAMP | Session start |
 | `ended_at` | TIMESTAMP | Session end |
 | `page_count` | INTEGER | Pages viewed |
@@ -300,31 +300,40 @@ ORDER BY events DESC
 
 ## 10. Security Model
 
-The SQL editor enforces read-only access at the server, not just the UI.
+The SQL Editor enforces its boundary **server-side**. The frontend performs no
+validation — the "DuckDB · read-only" label in the UI is informational, and every
+guarantee below is enforced in `apps/analytics-api/src/routes/sqlGuard.js`.
 
-### What is blocked
+**In brief:**
 
-- Any query not starting with `SELECT`, `WITH`, or `EXPLAIN`
-- Multiple statements in a single request (only one statement is permitted)
-- The keywords: `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE`,
-  `PRAGMA`, `ATTACH`, `DETACH`, `COPY`, `EXPORT`, `IMPORT`, `LOAD`, `INSTALL`,
-  `CHECKPOINT`, `VACUUM`, `CALL`, `EXECUTE`, `GRANT`, `REVOKE`
-- SQL comment stripping prevents hiding keywords behind `--` or `/* */`
+- **Read-only** — only `SELECT` / `WITH` / `EXPLAIN` are accepted; a single
+  statement per request. `EXPLAIN ANALYZE` is rejected because it executes the
+  query rather than only planning it.
+- **Function allowlist** — queries may call analytical functions only. DuckDB's
+  file and network readers (`read_csv`, `read_csv_auto`, `read_parquet`,
+  `read_json`, `read_text`, `read_blob`, `glob`) and engine-metadata functions
+  (`duckdb_settings`, `duckdb_databases`) are not on the allowlist and are
+  rejected.
+- **Table allowlist** — only analytics tables are reachable. The `users` table
+  and the assistant/MCP tables are not, and schema-qualified references such as
+  `main.events` are rejected.
+- **Two validation layers** — a textual layer plus an AST parse. Both must pass,
+  and a query the parser cannot understand is rejected rather than allowed.
+- **Site scoping** — each referenced table is rewritten to a per-request view
+  filtered to the site you are querying, so an unfiltered `SELECT * FROM events`
+  cannot return another site's rows.
+- **Resource limits** — a hard row cap that binds even if you supply your own
+  larger `LIMIT`, and a server-capped query timeout.
+- **Audit trail** — every execution, successful or failed, is recorded in
+  `sql_query_audits`.
 
-### Site ownership
+**Full details, verification evidence, and known limitations:**
+[SQL_EDITOR_SECURITY.md](./SQL_EDITOR_SECURITY.md).
 
-Before any query runs the server:
-
-1. Verifies the `Authorization: Bearer <token>` header is valid
-2. Looks up the `siteId` in the database
-3. Confirms `site.user_id === req.user.id`
-
-If any check fails the query is rejected before DuckDB/PostgreSQL is touched.
-
-### Row limit
-
-The server appends `LIMIT 1000` to any query that does not already contain a
-`LIMIT` clause, preventing runaway full-table scans from overwhelming the server.
+That document also records what is *not* guaranteed — notably that validation is
+defence-in-depth rather than a proof, that a query timeout does not cancel work
+already running in DuckDB, and that the AST layer uses a PostgreSQL grammar and
+so rejects some valid DuckDB-specific syntax.
 
 ---
 
@@ -404,3 +413,11 @@ pool helper. The same `LIMIT 1000` and keyword-blocking rules apply.
 | Query text | React state (not persisted) |
 | Query history | `localStorage` key `sql-editor-history` |
 | Results | React state (cleared on new run) |
+
+---
+
+## Security
+
+The SQL Editor's security boundary (read-only enforcement, filesystem protection,
+site scoping) and its verification evidence are documented in
+[SQL_EDITOR_SECURITY.md](./SQL_EDITOR_SECURITY.md).
