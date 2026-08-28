@@ -39,7 +39,7 @@ The main dashboard surfaces four key performance indicators, each with a trend c
 
 | Metric | Description |
 |---|---|
-| **Total Visitors** | Unique user count (anonymous UUID-based) |
+| **Total Visitors** | Unique visitor count (based on a pseudonymous random identifier) |
 | **Pageviews** | Total page views across the site |
 | **Bounce Rate** | Percentage of single-page sessions |
 | **Avg. Session Duration** | Average time per session in seconds |
@@ -87,7 +87,7 @@ Every visitor interaction is captured automatically:
 - **Pageviews** — Recorded on every page load and SPA route change
 - **Clicks** — Outbound link clicks tracked with destination URL
 - **Sessions** — Auto-created with a unique session ID stored in `sessionStorage`
-- **Anonymous User IDs** — Random UUIDs stored in `localStorage` (no cookies)
+- **Pseudonymous visitor IDs** — a random identifier stored in `localStorage` (no cookies). Not a UUID and not cryptographically random
 
 ---
 
@@ -409,12 +409,12 @@ InsightTrack respects user privacy by default:
 
 | Feature | Implementation |
 |---------|---------------|
-| **Do Not Track (DNT)** | Tracking script checks `navigator.doNotTrack` and stops if enabled |
-| **Global Privacy Control (GPC)** | Respects `navigator.globalPrivacyControl` signal |
-| **No cookies** | Uses `localStorage` for anonymous user ID only |
-| **No IP storage** | IP addresses are never stored in the database |
-| **Self-hosted** | All data stays on your infrastructure |
-| **Lightweight** | Tracking script is ~2 KB gzipped |
+| **Do Not Track (DNT)** | Script exits before any storage or network access when `navigator.doNotTrack === '1'`; the API also declines requests carrying `DNT: 1` |
+| **Global Privacy Control (GPC)** | Same behaviour for `navigator.globalPrivacyControl === true` and the `Sec-GPC: 1` header |
+| **No cookies** | Uses `localStorage` for a pseudonymous visitor identifier only |
+| **No IP storage** | IP addresses are used transiently for country lookup, never persisted |
+| **Self-hosted** | Tracking data goes only to your own server; optional integrations you enable may send data externally |
+| **Single tag** | ~7.5 KB gzipped in the current build (varies by build) |
 
 ### Data Retention Policies
 
@@ -422,7 +422,11 @@ Control how long analytics data is stored:
 
 - Configure retention period in days per site
 - Preset options: 30, 90, 180, or 365 days
-- Manual cleanup trigger to delete expired data
+- **Manually triggered** cleanup — there is no scheduler, so a policy does not
+  enforce itself
+- Cleanup removes matching rows from both PostgreSQL and the DuckDB read replica,
+  so deleted data stops appearing in dashboards, the SQL Editor, Pulse and MCP
+- Operates per-site on a time cutoff; it is not a per-visitor erasure mechanism
 - Automatic deletion of events and sessions older than the retention period
 - GDPR-friendly data lifecycle management
 
@@ -563,7 +567,7 @@ Each site card in the Sites tab supports:
 
 | Feature | Detail |
 |---|---|
-| **Parameterized SQL** | All queries use `$1` (PG) or `?` (DuckDB) — no string interpolation |
+| **Parameterized SQL** | Normal read/write paths use `$1` (PG) or `?` (DuckDB). Two documented exceptions in the SQL Editor (template substitution and scoped-view DDL) are covered by validation — see SQL_EDITOR_SECURITY.md |
 | **CORS** | Configurable allowed origins |
 | **Rate limiting** | API endpoints protected against abuse |
 | **Helmet** | CSP, X-Frame-Options, and other HTTP security headers |
@@ -655,15 +659,15 @@ InsightTrack is designed as a **privacy-first** analytics platform:
 
 | Principle | Implementation |
 |---|---|
-| **No cookies** | Tracking uses `localStorage` for anonymous user ID — no cookie consent banner needed |
-| **Anonymous users** | Random UUIDs only, no PII collected |
-| **Self-hosted** | All data stays on your own infrastructure |
-| **No third-party sharing** | Zero data sent to external services |
+| **No cookies** | Tracking uses `localStorage` for a pseudonymous visitor identifier. Whether a consent banner is required depends on your jurisdiction and deployment — consult applicable privacy/ePrivacy requirements |
+| **Pseudonymous visitors** | A random identifier only, with no name, email, or other directly identifying data collected. A persistent device identifier may still be personal data under some regimes |
+| **Self-hosted** | Tracking data goes only to your own infrastructure |
+| **Third-party sharing** | The tracking pipeline sends visitor data to no third party. Optional integrations you enable — Pulse AI providers, Sentry, S3/R2 cold storage — do send data to those services |
 | **Timezone geolocation** | Country detected from timezone, not IP address |
-| **DNT / GPC respect** | Tracking script honors Do Not Track and Global Privacy Control browser signals |
-| **Data retention policies** | Configurable per-site retention periods with automatic cleanup |
+| **DNT / GPC respect** | Honoured in the tracking script and as a server-side backstop on the tracking API |
+| **Data retention policies** | Configurable per-site periods with a manually triggered cleanup that clears both PostgreSQL and DuckDB |
 | **No IP storage** | IP addresses are never persisted |
-| **Lightweight** | Tracking script is ~2 KB gzipped |
+| **Single tag** | ~7.5 KB gzipped in the current build |
 | **Zero-config** | Single `<script>` tag, works on any website |
 
 ---
@@ -763,7 +767,7 @@ Add the auto-generated script to your website:
 | Device type | Screen width heuristics |
 | Country | `Intl.DateTimeFormat` timezone |
 | Session ID | `sessionStorage` |
-| User ID | `localStorage` (anonymous UUID) |
+| Visitor ID | `localStorage` (pseudonymous random identifier) |
 | UTM parameters | URL query string |
 | Scroll depth | Scroll event milestones |
 | Click coordinates | Click event x/y + selector |

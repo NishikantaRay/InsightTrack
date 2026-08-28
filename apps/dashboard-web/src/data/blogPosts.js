@@ -24,8 +24,8 @@ An **open-source, self-hosted analytics platform** flips every one of those prob
 When you evaluate an open-source Google Analytics alternative, look for:
 
 - **True self-hosting** — you run it on your own infrastructure, not someone else's cloud.
-- **Cookieless tracking** — no consent banner, GDPR-friendly by design.
-- **Speed** — analytics queries should be fast even over millions of events.
+- **Cookieless tracking** — GDPR-friendly by design. Whether a consent banner is required depends on your jurisdiction and deployment.
+- **Speed** — analytics queries should stay responsive as the dataset grows.
 - **Depth** — real-time, funnels, heatmaps, and Core Web Vitals, not just pageviews.
 - **A permissive license** — MIT or similar, so you can use it commercially.
 
@@ -42,7 +42,7 @@ InsightsTrack is built specifically to tick all of those boxes:
 | Real-time, heatmaps, funnels | Partial | ✅ |
 | Price | "Free" (your data) | Free forever |
 
-Under the hood, InsightsTrack uses PostgreSQL for writes and DuckDB — an embedded columnar engine — for reads, so 90-day reports return in under 100 ms even across millions of events.
+Under the hood, InsightsTrack uses PostgreSQL for writes and DuckDB — an embedded columnar engine — for reads. Columnar storage suits the wide aggregations a dashboard issues; real-world latency depends on your dataset, hardware, and query shape.
 
 ## Try it without installing anything
 
@@ -129,14 +129,14 @@ That is it — self-hosted, privacy-first analytics running in about 15 minutes.
         slug: 'cookieless-analytics-explained',
         title: 'Cookieless Analytics, Explained: Track Visitors Without Cookies or Consent Banners',
         description:
-            'What is cookieless analytics and how does it work? Learn how privacy-first tools track visitors with anonymous IDs, no cookies, and no GDPR consent banner.',
+            'What is cookieless analytics and how does it work? Learn how privacy-first tools track visitors with pseudonymous identifiers and no cookies.',
         keyword: 'cookieless analytics',
         date: '2026-06-27',
         readingMinutes: 5,
         body: `
 ## What is cookieless analytics?
 
-Cookieless analytics measures your website traffic **without storing cookies** in the visitor's browser. Because no personal identifiers are stored, you typically do not need a cookie consent banner, and you stay on the right side of regulations like GDPR.
+Cookieless analytics measures your website traffic **without storing cookies** in the visitor's browser. Because no directly identifying data is collected, many teams find their consent obligations are lighter — but requirements vary by jurisdiction and deployment, so consult applicable privacy/ePrivacy requirements rather than treating this as settled.
 
 ## How can you track visitors without cookies?
 
@@ -150,7 +150,7 @@ The result: you can count unique visitors and sessions without ever collecting p
 
 ## Do you still need a consent banner?
 
-In most jurisdictions, if you set no cookies and store no personal data, you do not need a consent banner. (Always confirm with your own legal counsel for your region.) Tools like InsightsTrack also honor the browser **Do Not Track (DNT)** and **Global Privacy Control (GPC)** signals automatically.
+This depends on your jurisdiction and deployment. Some regulators treat any storage on a visitor's device — including browser local storage — as in scope regardless of whether it is technically a cookie, so "no cookies" does not automatically mean "no banner". Confirm with your own legal counsel for your region. Separately, InsightsTrack honors the browser **Do Not Track (DNT)** and **Global Privacy Control (GPC)** signals in both the tracking script and the API.
 
 ## What you can still measure
 
@@ -204,7 +204,7 @@ Dashboard ◀── GET /api/analytics ◀──────  DuckDB (reads)
 
 DuckDB is "SQLite for analytics": a single file, zero-config, in-process, columnar. For a self-hosted tool that matters enormously — there is no extra service to run, no cluster to manage. You ship one binary dependency and get column-store performance.
 
-On a single node, DuckDB answers a 90-day KPI aggregation over millions of events in **under 100 ms**. The same query against the row-store would take seconds.
+On a single node, a 90-day KPI aggregation reads only the columns it needs rather than whole rows, which is what makes this shape of query cheap on a columnar engine. Actual latency depends on dataset size, hardware, and query shape.
 
 ## The sync pipeline (and how we made it correct)
 
@@ -295,7 +295,7 @@ Recreate your GA4 conversions as **goals** and multi-step **funnels** so you can
 
 ## Step 6 — Remove GA4
 
-Once you trust the new numbers, delete the GA4 script. Bonus: your site gets faster (GA4's gtag.js is ~50× larger than a privacy-first ~2 KB script), and you can finally remove the cookie consent banner.
+Once you trust the new numbers, delete the GA4 script. Bonus: your site gets lighter — GA4's gtag.js is substantially larger than a privacy-first tracking script — and you can revisit whether your consent banner is still required for your jurisdiction.
 
 ## Migration checklist
 

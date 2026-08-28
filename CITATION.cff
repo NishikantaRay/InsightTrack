@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: "InsightTrack: a self-hosted web analytics platform with a dual-database architecture"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Ray
+    given-names: Nishikanta
+    # Add `orcid: "https://orcid.org/0000-0000-0000-0000"` here before archiving
+    # to Zenodo or submitting to JOSS — both expect a persistent author ID.
+repository-code: "https://github.com/NishikantaRay/InsightTrack"
+abstract: >-
+  InsightTrack is a self-hosted web analytics platform that separates its write
+  path from its read path across two databases. PostgreSQL is the system of
+  record for tracking events, authentication and site management; an embedded
+  DuckDB instance, kept current by an incremental sync process, serves every
+  analytics query. The split lets the transactional store stay normalised and
+  write-optimised while analytical aggregations run against a columnar engine in
+  the same process, with no separate warehouse to operate. The platform includes
+  an allowlist-validated SQL editor scoped to a single tenant, configurable
+  retention that deletes from both stores, and honours Do Not Track and Global
+  Privacy Control signals.
+keywords:
+  - web analytics
+  - self-hosted
+  - DuckDB
+  - PostgreSQL
+  - OLAP
+  - privacy
+license: MIT
+# `version` and `date-released` are intentionally omitted until the first
+# tagged release; add them (and the Zenodo DOI as `doi:`) at that point.

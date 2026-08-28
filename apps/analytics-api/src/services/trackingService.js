@@ -1,5 +1,6 @@
 import { query, getPool } from '../db/postgres.js';
 import { v4 as uuidv4 } from 'uuid';
+import { sanitiseUrl, sanitiseReferrer } from '../utils/urlPrivacy.js';
 
 export const trackingService = {
     async trackEvent(eventData) {
@@ -30,8 +31,11 @@ export const trackingService = {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
             [
                 safeStr(siteId, 64), safeStr(userId, 64), safeStr(sid, 64), safeType,
-                safeStr(url || '', 2048), safeStr(path || '/', 512),
-                referrer ? safeStr(referrer, 2048) : null,
+                // Sensitive query params are stripped before storage — see
+                // utils/urlPrivacy.js. Done server-side so sites still serving an
+                // older cached tracking script are covered too.
+                safeStr(sanitiseUrl(url || ''), 2048), safeStr(sanitiseUrl(path || '/'), 512),
+                sanitiseReferrer(referrer),
                 safeStr(device, 50), safeStr(browser, 255), safeStr(os, 100),
                 safeStr(country, 100), safeStr(city, 255),
                 new Date().toISOString(),
@@ -73,8 +77,8 @@ export const trackingService = {
                 [
                     sessionId, siteId, userId,
                     new Date().toISOString(), new Date().toISOString(),
-                    duration, pageviews, entryPage, exitPage || entryPage,
-                    referrer || null, device, browser, os, country, true,
+                    duration, pageviews, sanitiseUrl(entryPage || ''), sanitiseUrl(exitPage || entryPage || ''),
+                    sanitiseReferrer(referrer), device, browser, os, country, true,
                     utm_source, utm_medium, utm_campaign,
                 ]
             );
@@ -117,8 +121,8 @@ export const trackingService = {
             for (const event of events) {
                 await client.query(insertQuery, [
                     event.siteId, event.userId, event.sessionId || uuidv4(),
-                    event.type || 'pageview', event.url || '', event.path || '/',
-                    event.referrer || null, event.device || 'Desktop',
+                    event.type || 'pageview', sanitiseUrl(event.url || ''), sanitiseUrl(event.path || '/'),
+                    sanitiseReferrer(event.referrer), event.device || 'Desktop',
                     event.browser || '', event.os || '',
                     event.country || '', event.city || '',
                     event.timestamp || new Date().toISOString(),

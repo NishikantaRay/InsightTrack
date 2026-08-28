@@ -264,7 +264,13 @@ Tested on: Apple M1, Docker, 98 837 events + 39 669 sessions, 120-day window.
 
 ### Query latency
 
-| Query | v1 flat DuckDB | v2 Hot+Cold | Speedup |
+> **⚠️ Historical, internal measurements — not a reproducible benchmark.**
+> The v1 configuration cannot be reconstructed from repository artifacts, the
+> dataset and environment were not recorded, and the measurement boundary is
+> unknown. Retained for context only. See
+> [`PERFORMANCE_BENCHMARK_AUDIT.md`](./PERFORMANCE_BENCHMARK_AUDIT.md).
+
+| Query | v1 flat DuckDB | v2 Hot+Cold | Ratio (as recorded) |
 |-------|---------------|-------------|---------|
 | KPI summary — 7 days | ~80 ms | **55 ms** | 1.5× |
 | KPI summary — 30 days | ~210 ms | **64 ms** | 3.3× |

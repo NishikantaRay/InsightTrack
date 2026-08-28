@@ -73,8 +73,22 @@ document.getElementById('cta').addEventListener('click', () => {
 - **No PII collected**: The user ID is a random anonymous UUID
 - **Country detection**: Uses timezone, not IP geolocation
 - **Self-hosted**: All data stays on your server
-- **DNT respect**: The script checks `navigator.doNotTrack` — if enabled, no data is collected
-- **GPC respect**: The script checks `navigator.globalPrivacyControl` — if enabled, tracking is disabled
+- **DNT respect**: The script exits before any storage or network access when
+  `navigator.doNotTrack === '1'` — no visitor id, no session id, no requests.
+  Other values (`'0'`, unset, unrelated strings) are not treated as opt-out.
+- **GPC respect**: Same early exit when `navigator.globalPrivacyControl === true`.
+  `false`/unset are not treated as opt-out.
+  Under opt-out, `window.analytics` is an inert stub (`track`/`identify` are no-ops,
+  `optedOut === true`) so existing call sites do not break.
+  These are technical controls that honour the browser signal; they are not by
+  themselves a statement of legal compliance.
+- **Server-side backstop**: the tracking API also rejects collection when the
+  request carries `DNT: 1` or `Sec-GPC: 1` (browsers send these headers
+  themselves). This covers visitors still running a cached copy of an older
+  script, and direct calls to `/api/track/*` that bypass the script entirely.
+  Such requests are acknowledged with a normal 2xx and `optedOut: true`; nothing
+  is persisted. The tracking pixel still returns a valid GIF so the image never
+  appears broken.
 
 ---
 

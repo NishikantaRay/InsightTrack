@@ -43,11 +43,6 @@ CREATE TABLE IF NOT EXISTS daily_stats (
   devices VARCHAR, countries VARCHAR, computed_at TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS users (
-  id VARCHAR, name VARCHAR NOT NULL, email VARCHAR NOT NULL,
-  password VARCHAR NOT NULL, role VARCHAR DEFAULT 'viewer', created_at TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS goals (
   id VARCHAR PRIMARY KEY, site_id VARCHAR NOT NULL, name VARCHAR NOT NULL,
   type VARCHAR NOT NULL, config VARCHAR, created_at TIMESTAMP
@@ -134,7 +129,11 @@ export const SYNCABLE_TABLES = [
   // DuckDB-derived rollup owned solely by computeDailyRollups() in sync.js.
   // Syncing it from PG too would create two competing writers (PG-upsert by id
   // vs rollup delete-by-date + insert with NULL id) that double-count metrics.
-  { table: 'users', tsColumn: 'created_at', idColumn: 'id' },
+  // NOTE: `users` is intentionally NOT synced. It carries bcrypt password
+  // hashes, and no analytics query reads it (all real user lookups go to
+  // PostgreSQL via authService/teamService). Replicating it into DuckDB put
+  // every account's email + password hash inside the SQL Editor's reach
+  // where the SQL Editor could read them.
   { table: 'goals', tsColumn: 'created_at', idColumn: 'id' },
   { table: 'ab_tests', tsColumn: 'created_at', idColumn: 'id' },
   { table: 'annotations', tsColumn: 'created_at', idColumn: 'id' },

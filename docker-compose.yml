@@ -5,8 +5,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Bound to loopback: the backend reaches Postgres over the compose network,
+    # so this is only for local psql/debugging and must not be exposed to the
+    # host's network interfaces.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -74,8 +77,10 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_LISTEN_PORT: 5050
+    # Loopback only. This is a full database console guarded by a password from
+    # .env; it should never be reachable from outside the host.
     ports:
-      - "5050:5050"
+      - "127.0.0.1:5050:5050"
     depends_on:
       db:
         condition: service_healthy

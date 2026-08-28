@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: analytics-api tests
+    runs-on: ubuntu-latest
+    # The suite provisions its own throwaway postgres:15-alpine container via
+    # tests/globalSetup.js, so no `services:` block is needed here — the runner
+    # only has to provide Docker, which ubuntu-latest does.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/analytics-api/package-lock.json
+      - run: npm ci
+        working-directory: apps/analytics-api
+      - run: npm test
+        working-directory: apps/analytics-api
+
+  dashboard:
+    name: dashboard-web tests + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/dashboard-web/package-lock.json
+      - run: npm ci
+        working-directory: apps/dashboard-web
+      - run: npm test
+        working-directory: apps/dashboard-web
+      - run: npm run build
+        working-directory: apps/dashboard-web
+
+  compose:
+    name: docker compose smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Boots the documented quick-start exactly as a new user would, then
+      # checks the things a broken release would break: the API answers, the
+      # bundled demo site's tracking script resolves, and an event survives the
+      # PostgreSQL -> DuckDB sync into the analytics API.
+      - name: Start the stack
+        run: docker compose --env-file .env.example up -d
+
+      - name: Wait for the API
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf -m 5 http://localhost:3001/api/health >/dev/null; then
+              echo "API healthy after ${i} attempts"; exit 0
+            fi
+            sleep 5
+          done
+          echo "API did not become healthy"; exit 1
+
+      - name: Demo site tracking script resolves
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3001/api/sites/site_demo/script)
+          echo "HTTP $code"
+          [ "$code" = "200" ]
+
+      - name: End-to-end track -> sync -> analytics
+        run: |
+          set -euo pipefail
+          tok=$(curl -sf -X POST http://localhost:3001/api/auth/register \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"CI","email":"ci@test.example.com","password":"CiPassw0rd!x"}' \
+            | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).data.token')
+          site=$(curl -sf -X POST http://localhost:3001/api/sites \
+            -H "Authorization: Bearer $tok" -H 'Content-Type: application/json' \
+            -d '{"name":"CI","domain":"ci.test.example.com"}' \
+            | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).data.id')
+          curl -sf -X POST http://localhost:3001/api/track/event \
+            -H 'Content-Type: application/json' \
+            -d "{\"siteId\":\"$site\",\"userId\":\"u1\",\"sessionId\":\"s1\",\"type\":\"pageview\",\"path\":\"/ci\"}" >/dev/null
+          for i in $(seq 1 30); do
+            n=$(curl -sf "http://localhost:3001/api/analytics/$site/kpi?dateRange=30d" \
+              -H "Authorization: Bearer $tok" \
+              | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).data.totalPageviews' 2>/dev/null || echo 0)
+            if [ "$n" -ge 1 ] 2>/dev/null; then echo "analytics reflected the event after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "event never reached the analytics store"; exit 1
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose --env-file .env.example logs --tail=100
+
+      - name: Tear down
+        if: always()
+        run: docker compose --env-file .env.example down -v

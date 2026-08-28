@@ -1,5 +1,6 @@
 // Reporting & Settings Service — PostgreSQL writes
 import { query } from '../db/postgres.js';
+import { applyRetentionDeletionToDuck } from '../sync/sync.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const reportingService = {
@@ -150,6 +151,20 @@ export const reportingService = {
             [siteId, cutoffISO]
         );
 
+        // Mirror the deletion into DuckDB. PostgreSQL is only the write store —
+        // every dashboard, SQL Editor, Pulse and MCP read queries DuckDB, and the
+        // PG→DuckDB sync is additive (append-only keyset for events, watermark
+        // upserts for sessions), so it can never observe a row that was deleted.
+        // Without this the cleanup would report rows removed while they stayed
+        // fully queryable everywhere users actually look.
+        //
+        // Ordering matters: this runs only AFTER the PostgreSQL deletes resolve.
+        // If PG fails we throw before touching DuckDB, so we never prune the read
+        // replica for data that still exists in the write store. If the DuckDB
+        // step itself fails, the error propagates — the caller gets a 500 rather
+        // than a success response claiming a deletion that only half happened.
+        const duckDeleted = await applyRetentionDeletionToDuck(siteId, cutoffISO);
+
         await query(
             `UPDATE data_retention_policies SET last_cleanup_at = NOW() WHERE site_id = $1`,
             [siteId]
@@ -158,7 +173,38 @@ export const reportingService = {
         return {
             deletedEvents: eventsResult.rowCount || 0,
             deletedSessions: sessionsResult.rowCount || 0,
+            duckdb: duckDeleted,
         };
+    },
+
+    /**
+     * Run retention cleanup for every site that has an enabled policy.
+     *
+     * Without this, `runRetentionCleanup` was reachable only through
+     * `POST /api/reporting/:siteId/retention/cleanup`, so an operator who
+     * configured a policy but never called the endpoint retained data forever —
+     * the policy silently did nothing. This is what the periodic scheduler in
+     * index.js calls.
+     *
+     * One site's failure must not stop the others, so each is caught
+     * individually and reported in the result.
+     */
+    async runAllRetentionCleanups() {
+        const { rows } = await query(
+            `SELECT site_id FROM data_retention_policies WHERE enabled = TRUE`
+        );
+
+        const results = [];
+        for (const { site_id: siteId } of rows) {
+            try {
+                const r = await this.runRetentionCleanup(siteId);
+                results.push({ siteId, ok: true, ...r });
+            } catch (err) {
+                console.error(`Retention cleanup failed for ${siteId}:`, err?.message);
+                results.push({ siteId, ok: false, error: err?.message });
+            }
+        }
+        return { sites: results.length, results };
     },
 };
 

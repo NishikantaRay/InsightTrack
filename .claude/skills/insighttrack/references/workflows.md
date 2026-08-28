@@ -88,8 +88,10 @@ Mapping: `analytics-dashboard ⇄ dashboard-web`, `analytics-db ⇄
 analytics-api`; `mcp-server`, `mcp-toolkit-core`, `docs` map by name.
 
 ```bash
-T=/Users/nishikantaray/Desktop/Personal/traffic
-T2=/Users/nishikantaray/Desktop/Personal/traffic2
+# Set these to wherever the copies live on your machine. `traffic` is a
+# separate private repository, not part of this checkout.
+T=${TRAFFIC_REPO:?set TRAFFIC_REPO to the traffic/ checkout}
+T2=${INSIGHTTRACK_REPO:-$(git rev-parse --show-toplevel)}
 
 # 1. Verify current drift (expect: only files you just changed)
 diff -rq $T/analytics-db/src        $T2/apps/analytics-api/src

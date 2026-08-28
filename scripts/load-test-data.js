@@ -16,9 +16,24 @@ import https from 'node:https';
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const API    = process.env.API    || 'http://localhost:3001';
-const EMAIL  = process.env.EMAIL  || 'nishikantaray1@gmail.com';
-const PASS   = process.env.PASS   || '123456';
-const SITE_ID = process.env.SITE_ID || 'site_98182e60';
+const EMAIL  = process.env.EMAIL;
+const PASS   = process.env.PASS;
+const SITE_ID = process.env.SITE_ID;
+
+// No credential defaults — supply them via the environment. See docs/benchmarking.md.
+const _missing = [['EMAIL', EMAIL], ['PASS', PASS], ['SITE_ID', SITE_ID]]
+    .filter(([, v]) => !v).map(([k]) => k);
+if (_missing.length > 0) {
+    console.error(`\n\u274c Missing required environment variable(s): ${_missing.join(', ')}\n`);
+    console.error('This script writes test data into a running InsightTrack instance.');
+    console.error('Supply a dedicated (non-personal) account and the target site:\n');
+    console.error('  export EMAIL="benchmark@example.com"');
+    console.error('  export PASS="<password>"');
+    console.error('  export SITE_ID="site_xxxxxxxx"');
+    console.error('  node scripts/load-test-data.js --events=1000000\n');
+    console.error('See docs/benchmarking.md for details.\n');
+    process.exit(1);
+}
 const TOTAL_EVENTS = parseInt(process.argv.find(a => a.startsWith('--events='))?.split('=')[1] || process.env.EVENTS || '1000000');
 const BATCH_SIZE   = parseInt(process.argv.find(a => a.startsWith('--batch='))?.split('=')[1]  || '500');
 

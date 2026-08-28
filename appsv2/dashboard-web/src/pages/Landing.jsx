@@ -386,7 +386,7 @@ const FEATURES = [
         border: 'border-emerald-200 dark:border-emerald-500/20',
         label: 'Privacy',
         title: 'No cookies. No consent banner.',
-        desc: 'Cookieless tracking using anonymous localStorage IDs. No IP storage, no fingerprinting. GDPR-compliant by design. DNT and GPC respected automatically.',
+        desc: 'Cookieless tracking using pseudonymous localStorage identifiers. No IP storage, no fingerprinting. GDPR-friendly by design. DNT and GPC opt-out honored in the script and the API.',
         metric: { value: '0', label: 'cookies set', up: true },
     },
     {
@@ -395,9 +395,9 @@ const FEATURES = [
         bg: 'from-amber-500/10 to-amber-500/5',
         border: 'border-amber-200 dark:border-amber-500/20',
         label: 'Speed',
-        title: '90-day queries in under 50ms',
-        desc: 'DuckDB runs analytics reads in-process. No network round-trip to a query engine. Hot tier (last 30 days) in RAM, cold Parquet on disk.',
-        metric: { value: '50', label: 'ms p99 query', up: true },
+        title: 'In-process analytical reads',
+        desc: 'DuckDB runs analytics reads in-process. No network round-trip to a separate query engine. Hot tier (last 30 days) in RAM, cold Parquet on disk.',
+        metric: { value: 'In-process', label: 'columnar reads', up: true },
     },
     {
         icon: MousePointerClick,
@@ -437,7 +437,7 @@ const WHY_TABLE = [
     ['No cookies / no consent banner', true, false, false],
     ['Self-hosted — you own all data', true, false, false],
     ['Free forever', true, false, false],
-    ['Script under 2 KB', true, false, false],
+    ['Single lightweight tag', true, false, false],
     ['Heatmaps included', true, false, true],
     ['JS error tracking', true, false, true],
     ['SQL editor built-in', true, false, false],
@@ -515,11 +515,11 @@ const FAQS = [
     },
     {
         q: 'Is InsightsTrack privacy-friendly?',
-        a: 'Yes. It is cookieless by design, stores no IP addresses, does no fingerprinting, generates anonymous first-party visitor IDs, and honors Do Not Track (DNT) and Global Privacy Control (GPC). This makes it GDPR-compliant without a cookie banner in most jurisdictions.',
+        a: 'It is cookieless by design, stores no IP addresses, does no fingerprinting, generates pseudonymous first-party visitor identifiers, and honors Do Not Track (DNT) and Global Privacy Control (GPC). These properties are designed to help self-hosted deployments meet privacy obligations. Whether a consent banner is required depends on your jurisdiction and deployment — consult applicable privacy/ePrivacy requirements.',
     },
     {
         q: 'How do I install InsightsTrack?',
-        a: 'Self-host the stack with one Docker command (git clone, then docker-compose up), create a site in Settings, and paste a single ~2 KB <script> tag into your website’s <head>. Tracking starts immediately — setup takes under 15 minutes.',
+        a: 'Self-host the stack with one Docker command (git clone, then docker-compose up), create a site in Settings, and paste a single <script> tag into your website’s <head>. Tracking starts immediately — setup takes under 15 minutes.',
     },
     {
         q: 'What is Pulse, the AI analyst?',
@@ -539,7 +539,7 @@ const FAQS = [
     },
     {
         q: 'How fast is InsightsTrack?',
-        a: 'The tracking script is ~2 KB and loads asynchronously, so it does not slow your site. On the backend, a DuckDB columnar engine answers 90-day analytics queries in under 100 ms even across millions of events.',
+        a: 'The tracking script is ~7.5 KB gzipped and loads asynchronously, so it does not slow your site. On the backend, analytics reads are served by DuckDB, an embedded columnar engine suited to the wide aggregations a dashboard issues. Latency depends on your dataset, hardware, and query shape.',
     },
     {
         q: 'How does real-time tracking work?',
@@ -1145,7 +1145,7 @@ export default function Landing() {
                                 {activeFeature === 0 && <RealtimeWidget />}
                                 {activeFeature === 1 && (
                                     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 space-y-2.5">
-                                        {[['No cookies set', true], ['No IP stored', true], ['DNT respected', true], ['GDPR compliant', true], ['GPC signal honored', true]].map(([l, v]) => (
+                                        {[['No cookies set', true], ['No IP stored', true], ['DNT respected', true], ['No fingerprinting', true], ['GPC signal honored', true]].map(([l, v]) => (
                                             <div key={l} className="flex items-center gap-2.5 text-sm">
                                                 <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
                                                     <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
@@ -1334,7 +1334,7 @@ export default function Landing() {
                         {/* capabilities — bordered cards */}
                         <div className="order-1 lg:order-2 flex flex-col gap-3.5">
                             {[
-                                { c: 'indigo', t: 'Plain-English questions, real answers', d: '“Where’s my traffic from?” · “How’s my funnel?” · “Compare this month vs last.” Pulse calls 17 read-only tools and answers with numbers you can trust.', icon: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> },
+                                { c: 'indigo', t: 'Plain-English questions, real answers', d: '“Where’s my traffic from?” · “How’s my funnel?” · “Compare this month vs last.” Pulse calls read-only tools and answers with numbers you can trust.', icon: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> },
                                 { c: 'emerald', t: 'Charts, tables & one-click CSV', d: 'Every answer renders as a chart, table, or KPI card. Switch the view, export to CSV, or deep-link to the matching dashboard page.', icon: <><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></> },
                                 { c: 'violet', t: 'Works in Claude Desktop & Cursor', badge: 'MCP', d: 'The same tools connect to any Model Context Protocol client. Ask Claude Desktop about your traffic and it queries InsightTrack directly.', icon: <><path d="M4 17l6-6-6-6" /><line x1="12" y1="19" x2="20" y2="19" /></> },
                             ].map((f, i) => (
@@ -1405,7 +1405,7 @@ export default function Landing() {
                                     ))}
                                 </div>
                                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3">
-                                    Remote HTTP URL (nothing to install) or a local bridge · 17 read-only tools, scoped to your account.
+                                    Remote HTTP URL (nothing to install) or a local bridge · read-only tools, scoped to your account.
                                 </p>
                             </div>
                         </div>
@@ -1610,7 +1610,7 @@ export default function Landing() {
                             </div>
 
                             <div className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/55">
-                                {['No cookies', 'Self-hosted', 'Open source', 'GDPR compliant', 'Free forever'].map(t => (
+                                {['No cookies', 'Self-hosted', 'Open source', 'Privacy-first', 'Free forever'].map(t => (
                                     <span key={t} className="flex items-center gap-1.5">
                                         <Check className="w-3 h-3 text-emerald-400" />{t}
                                     </span>

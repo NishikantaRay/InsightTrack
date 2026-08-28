@@ -1,12 +1,15 @@
 {
   "name": "@insighttrack/mcp-server",
   "version": "0.1.0",
-  "description": "InsightTrack MCP server — query your web analytics from Claude Desktop, Cursor, and any MCP client.",
+  "license": "MIT",
+  "description": "InsightTrack MCP server \u2014 query your web analytics from Claude Desktop, Cursor, and any MCP client.",
   "type": "module",
   "bin": {
     "insighttrack-mcp": "src/index.js"
   },
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "engines": {
     "node": ">=20"
   },

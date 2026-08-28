@@ -223,6 +223,27 @@ async function start() {
             }
         }, SYNC_INTERVAL);
 
+        // Periodic retention cleanup. A configured policy previously only took
+        // effect when someone called the cleanup endpoint by hand, so data was
+        // retained indefinitely unless an operator remembered to trigger it.
+        // This sweeps every site whose policy is enabled; sites without one are
+        // untouched. Set RETENTION_INTERVAL_MS=0 to disable the scheduler.
+        const RETENTION_INTERVAL = parseInt(process.env.RETENTION_INTERVAL_MS ?? '') || 6 * 60 * 60_000;
+        if (RETENTION_INTERVAL > 0) {
+            const { reportingService } = await import('./services/reportingService.js');
+            const sweepRetention = async () => {
+                try {
+                    const { sites } = await reportingService.runAllRetentionCleanups();
+                    if (sites > 0) console.log(`🧹 Retention cleanup ran for ${sites} site(s)`);
+                } catch (err) {
+                    console.warn('⚠  Retention cleanup failed:', err.message);
+                }
+            };
+            // Delayed first run so startup isn't competing with the initial sync.
+            setTimeout(sweepRetention, 60_000);
+            setInterval(sweepRetention, RETENTION_INTERVAL);
+        }
+
         // Periodic integration poll: pull each connected provider's issues into
         // PostgreSQL (from where the sync loop above carries them to DuckDB).
         // Provider-generic via the integration registry (P3.1) — each adapter's

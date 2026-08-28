@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
     const updated = 'June 2026';
     useSeo({
         title: 'Privacy Policy',
-        description: 'How InsightsTrack handles data: cookieless, no IP storage, no fingerprinting, anonymous visitor IDs, DNT/GPC honored. GDPR-friendly by design.',
+        description: 'How InsightsTrack handles data: cookieless, no IP storage, no fingerprinting, pseudonymous visitor identifiers, DNT/GPC honored. GDPR-friendly by design.',
         path: '/privacy-policy',
     });
     return (
@@ -61,10 +61,12 @@ export default function PrivacyPolicy() {
                     </ul>
                 </Section>
 
-                <Section title="Anonymous visitor IDs">
+                <Section title="Pseudonymous visitor IDs">
                     To distinguish unique visitors and sessions, InsightsTrack generates a random identifier
-                    stored in the visitor's browser (first-party localStorage). This ID is not linked to any
-                    personal information and cannot be used to identify a person across other websites.
+                    stored in the visitor's browser (first-party localStorage). It is not linked to any name,
+                    email, or other directly identifying information, and is not shared across other websites.
+                    Because it persists on the device until browser storage is cleared, it is best described as
+                    pseudonymous rather than anonymous.
                 </Section>
 
                 <Section title="Do Not Track & Global Privacy Control">

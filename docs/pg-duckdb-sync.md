@@ -5,7 +5,7 @@ This post dives into the heart of InsightTrack's dual-database architecture: how
 ## Why sync?
 
 - **Separation of concerns** – PostgreSQL handles high-volume writes (events, sessions, auth), while DuckDB is optimized for columnar analytical workloads. By copying only new rows, the backend can serve complex queries without contention.
-- **Performance** – reads in DuckDB are 10‑100× faster than equivalent SQL on a row-store. The sync keeps the read database only a minute or two behind the write store.
+- **Performance** – DuckDB is a columnar engine intended for the wide aggregations the dashboard issues. No reproducible PostgreSQL baseline exists in this repository, so no speed multiple is claimed here. The sync keeps the read database only a minute or two behind the write store.
 - **Simplicity** – DuckDB is embedded in the same process as the Node server; no separate database server to manage.
 
 ## How it works

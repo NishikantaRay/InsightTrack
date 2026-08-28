@@ -1,0 +1,4705 @@
+{
+  "schemaVersion": 1,
+  "benchmark": "database-engine",
+  "note": "Measures database execution time only. Not comparable with the HTTP/API benchmark in scripts/benchmark.js.",
+  "startedAt": "2026-08-28T13:09:40.348Z",
+  "finishedAt": "2026-08-28T13:10:16.857Z",
+  "parameters": {
+    "datasetSize": 100000,
+    "seed": 42,
+    "warmupIterations": 5,
+    "measuredIterations": 30,
+    "queryCount": 12,
+    "executionOrder": "alternating per iteration"
+  },
+  "dataset": {
+    "events": 100000,
+    "sessions": 35701,
+    "visitorPool": 8333,
+    "sites": 3,
+    "days": 90,
+    "rangeStart": "2025-10-03T00:00:00.000Z",
+    "rangeEnd": "2026-01-01T00:00:00.000Z",
+    "seed": 42,
+    "fingerprintFirst5k": "e683c0e3d355f"
+  },
+  "environment": {
+    "os": "Darwin 25.5.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpuModel": "Apple M4",
+    "cpuCount": 10,
+    "totalMemGB": 16,
+    "nodeVersion": "v22.19.0",
+    "npmVersion": "10.9.3",
+    "dockerVersion": "29.7.2, build a7dcaa6",
+    "duckdbPackageVersion": "1.4.4",
+    "gitCommit": "a70ca0a00c8cd169a93b300cfcb450b5ecbde7f8",
+    "gitDirty": true,
+    "postgresVersion": "16.15",
+    "duckdbVersion": "v1.4.4"
+  },
+  "setup": {
+    "postgresConnectMs": 18,
+    "postgresLoadMs": 2167,
+    "postgresIndexes": 7,
+    "duckdbConnectMs": 48,
+    "duckdbLoadMs": 4712,
+    "duckdbIndexes": 3
+  },
+  "tuning": {
+    "postgres": [
+      "SET work_mem = '256MB'",
+      "SET max_parallel_workers_per_gather = 4",
+      "SET parallel_setup_cost = 200",
+      "SET parallel_tuple_cost = 0.01",
+      "SET min_parallel_table_scan_size = '1MB'"
+    ],
+    "duckdb": [
+      "SET threads = 10",
+      "SET memory_limit = '4GB'"
+    ]
+  },
+  "correctness": {
+    "verifiedQueries": [
+      "Q01_total_events",
+      "Q02_unique_visitors",
+      "Q03_sessions",
+      "Q04_daily_events",
+      "Q05_daily_unique_visitors",
+      "Q06_top_pages",
+      "Q07_referrer_sources",
+      "Q08_date_range_filter",
+      "Q09_multi_dim_groupby",
+      "Q10_dashboard_kpi",
+      "Q11_utm_campaign_breakdown",
+      "Q12_hourly_pattern"
+    ],
+    "excludedQueries": [],
+    "floatToleranceDecimalPlaces": 6
+  },
+  "perQuery": [
+    {
+      "queryId": "Q01_total_events",
+      "title": "Total events",
+      "description": "Full-table COUNT(*). Cheapest possible scan; a sanity floor.",
+      "postgres": {
+        "n": 30,
+        "min": 3.53,
+        "max": 4.086,
+        "mean": 3.765,
+        "median": 3.761,
+        "p95": 4.065,
+        "p99": 4.086,
+        "stddev": 0.148
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 0.146,
+        "max": 1.001,
+        "mean": 0.517,
+        "median": 0.482,
+        "p95": 0.834,
+        "p99": 1.001,
+        "stddev": 0.216
+      }
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "title": "Unique visitors",
+      "description": "COUNT(DISTINCT user_id) across the whole table - high-cardinality distinct.",
+      "postgres": {
+        "n": 30,
+        "min": 26.704,
+        "max": 29.122,
+        "mean": 27.535,
+        "median": 27.329,
+        "p95": 28.926,
+        "p99": 29.122,
+        "stddev": 0.615
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 0.792,
+        "max": 4.473,
+        "mean": 2.981,
+        "median": 2.674,
+        "p95": 4.426,
+        "p99": 4.473,
+        "stddev": 1.001
+      }
+    },
+    {
+      "queryId": "Q03_sessions",
+      "title": "Total sessions",
+      "description": "COUNT(DISTINCT session_id) - second high-cardinality distinct.",
+      "postgres": {
+        "n": 30,
+        "min": 26.601,
+        "max": 29.254,
+        "mean": 27.278,
+        "median": 27.207,
+        "p95": 27.739,
+        "p99": 29.254,
+        "stddev": 0.484
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 4.151,
+        "max": 6.951,
+        "mean": 5.287,
+        "median": 5.13,
+        "p95": 6.435,
+        "p99": 6.951,
+        "stddev": 0.696
+      }
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "title": "Daily event aggregation",
+      "description": "GROUP BY day over the full table - classic time-series rollup.",
+      "postgres": {
+        "n": 30,
+        "min": 11.302,
+        "max": 12.673,
+        "mean": 11.757,
+        "median": 11.685,
+        "p95": 12.204,
+        "p99": 12.673,
+        "stddev": 0.289
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 1.962,
+        "max": 4.238,
+        "mean": 3.065,
+        "median": 2.854,
+        "p95": 4.133,
+        "p99": 4.238,
+        "stddev": 0.643
+      }
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "title": "Daily unique visitors",
+      "description": "GROUP BY day with a DISTINCT aggregate - substantially harder than Q04.",
+      "postgres": {
+        "n": 30,
+        "min": 19.461,
+        "max": 20.989,
+        "mean": 20.06,
+        "median": 19.977,
+        "p95": 20.824,
+        "p99": 20.989,
+        "stddev": 0.474
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 3.612,
+        "max": 9.18,
+        "mean": 6.551,
+        "median": 6.531,
+        "p95": 8.711,
+        "p99": 9.18,
+        "stddev": 1.77
+      }
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "title": "Page aggregation (top 20)",
+      "description": "GROUP BY path with two aggregates, ordered and limited.",
+      "postgres": {
+        "n": 30,
+        "min": 18.296,
+        "max": 19.196,
+        "mean": 18.64,
+        "median": 18.606,
+        "p95": 19.162,
+        "p99": 19.196,
+        "stddev": 0.236
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 5.307,
+        "max": 8.666,
+        "mean": 6.514,
+        "median": 6.067,
+        "p95": 8.491,
+        "p99": 8.666,
+        "stddev": 1.06
+      }
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "title": "Referrer / source aggregation",
+      "description": "GROUP BY over a normalised expression - forces per-row work before grouping.",
+      "postgres": {
+        "n": 30,
+        "min": 25.891,
+        "max": 27.83,
+        "mean": 26.569,
+        "median": 26.521,
+        "p95": 27.403,
+        "p99": 27.83,
+        "stddev": 0.444
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 10.711,
+        "max": 13.447,
+        "mean": 11.799,
+        "median": 11.685,
+        "p95": 13.42,
+        "p99": 13.447,
+        "stddev": 0.718
+      }
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "title": "Date-range filter (30 days, single site)",
+      "description": "Selective filter on (site_id, timestamp) - the pattern both schemas index.",
+      "postgres": {
+        "n": 30,
+        "min": 9.608,
+        "max": 10.178,
+        "mean": 9.86,
+        "median": 9.833,
+        "p95": 10.149,
+        "p99": 10.178,
+        "stddev": 0.151
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 1.747,
+        "max": 4.66,
+        "mean": 3.071,
+        "median": 2.854,
+        "p95": 4.623,
+        "p99": 4.66,
+        "stddev": 1.068
+      }
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "title": "Multi-dimensional GROUP BY",
+      "description": "Four grouping columns at once - wide aggregation across many columns.",
+      "postgres": {
+        "n": 30,
+        "min": 8.361,
+        "max": 9.282,
+        "mean": 8.631,
+        "median": 8.555,
+        "p95": 9.124,
+        "p99": 9.282,
+        "stddev": 0.221
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 1.918,
+        "max": 5.142,
+        "mean": 2.86,
+        "median": 2.704,
+        "p95": 4.796,
+        "p99": 5.142,
+        "stddev": 0.731
+      }
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "title": "Dashboard-style KPI (single site, 30 days)",
+      "description": "Composite KPI in one pass - mirrors what the KPI card actually needs.",
+      "postgres": {
+        "n": 30,
+        "min": 12.064,
+        "max": 12.995,
+        "mean": 12.427,
+        "median": 12.419,
+        "p95": 12.73,
+        "p99": 12.995,
+        "stddev": 0.227
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 3.913,
+        "max": 5.268,
+        "mean": 4.628,
+        "median": 4.594,
+        "p95": 5.204,
+        "p99": 5.268,
+        "stddev": 0.38
+      }
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "title": "UTM campaign breakdown (30 days)",
+      "description": "Filtered multi-column GROUP BY - acquisition-report shape.",
+      "postgres": {
+        "n": 30,
+        "min": 13.229,
+        "max": 15.143,
+        "mean": 14.052,
+        "median": 13.986,
+        "p95": 14.69,
+        "p99": 15.143,
+        "stddev": 0.396
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 3.132,
+        "max": 6.646,
+        "mean": 4.381,
+        "median": 4.231,
+        "p95": 6.557,
+        "p99": 6.646,
+        "stddev": 0.921
+      }
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "title": "Hourly traffic pattern",
+      "description": "EXTRACT + GROUP BY - per-row function application before grouping.",
+      "postgres": {
+        "n": 30,
+        "min": 11.568,
+        "max": 12.56,
+        "mean": 12.012,
+        "median": 11.936,
+        "p95": 12.329,
+        "p99": 12.56,
+        "stddev": 0.22
+      },
+      "duckdb": {
+        "n": 30,
+        "min": 2.46,
+        "max": 4.84,
+        "mean": 3.454,
+        "median": 3.285,
+        "p95": 4.68,
+        "p99": 4.84,
+        "stddev": 0.65
+      }
+    }
+  ],
+  "samples": [
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 3.53225
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 3.945541
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 3.820542
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 3.624542
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 3.5295
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 4.085958
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 3.721625
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 3.873417
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 3.56875
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 4.064625
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 3.834834
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 3.760916
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 3.722708
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 3.865542
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 3.896667
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 3.600625
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 3.770167
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 3.645792
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 4.027334
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 3.748833
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 3.788625
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 3.854042
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 3.798667
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 3.633666
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 3.641209
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 3.783
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 3.740875
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 3.645958
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 3.618708
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 3.790917
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 0.227791
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 0.189792
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 0.335416
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 0.145792
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 0.711292
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 0.387708
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 0.724833
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 0.369375
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 0.542708
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 0.415083
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 0.481833
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 0.34425
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 0.659959
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 0.419208
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 0.734458
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 0.4465
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 0.834125
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 0.604333
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 0.566459
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 0.275958
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 1.000584
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 0.618833
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 0.814333
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 0.246042
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 0.587083
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 0.478667
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 0.83375
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 0.290333
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 0.585416
+    },
+    {
+      "queryId": "Q01_total_events",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 0.624208
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 26.935042
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 27.468541
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 26.7895
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 27.97025
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 27.697792
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 27.809083
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 27.235458
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 28.183041
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 27.176125
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 26.704292
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 27.149959
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 27.900667
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 27.273958
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 27.320958
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 26.885875
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 28.553416
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 27.208333
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 27.381
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 26.961292
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 28.057042
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 27.082166
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 27.43975
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 26.833333
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 28.125042
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 27.075625
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 28.925917
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 27.784333
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 29.12225
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 27.329333
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 27.679709
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 3.969625
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 2.959
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 4.426208
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 2.725541
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 4.015375
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 2.447709
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 4.473208
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 2.172542
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 3.854667
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 2.267458
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 3.861833
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 2.590875
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 4.328916
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 2.375166
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 4.102834
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 2.44325
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 4.420416
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 2.23975
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 3.809042
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 2.2165
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 3.943833
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 2.316125
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 3.314833
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 2.674167
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 2.790625
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 2.449166
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 0.9505
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 0.792417
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 2.369125
+    },
+    {
+      "queryId": "Q02_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 2.138708
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 27.695166
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 27.457291
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 26.943417
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 27.652208
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 27.080916
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 27.739375
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 26.693334
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 27.224875
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 27.2795
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 27.343875
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 27.666041
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 26.744583
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 27.153542
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 27.260625
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 26.971958
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 27.246334
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 27.588666
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 26.86325
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 26.601125
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 27.033709
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 27.116709
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 27.537667
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 26.832625
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 27.451459
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 27.206375
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 27.206875
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 27.168667
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 27.405125
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 29.253542
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 26.906167
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 4.898542
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 5.222209
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 6.951166
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 4.401917
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 5.290875
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 5.130458
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 5.85875
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 4.351875
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 5.976917
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 4.916459
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 6.215959
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 4.712541
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 5.635417
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 4.151458
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 5.645959
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 4.451208
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 5.810541
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 4.466709
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 4.640083
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 4.754166
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 6.182833
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 4.85875
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 6.102458
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 5.128542
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 6.434541
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 5.107208
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 5.292958
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 5.003792
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 5.824167
+    },
+    {
+      "queryId": "Q03_sessions",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 5.198833
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 12.673042
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 11.690666
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 12.131083
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 12.13325
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 11.70875
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 11.879208
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 11.428166
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 11.520959
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 12.031292
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 11.6365
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 11.301542
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 11.65125
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 12.086
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 12.204042
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 11.92425
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 11.91625
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 11.524708
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 11.528417
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 11.788375
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 11.835208
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 11.684916
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 11.725208
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 11.562917
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 11.819583
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 11.438209
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 11.587417
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 11.585417
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 11.639333
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 11.437291
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 11.646833
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 4.237583
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 2.560291
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 4.1325
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 2.042834
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 3.800959
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 2.854292
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 2.730709
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 2.853042
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 2.904417
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 2.649666
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 4.095417
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 2.540208
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 3.968584
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 2.351833
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 3.617375
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 2.377125
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 2.901125
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 2.735792
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 4.0415
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 1.962334
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 3.431625
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 2.832708
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 3.171458
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 3.152042
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 3.746459
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 2.960458
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 2.664458
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 2.4865
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 3.475375
+    },
+    {
+      "queryId": "Q04_daily_events",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 2.674
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 19.569708
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 20.824417
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 20.703167
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 20.478208
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 20.049208
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 20.989125
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 20.30225
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 20.785417
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 20.658875
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 20.322667
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 20.136917
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 20.445708
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 19.479875
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 20.091292
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 19.474083
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 20.385333
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 19.621083
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 19.9765
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 19.461
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 20.1665
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 19.613959
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 19.92475
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 19.624541
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 19.819084
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 19.497084
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 19.608958
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 19.529541
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 19.73725
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 20.625583
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 19.899625
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 7.050125
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 4.897417
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 8.089709
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 6.146958
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 8.237292
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 6.145541
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 8.377875
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 3.828
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 5.193417
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 4.02775
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 5.487667
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 3.99275
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 8.173291
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 3.611541
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 8.165416
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 4.21025
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 8.309708
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 6.530709
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 8.102417
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 6.357375
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 8.711291
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 5.590709
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 8.699916
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 7.418042
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 9.179625
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 6.712042
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 7.988292
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 5.585666
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 7.977541
+    },
+    {
+      "queryId": "Q05_daily_unique_visitors",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 3.743833
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 18.514208
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 18.764917
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 19.035625
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 18.835042
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 18.678458
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 18.486666
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 18.296375
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 18.53925
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 18.312375
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 18.616791
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 18.361542
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 18.636125
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 18.574458
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 18.789792
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 18.805666
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 18.450542
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 18.580583
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 18.644167
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 18.626417
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 18.566625
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 18.937625
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 19.195792
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 18.476125
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 18.827666
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 18.355041
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 18.719292
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 19.162167
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 18.605792
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 18.31025
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 18.493083
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 5.306959
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 5.449459
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 5.621167
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 6.062833
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 8.072834
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 5.555667
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 5.646709
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 6.711333
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 5.996875
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 5.930959
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 8.666459
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 5.559292
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 8.455167
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 6.576833
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 5.956958
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 6.2445
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 7.32
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 6.475458
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 7.086458
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 6.242167
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 8.490583
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 6.066792
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 5.744916
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 6.098959
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 8.439958
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 5.478125
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 8.202833
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 5.790709
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 5.857583
+    },
+    {
+      "queryId": "Q06_top_pages",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 6.299042
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 26.3765
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 27.208167
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 26.059333
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 26.913084
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 25.891
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 26.517792
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 26.139167
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 27.403334
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 26.496417
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 26.452833
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 26.221917
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 26.562666
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 27.830042
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 26.82975
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 26.566375
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 26.831875
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 26.83525
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 26.829292
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 25.959208
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 26.760208
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 26.699458
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 26.258042
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 26.301875
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 26.802375
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 25.930667
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 26.396958
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 26.520959
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 26.606
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 25.980792
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 26.90275
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 12.4325
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 12.081833
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 11.685
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 11.450792
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 11.054625
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 10.937
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 10.711459
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 12.238875
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 13.446625
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 11.690333
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 12.35075
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 11.244917
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 12.341083
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 11.371708
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 11.099708
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 11.776625
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 13.420416
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 11.407625
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 13.218209
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 11.438541
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 11.991791
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 11.02775
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 11.392917
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 11.382333
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 11.093125
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 11.890417
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 12.528709
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 11.720875
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 12.223375
+    },
+    {
+      "queryId": "Q07_referrer_sources",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 11.313875
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 10.018333
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 9.607625
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 9.721792
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 9.965416
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 9.713333
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 9.686417
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 9.612208
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 9.832875
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 9.956542
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 9.886666
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 9.816583
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 9.913375
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 9.808084
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 10.003917
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 9.790791
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 9.778334
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 9.795208
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 9.866875
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 9.66475
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 9.742208
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 9.790875
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 10.013208
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 9.871459
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 10.119291
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 9.704333
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 10.1485
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 9.887917
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 9.976375
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 9.94025
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 10.1775
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 1.834667
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 1.746917
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 4.130292
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 1.842
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 2.059
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 2.648167
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 4.623
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 2.552917
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 4.052834
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 3.268875
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 3.966292
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 1.829833
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 4.059334
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 2.259958
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 4.135625
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 1.886292
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 4.140917
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 3.360125
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 4.659666
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 2.853708
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 4.218625
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 2.1625
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 3.715208
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 1.825667
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 4.157084
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 1.852334
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 4.20925
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 1.96625
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 4.218708
+    },
+    {
+      "queryId": "Q08_date_range_filter",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 1.898916
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 8.629583
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 8.523792
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 8.554875
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 8.624333
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 8.7305
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 8.468125
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 8.533291
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 8.992417
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 8.715333
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 8.441375
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 8.720375
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 8.413542
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 8.587125
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 8.516667
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 8.412083
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 9.123875
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 9.057667
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 8.754
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 8.64475
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 8.524125
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 8.672125
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 8.494958
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 8.360542
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 8.612125
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 8.465708
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 8.448167
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 8.585458
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 9.282
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 8.515
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 8.520209
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 2.608417
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 2.709833
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 4.795875
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 3.661708
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 2.245583
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 2.459458
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 2.414125
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 2.947583
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 2.78325
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 2.826042
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 2.675291
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 2.703667
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 5.141958
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 2.640625
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 2.267167
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 3.9155
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 2.86275
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 2.01225
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 2.683958
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 2.62575
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 2.153916
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 3.170666
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 2.707125
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 1.917667
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 3.260458
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 2.804166
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 2.345958
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 2.760166
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 2.24725
+    },
+    {
+      "queryId": "Q09_multi_dim_groupby",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 3.449625
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 12.528041
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 12.583417
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 12.547417
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 12.72575
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 12.488125
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 12.641459
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 12.484792
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 12.994792
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 12.349833
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 12.729666
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 12.153875
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 12.50275
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 12.167375
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 12.192416
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 12.221834
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 12.325791
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 12.292833
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 12.536208
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 12.256125
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 12.473875
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 12.063917
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 12.713
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 12.218
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 12.596042
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 12.259875
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 12.4155
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 12.07625
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 12.419125
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 12.167417
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 12.685125
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 4.862708
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 3.936291
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 4.436208
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 4.3855
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 4.131
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 4.20975
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 4.605833
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 4.870208
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 4.52825
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 5.267791
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 4.508542
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 4.859084
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 5.1165
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 4.823584
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 5.204084
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 4.528333
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 3.912541
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 4.84125
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 5.082792
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 5.033625
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 4.843334
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 4.297458
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 4.594125
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 4.334959
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 4.45225
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 4.943875
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 4.687041
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 3.934042
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 5.04925
+    },
+    {
+      "queryId": "Q10_dashboard_kpi",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 4.555041
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 13.866042
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 14.375375
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 13.9005
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 13.838166
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 14.69025
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 13.738292
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 14.487542
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 15.142875
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 13.609833
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 14.021458
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 13.773208
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 13.988375
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 13.992541
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 13.884792
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 14.600542
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 13.986042
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 13.746666
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 13.811916
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 13.650209
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 14.5815
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 14.174083
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 14.216042
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 13.229084
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 14.234125
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 13.779708
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 13.95425
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 14.161542
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 14.270625
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 13.532875
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 14.33475
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 4.526541
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 4.070917
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 6.42675
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 3.37675
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 6.5565
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 4.494292
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 4.079209
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 4.056541
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 3.478208
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 4.187375
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 3.484959
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 4.230958
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 4.146042
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 4.275166
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 3.550542
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 4.173542
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 5.224792
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 3.632292
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 5.489167
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 4.6665
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 3.2795
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 4.490208
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 4.7595
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 4.367209
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 3.132208
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 4.546291
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 6.646
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 4.315083
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 3.295958
+    },
+    {
+      "queryId": "Q11_utm_campaign_breakdown",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 4.478166
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 1,
+      "ms": 12.27125
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 2,
+      "ms": 12.161542
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 3,
+      "ms": 11.871583
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 4,
+      "ms": 12.559625
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 5,
+      "ms": 11.825833
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 6,
+      "ms": 12.124542
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 7,
+      "ms": 11.856583
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 8,
+      "ms": 12.185125
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 9,
+      "ms": 11.5675
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 10,
+      "ms": 12.14575
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 11,
+      "ms": 12.077084
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 12,
+      "ms": 11.715542
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 13,
+      "ms": 11.80325
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 14,
+      "ms": 11.935583
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 15,
+      "ms": 11.885
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 16,
+      "ms": 12.200875
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 17,
+      "ms": 11.829958
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 18,
+      "ms": 12.181667
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 19,
+      "ms": 11.901666
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 20,
+      "ms": 12.28175
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 21,
+      "ms": 11.727541
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 22,
+      "ms": 12.099167
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 23,
+      "ms": 11.863792
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 24,
+      "ms": 11.871583
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 25,
+      "ms": 11.860875
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 26,
+      "ms": 12.328791
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 27,
+      "ms": 12.080167
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 28,
+      "ms": 11.964833
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 29,
+      "ms": 11.918458
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "postgres",
+      "iteration": 30,
+      "ms": 12.273792
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 1,
+      "ms": 2.74325
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 2,
+      "ms": 2.495417
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 3,
+      "ms": 2.864375
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 4,
+      "ms": 2.745959
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 5,
+      "ms": 3.117666
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 6,
+      "ms": 2.868959
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 7,
+      "ms": 3.1045
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 8,
+      "ms": 2.459917
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 9,
+      "ms": 3.767292
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 10,
+      "ms": 3.1865
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 11,
+      "ms": 3.718125
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 12,
+      "ms": 3.469667
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 13,
+      "ms": 3.952083
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 14,
+      "ms": 3.48875
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 15,
+      "ms": 3.33725
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 16,
+      "ms": 3.222916
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 17,
+      "ms": 4.839625
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 18,
+      "ms": 3.204542
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 19,
+      "ms": 4.613375
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 20,
+      "ms": 3.064917
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 21,
+      "ms": 4.173667
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 22,
+      "ms": 3.0225
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 23,
+      "ms": 4.261291
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 24,
+      "ms": 3.285
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 25,
+      "ms": 4.680125
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 26,
+      "ms": 3.032167
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 27,
+      "ms": 3.353125
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 28,
+      "ms": 3.305167
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 29,
+      "ms": 4.550584
+    },
+    {
+      "queryId": "Q12_hourly_pattern",
+      "engine": "duckdb",
+      "iteration": 30,
+      "ms": 3.701958
+    }
+  ]
+}

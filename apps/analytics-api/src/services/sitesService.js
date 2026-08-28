@@ -80,17 +80,96 @@ export const sitesService = {
   },
 
   getRawTrackingScript(siteId, serverUrl = process.env.SERVER_URL || 'http://localhost:3001') {
+    // How long a visitor id survives without a return visit. Bounds how far back
+    // one visitor can be correlated; set VISITOR_ID_TTL_DAYS=0 to disable
+    // rotation and keep the previous unbounded behaviour.
+    const uidTtlDays = Number.isFinite(Number(process.env.VISITOR_ID_TTL_DAYS))
+      ? Math.max(0, Number(process.env.VISITOR_ID_TTL_DAYS))
+      : 180;
     return `(function() {
   var siteId = ${JSON.stringify(siteId)};
   var serverUrl = ${JSON.stringify(serverUrl)};
-  
-  function getUserId() {
-    var userId = localStorage.getItem('_analytics_uid');
-    if (!userId) {
-      userId = 'u_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('_analytics_uid', userId);
+
+  // ── Privacy opt-out: Do Not Track / Global Privacy Control ──────────────────
+  // Runs BEFORE any storage access or network request. When the visitor has
+  // signalled opt-out we return immediately, so no visitor id, no session id and
+  // no analytics request is ever created. Everything below this point — including
+  // getUserId()/getSessionId() and the window.analytics helpers — is unreachable.
+  //
+  // Signals are read conservatively: only the explicit opt-out values count.
+  // DNT "0", false, null, undefined and unrelated values are NOT opt-out.
+  // navigator.doNotTrack is a STRING in every browser that ships it.
+  //
+  // This is a technical control that honours the browser signal. It is not, by
+  // itself, a statement about legal compliance.
+  try {
+    var _dnt = navigator.doNotTrack === '1';
+    var _gpc = navigator.globalPrivacyControl === true;
+    if (_dnt || _gpc) {
+      // Expose an inert stub so callers of window.analytics.track(...) on an
+      // opted-out visitor get a no-op rather than a TypeError.
+      window.analytics = {
+        track: function() {},
+        identify: function() {},
+        optedOut: true
+      };
+      return;
     }
-    return userId;
+  } catch (e) {
+    // navigator unavailable (non-browser host). Fall through to normal behaviour
+    // rather than failing closed — this matches the pre-existing contract, and an
+    // environment without navigator has no opt-out signal to honour.
+  }
+
+  // Visitor ID with a rolling expiry. Without one the identifier lives in
+  // localStorage forever, so a visitor stays linkable across sessions
+  // indefinitely. The stored value is JSON: { id, exp }. Passing exp mints a
+  // fresh ID, which caps how far back any one visitor can be correlated.
+  //
+  // The window refreshes on each use, so a regular visitor is not re-counted as
+  // new mid-stream; it only elapses after ${uidTtlDays} days with no visits.
+  // A TTL of 0 disables rotation (ids then never expire).
+  var UID_TTL_MS = ${uidTtlDays} * 24 * 60 * 60 * 1000;
+
+  function newUid() {
+    // crypto.randomUUID where available (collision-resistant); the previous
+    // Math.random() form remains the fallback for older browsers.
+    try {
+      if (window.crypto && window.crypto.randomUUID) {
+        return 'u_' + window.crypto.randomUUID().replace(/-/g, '').substr(0, 16);
+      }
+    } catch (e) {}
+    return 'u_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  function getUserId() {
+    var now = Date.now();
+    var raw = null;
+    try { raw = localStorage.getItem('_analytics_uid'); } catch (e) { return newUid(); }
+
+    if (raw) {
+      // Values written before rotation existed are bare strings, not JSON.
+      // Adopt them once and attach an expiry rather than resetting the visitor.
+      if (raw.charAt(0) !== '{') {
+        var migrated = { id: raw, exp: now + UID_TTL_MS };
+        try { localStorage.setItem('_analytics_uid', JSON.stringify(migrated)); } catch (e) {}
+        return raw;
+      }
+      try {
+        var rec = JSON.parse(raw);
+        if (rec && rec.id && (UID_TTL_MS === 0 || (rec.exp && now < rec.exp))) {
+          if (UID_TTL_MS > 0) {
+            rec.exp = now + UID_TTL_MS;   // sliding window
+            try { localStorage.setItem('_analytics_uid', JSON.stringify(rec)); } catch (e) {}
+          }
+          return rec.id;
+        }
+      } catch (e) { /* corrupt value — fall through and mint a new one */ }
+    }
+
+    var fresh = { id: newUid(), exp: now + UID_TTL_MS };
+    try { localStorage.setItem('_analytics_uid', JSON.stringify(fresh)); } catch (e) {}
+    return fresh.id;
   }
   
   function getSessionId() {
@@ -368,7 +447,16 @@ export const sitesService = {
     } else if (el.className && typeof el.className === 'string' && el.className.trim()) {
       sel += '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.');
     }
-    var text = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim().substring(0, 100);
+    // Label for the clicked element. Deliberately never reads a form control's
+    // entered value: on a populated input that is whatever the visitor typed
+    // (search terms, an email, a form entry), which must not leave the page.
+    // For form controls we use the accessible label or the field's name — both
+    // authored by the site, not entered by the visitor.
+    var _tag = el.tagName.toLowerCase();
+    var text = (_tag === 'input' || _tag === 'textarea' || _tag === 'select')
+      ? (el.getAttribute('aria-label') || el.getAttribute('name') || '')
+      : (el.innerText || el.getAttribute('aria-label') || '');
+    text = String(text).trim().substring(0, 100);
     var relX = Math.round((e.clientX / window.innerWidth) * 100);
     var relY = Math.round((e.clientY / window.innerHeight) * 100);
     var props = {
@@ -560,7 +648,20 @@ export const sitesService = {
         url: window.location.href, path: window.location.pathname, properties: props || {}
       });
     },
-    identify: function(uid) { localStorage.setItem('_analytics_uid', uid); }
+    // Replaces the pseudonymous visitor ID with one you supply.
+    //
+    // NOTE: passing a direct identifier (email address, account ID, username)
+    // makes every subsequent event directly attributable to a named person
+    // rather than pseudonymous. Prefer an opaque internal ID that cannot be
+    // resolved to a person without your own systems.
+    identify: function(uid) {
+      if (uid == null || uid === '') return;
+      try {
+        localStorage.setItem('_analytics_uid', JSON.stringify({
+          id: String(uid), exp: Date.now() + UID_TTL_MS
+        }));
+      } catch (e) {}
+    }
   };
 })();`;
   },

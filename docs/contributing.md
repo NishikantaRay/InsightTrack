@@ -1,29 +1,15 @@
 # Contributing Guide
 
-How to contribute to InsightTrack.
+The contribution guide has moved to **[CONTRIBUTING.md](../CONTRIBUTING.md)** in
+the repository root, where GitHub surfaces it automatically.
 
----
-
-## Workflow
-1. Fork and clone the repo
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Make changes and add tests
-4. Run all tests locally
-5. Commit with clear messages
-6. Open a pull request (PR)
-
-## Code Style
-- Follow ES module syntax
-- Use Prettier and ESLint (see config files)
-- Tailwind for CSS
-- Keep functions/components small
-
-## PR Review
-- All PRs require review — process, risk table, and checklists live in
-  `.claude/skills/insighttrack/references/review-security.md`
+It covers development setup, running the app, tests, database setup, Docker, and
+how to submit issues and pull requests.
 
 ---
 
 ## See Also
 - [testing.md](./testing.md)
 - [index.md](./index.md) — full documentation index
+- [review-security.md](../.claude/skills/insighttrack/references/review-security.md) —
+  PR review process, risk table, and checklists

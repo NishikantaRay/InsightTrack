@@ -1,20 +1,42 @@
 # Performance Architecture — InsightTrack
 
-> How InsightTrack handles millions of events with sub-second query latency.
+> How InsightTrack's analytics read path is structured for large event volumes.
 
 ---
 
-## Benchmarked Query Performance
+## Historical Query Measurements
 
-Real numbers measured with DuckDB on Apple M4 (same engine used in Docker):
+> **⚠️ These are historical, internal measurements — not a reproducible benchmark.**
+>
+> They were recorded during development and are retained for architectural context
+> only. Per [`PERFORMANCE_BENCHMARK_AUDIT.md`](./PERFORMANCE_BENCHMARK_AUDIT.md)
+> they **cannot currently be reproduced from repository artifacts**:
+>
+> - **Dataset:** the 1M / 10M / 100M datasets have no generator in this repository.
+>   `scripts/load-test-data.js` can produce arbitrary event counts but is **unseeded**,
+>   so two runs yield different data and different query selectivity.
+> - **Environment:** recorded only as "Apple M4". RAM, OS, Node, and DuckDB versions
+>   were not captured.
+> - **Runs:** the number of iterations was not recorded.
+> - **Cache state:** not recorded.
+> - **Measurement boundary:** not recorded. The repository's current harness
+>   (`scripts/benchmark.js`) measures **HTTP/API latency including the application
+>   response cache**, not DuckDB execution time.
+> - **Baseline:** none. No PostgreSQL comparison exists in this repository.
+>
+> Treat the figures below as indicative of the shape of the problem, not as
+> verified results.
 
 | Events in DB | KPI query | Traffic chart | Top pages | RAM used |
 |---|---|---|---|---|
 | 1M | 9ms | 5ms | 6ms | ~50 MB |
 | 10M | 88ms | 42ms | — | ~985 MB |
-| 100M | 3.9s → **< 5ms** with daily_stats | 522ms | 869ms | ~3 GB |
+| 100M | 3.9s → < 5ms with daily_stats | 522ms | 869ms | ~3 GB |
 
-With `daily_stats` pre-aggregation active (enabled by default), historical KPI/traffic queries return in **< 5ms at any dataset size**.
+`daily_stats` pre-aggregation (enabled by default) is intended to keep historical
+KPI/traffic reads cheap by serving them from a per-day rollup rather than scanning
+raw events. The magnitude of that effect has not been re-measured under a
+controlled methodology.
 
 ---
 
@@ -36,7 +58,7 @@ Browser (tracking script)
 │     Request → In-memory cache (30–120s TTL)                    │
 │               │ miss? coalesced — only 1 DuckDB query fired     │
 │               ▼                                                  │
-│     daily_stats (< 1ms) for historical ranges (> today)        │
+│     daily_stats rollup for historical ranges (> today)         │
 │     raw events for today / yesterday (live data)               │
 └─────────────────────────────────────────────────────────────────┘
         │
@@ -71,7 +93,7 @@ Browser (tracking script)
 DUCKDB_POOL_SIZE=4   # increase on 8+ core machines
 ```
 
-**Impact:** 50 concurrent dashboard users → queries run 4 at a time instead of 1. P99 latency drops ~4×.
+**Impact:** 50 concurrent dashboard users → queries run 4 at a time instead of 1. No P99 measurement exists in this repository; the ~4× figure previously stated here was not produced by any benchmark.
 
 ---
 
@@ -123,7 +145,7 @@ CREATE INDEX idx_sessions_site_ts  ON sessions(site_id, started_at);
 CREATE INDEX idx_daily_stats_site_date ON daily_stats(site_id, date);
 ```
 
-**Impact:** 5–20× speedup on selective (single-site, date-filtered) queries. The gain is largest for small sites querying a subset of a large multi-tenant dataset.
+**Impact:** intended to speed up selective (single-site, date-filtered) queries, with the largest gain for small sites querying a subset of a large multi-tenant dataset. No A/B measurement of this exists in the repository, so no multiple is claimed.
 
 ---
 
@@ -131,7 +153,7 @@ CREATE INDEX idx_daily_stats_site_date ON daily_stats(site_id, date);
 
 **Files:** `src/sync/sync.js` (writes rollups), `src/queries/queries.js` (reads from `daily_stats`)
 
-**Before:** Every KPI/traffic query scanned raw `events` table regardless of date range. 100M rows × 30-day KPI = 3.9s.
+**Before:** every KPI/traffic query scanned the raw `events` table regardless of date range. The 3.9s figure for 100M rows comes from the historical measurements above and is not independently reproducible.
 
 **After:** After each sync, `computeDailyRollups()` aggregates events into `daily_stats` (one row per site per day). Queries for historical ranges (any range that doesn't include today) read from `daily_stats` instead.
 
@@ -143,7 +165,7 @@ daily_stats:  site_id | date       | visitors | sessions | pageviews | ...
 ```
 
 **Query routing:**
-- `dateRange=30d` and end date is not today → reads 30 rows from `daily_stats` → **< 1ms**
+- `dateRange=30d` and end date is not today → reads 30 rows from `daily_stats` (a small point read rather than a raw-event scan; not separately benchmarked)
 - `dateRange=1d` or today is in range → reads raw events (live numbers)
 - Fallback: if `daily_stats` is empty for the range → falls back to raw events automatically
 
@@ -153,13 +175,19 @@ daily_stats:  site_id | date       | visitors | sessions | pageviews | ...
 
 ## Capacity at Each Scale
 
-| Monthly pageviews | Server | Daily stats query | Concurrent users |
+> **⚠️ Planning guidance, not measured capacity.** The server sizings and
+> concurrency ranges below are estimates that have not been load-tested in this
+> repository. The "daily stats query" column reflects the intent of the
+> `daily_stats` rollup (a small per-day point read rather than a raw-event scan),
+> not a measured latency at these scales.
+
+| Monthly pageviews | Server (estimate) | Daily stats read | Concurrent users (estimate) |
 |---|---|---|---|
-| < 500K | 1 vCPU, 1 GB RAM | < 1ms | 1–20 |
-| 500K – 5M | 2 vCPU, 4 GB RAM | < 1ms | 20–100 |
-| 5M – 50M + S3 | 4 vCPU, 8 GB RAM | < 1ms | 50–200 |
-| 50M – 500M + S3 | 8 vCPU, 16 GB RAM | < 1ms | 100–500 |
-| 500M+ | Multiple instances + Redis | < 1ms | Unlimited |
+| < 500K | 1 vCPU, 1 GB RAM | rollup point read | 1–20 |
+| 500K – 5M | 2 vCPU, 4 GB RAM | rollup point read | 20–100 |
+| 5M – 50M + S3 | 4 vCPU, 8 GB RAM | rollup point read | 50–200 |
+| 50M – 500M + S3 | 8 vCPU, 16 GB RAM | rollup point read | 100–500 |
+| 500M+ | Multiple instances + Redis | rollup point read | Unlimited |
 
 ---
 
@@ -195,8 +223,8 @@ ARCHIVE_DAYS=30              # events older than this → S3
 |---|---|---|
 | Redis cache adapter | Multi-instance, cache survives restarts | When running 2+ Node instances |
 | PM2 cluster mode | Use all CPU cores | When CPU is the bottleneck |
-| PgBouncer | 10× PG write throughput | > 5M events/day |
-| Write buffer in trackingService | 10× write throughput at burst | > 1K events/sec sustained |
+| PgBouncer | Higher PG write throughput (not benchmarked here) | > 5M events/day |
+| Write buffer in trackingService | Higher burst write throughput (not benchmarked here) | > 1K events/sec sustained |
 
 ---
 

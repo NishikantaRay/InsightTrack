@@ -89,6 +89,104 @@ const EPOCH = '1970-01-01T00:00:00.000Z';
 // Prevent concurrent syncs
 let _syncRunning = false;
 
+/**
+ * Wait until no sync is in flight, then hold the sync lock while `fn` runs.
+ *
+ * runSync() *skips* when the lock is held (a missed periodic tick is harmless).
+ * Retention deletion cannot skip — dropping it would leave PostgreSQL and DuckDB
+ * permanently inconsistent — so this waits for the lock instead of bailing out.
+ *
+ * Holding the same lock is what makes deletion safe against a concurrent sync:
+ * a sync can never be midway through inserting rows while we delete them, and
+ * the keyset cursor in _sync_meta cannot advance underneath us.
+ */
+async function withSyncLock(fn, { timeoutMs = 60_000, pollMs = 50 } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (_syncRunning) {
+        if (Date.now() > deadline) {
+            throw new Error('Timed out waiting for the PG→DuckDB sync lock');
+        }
+        await new Promise((r) => setTimeout(r, pollMs));
+    }
+    _syncRunning = true;
+    try {
+        return await fn();
+    } finally {
+        _syncRunning = false;
+    }
+}
+
+/**
+ * Mirror a retention deletion into DuckDB.
+ *
+ * Why this exists: the sync is additive in both of its modes. `events` is
+ * append-only and advances a keyset cursor (`_sync_meta.last_id`), so rows below
+ * the cursor are never revisited; `sessions` advances a timestamp watermark and
+ * upserts by id. Neither strategy can observe a row that is simply *gone* from
+ * PostgreSQL, so a retention DELETE there never reaches DuckDB — and DuckDB is
+ * what every dashboard, SQL Editor, Pulse and MCP read actually queries.
+ *
+ * This applies the SAME predicate to DuckDB that reportingService applied to
+ * PostgreSQL, so the two stores agree. It deliberately does NOT touch
+ * `_sync_meta`: the keyset cursor must keep advancing from where it was, or the
+ * next incremental sync would re-fetch and resurrect the deleted rows.
+ *
+ * daily_stats is a DuckDB-owned rollup (not synced from PG) that recomputes only
+ * *forward* from MAX(date), so rows for affected days are deleted here and
+ * rebuilt by computeDailyRollups() on the next sync — otherwise the dashboard
+ * would keep serving aggregates derived from deleted events.
+ *
+ * @param {string} siteId  site whose data is being pruned
+ * @param {string} cutoffISO  delete records strictly older than this instant
+ * @returns {Promise<{events:number, sessions:number, dailyStats:number}>} rows removed
+ */
+export async function applyRetentionDeletionToDuck(siteId, cutoffISO) {
+    if (!siteId || !cutoffISO) {
+        throw new Error('applyRetentionDeletionToDuck requires siteId and cutoffISO');
+    }
+
+    return withSyncLock(async () => {
+        const countOf = async (sql, params) => {
+            const rows = await duckAll(sql, params);
+            return Number(rows[0]?.cnt ?? 0);
+        };
+
+        // Count first so we can report what was removed (DuckDB's run() gives no
+        // affected-row count through this binding).
+        const events = await countOf(
+            `SELECT COUNT(*) AS cnt FROM events WHERE site_id = ? AND timestamp < ?`,
+            [siteId, cutoffISO],
+        );
+        const sessions = await countOf(
+            `SELECT COUNT(*) AS cnt FROM sessions WHERE site_id = ? AND started_at < ?`,
+            [siteId, cutoffISO],
+        );
+        const cutoffDate = cutoffISO.split('T')[0];
+        const dailyStats = await countOf(
+            `SELECT COUNT(*) AS cnt FROM daily_stats WHERE site_id = ? AND date < ?`,
+            [siteId, cutoffDate],
+        );
+
+        await duckRun(
+            `DELETE FROM events WHERE site_id = ? AND timestamp < ?`,
+            [siteId, cutoffISO],
+        );
+        await duckRun(
+            `DELETE FROM sessions WHERE site_id = ? AND started_at < ?`,
+            [siteId, cutoffISO],
+        );
+        // Drop rollup rows whose source events are gone. computeDailyRollups()
+        // only fills days *after* MAX(date), so these are not silently rebuilt
+        // with stale numbers.
+        await duckRun(
+            `DELETE FROM daily_stats WHERE site_id = ? AND date < ?`,
+            [siteId, cutoffDate],
+        );
+
+        return { events, sessions, dailyStats };
+    });
+}
+
 // ─── helpers ─────────────────────────────────────────────────────
 
 async function ensureSchema() {
@@ -98,6 +196,15 @@ async function ensureSchema() {
     for (const stmt of statements) {
         await duckRun(stmt);
     }
+    // Security migration: drop the DuckDB `users` table on existing installs.
+    // It previously replicated bcrypt password hashes from PostgreSQL into the
+    // analytics DB, where the SQL Editor could read them
+    // where the SQL Editor could read them. It is no longer synced or created;
+    // this removes any copy left behind by an earlier version.
+    try {
+        await duckRun(`DROP TABLE IF EXISTS users`);
+    } catch { /* already absent — nothing to clean up */ }
+
     // Migration for DBs created before the keyset cursor column existed.
     try {
         await duckRun(`ALTER TABLE _sync_meta ADD COLUMN IF NOT EXISTS last_id BIGINT DEFAULT 0`);

@@ -1,55 +1,24 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
-import { duckAll } from '../db/duckdb.js';
+import { duckAll, duckRun } from '../db/duckdb.js';
 import { query as pgQuery } from '../db/postgres.js';
 import { authMiddleware } from '../middleware/auth.js';
 import sitesService from '../services/sitesService.js';
 import { safeMsg } from '../utils/safeError.js';
+import {
+    validateQuery,
+    clampTimeout,
+    scopeQueryToSite,
+    applyRowCap,
+    MAX_RESULT_ROWS as GUARD_MAX_ROWS,
+} from './sqlGuard.js';
 
 const router = express.Router();
 
-const MAX_SQL_LENGTH = 20_000;
-const MAX_RESULT_ROWS = 1000;
+const MAX_RESULT_ROWS = GUARD_MAX_ROWS;
 const DEFAULT_TIMEOUT_MS = Number(process.env.SQL_EDITOR_TIMEOUT_MS || 15_000);
 
-const dangerousPattern = /\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|PRAGMA|ATTACH|DETACH|COPY|EXPORT|IMPORT|LOAD|INSTALL|CHECKPOINT|VACUUM|CALL|EXECUTE|GRANT|REVOKE)\b/i;
-
 router.use(authMiddleware);
-
-/**
- * Strip SQL comments and validate the query is read-only.
- * Returns an error string, or null if valid.
- */
-function validateQuery(sql) {
-    if (!sql || typeof sql !== 'string') return 'Query must be a non-empty string.';
-    if (sql.length > MAX_SQL_LENGTH) return `Query exceeds the ${MAX_SQL_LENGTH} character limit.`;
-
-    // Strip single-line and block comments to avoid hiding dangerous keywords
-    const stripped = sql
-        .replace(/--[^\n]*/g, ' ')
-        .replace(/\/\*[\s\S]*?\*\//g, ' ')
-        .trim();
-
-    if (!stripped) return 'Query is empty after stripping comments.';
-
-    // Must begin with SELECT/WITH/EXPLAIN (read-only)
-    if (!/^(SELECT|WITH|EXPLAIN)\b/i.test(stripped)) {
-        return 'Only SELECT / WITH / EXPLAIN queries are permitted.';
-    }
-
-    // Permit only one SQL statement (optional trailing semicolon)
-    const normalized = stripped.replace(/;+\s*$/, '').trim();
-    if (normalized.includes(';')) {
-        return 'Only a single SQL statement is allowed.';
-    }
-
-    // Block any mutating or administrative keyword anywhere in the query
-    if (dangerousPattern.test(stripped)) {
-        return 'Query contains a disallowed keyword (INSERT, UPDATE, DELETE, DROP, etc.). Only read-only SELECT queries are permitted.';
-    }
-
-    return null;
-}
 
 function extractTemplateVariables(sql) {
     if (!sql) return [];
@@ -352,15 +321,37 @@ router.post('/:siteId/run', async (req, res) => {
 
     const usedVariables = extractTemplateVariables(query);
 
-    // 4. Append LIMIT if the user did not supply one
-    const hasLimit = /\bLIMIT\s+\d+/i.test(withVars);
-    const withLimit = hasLimit ? withVars : `${withVars.trimEnd()} LIMIT ${MAX_RESULT_ROWS}`;
-    const finalQuery = explain ? `EXPLAIN ${withLimit}` : withLimit;
+    // 3b. Re-validate AFTER substitution. Template values come from the request
+    //     body and are interpolated as SQL literals, so a value could otherwise
+    //     smuggle a disallowed construct into an already-approved query
+    //     (audit F-09). Validating the post-substitution text closes that gap.
+    const postSubstitutionError = validateQuery(withVars);
+    if (postSubstitutionError) {
+        return res.status(400).json({
+            error: `Template variable produced a disallowed query: ${postSubstitutionError}`,
+        });
+    }
+
+    // 4. Bind the query to this site and enforce a hard row cap.
+    //    Tenant scoping (audit F-05): each referenced analytics table is swapped
+    //    for a TEMP VIEW filtered to this site, so an unfiltered
+    //    `SELECT * FROM events` cannot read another tenant's rows.
+    //    Row cap (audit F-07): wrapping in an outer LIMIT binds even when the
+    //    user supplied a larger LIMIT of their own.
+    const { views, rewritten } = scopeQueryToSite(withVars, siteId);
+    const finalQuery = applyRowCap(rewritten, { explain, max: MAX_RESULT_ROWS });
 
     // 5. Execute
     try {
         const start = Date.now();
-        const rows = await withTimeout(duckAll(finalQuery), Math.max(1000, Number(timeoutMs) || DEFAULT_TIMEOUT_MS));
+
+        // Create the per-request scoped views before running the query.
+        // createSql is built by sqlGuard (DuckDB cannot bind parameters in DDL).
+        for (const { createSql } of views) {
+            await duckRun(createSql);
+        }
+
+        const rows = await withTimeout(duckAll(finalQuery), clampTimeout(timeoutMs, DEFAULT_TIMEOUT_MS));
         const duration = Date.now() - start;
 
         const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
@@ -382,7 +373,7 @@ router.post('/:siteId/run', async (req, res) => {
             rows: rows.map((r) => columns.map((c) => serialize(r[c]))),
             rowCount: rows.length,
             duration,
-            truncated: !hasLimit && rows.length === MAX_RESULT_ROWS,
+            truncated: rows.length === MAX_RESULT_ROWS,
             explain,
             variablesUsed: usedVariables,
         });
@@ -400,6 +391,10 @@ router.post('/:siteId/run', async (req, res) => {
         const duration = null;
         const rawMessage = error.message ?? 'Query execution failed.';
         const diagnostics = parseSqlErrorDetails(rawMessage);
+        // Surface SQL-level feedback (the editor is useless without it) but never
+        // absolute filesystem paths, which aid reconnaissance (audit F-10). The
+        // unredacted message is still written to sql_query_audits below.
+        const clientMessage = rawMessage.replace(/(?:\/[\w.\-]+){2,}/g, '<path>');
 
         await logAudit({
             requestId,
@@ -414,14 +409,14 @@ router.post('/:siteId/run', async (req, res) => {
 
         if (/timed out/i.test(rawMessage)) {
             return res.status(408).json({
-                error: rawMessage,
+                error: clientMessage,
                 requestId,
                 diagnostics,
             });
         }
 
         res.status(400).json({
-            error: rawMessage,
+            error: clientMessage,
             requestId,
             diagnostics,
         });

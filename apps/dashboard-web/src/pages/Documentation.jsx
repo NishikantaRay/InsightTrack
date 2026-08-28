@@ -393,7 +393,7 @@ function BusinessOwnerGuide() {
                     </div>
                     <div className="flex gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
                         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-                        <p><strong className="text-green-700 dark:text-green-400">Your data stays on your servers.</strong> Unlike Google Analytics, no visitor data is sent to any external company. You are the data controller and data processor. This simplifies GDPR compliance significantly.</p>
+                        <p><strong className="text-green-700 dark:text-green-400">Your data stays on your servers.</strong> The tracking pipeline sends no visitor data to any external company. Optional integrations you enable (Pulse AI providers, Sentry, S3/R2 storage) send data to those services by design. Because you self-host, you act as the data controller — consult applicable privacy requirements for your deployment.</p>
                     </div>
                     <div className="flex gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                         <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
@@ -1381,7 +1381,7 @@ window.trackPurchase(29.99);`}</CodeBlock>
             <Collapsible title="Tracking Script — Auto-Captured Events" icon={MousePointerClick} color="text-blue-500">
                 <div className="space-y-4">
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                        Lightweight (&lt;2KB gzipped) — no cookies, no fingerprinting, no IP storage. Respects DNT and GPC signals automatically.
+                        A single tag (~7.5 KB gzipped in the current build) — no cookies, no fingerprinting, no IP storage. Respects DNT and GPC signals.
                     </p>
                     <div className="rounded-lg border border-border dark:border-border-dark overflow-hidden">
                         <table className="w-full text-xs">
@@ -1507,8 +1507,8 @@ window.trackPurchase(29.99);`}</CodeBlock>
                 <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         {[
-                            { feature: 'Do Not Track (DNT)', detail: 'Tracking script checks navigator.doNotTrack and halts if enabled' },
-                            { feature: 'Global Privacy Control (GPC)', detail: 'Respects navigator.globalPrivacyControl signal' },
+                            { feature: 'Do Not Track (DNT)', detail: 'Script exits before any storage or network access when navigator.doNotTrack === "1"; the API also declines requests carrying DNT: 1' },
+                            { feature: 'Global Privacy Control (GPC)', detail: 'Same behaviour for navigator.globalPrivacyControl === true and the Sec-GPC: 1 header' },
                             { feature: 'No cookies', detail: 'Anonymous user ID in localStorage only' },
                             { feature: 'No IP storage', detail: 'IP addresses never written to any table' },
                             { feature: 'Self-hosted', detail: 'All data stays on your own infrastructure' },
@@ -1700,15 +1700,14 @@ DELETE /api/invite/:token                  → cancel pending invite`}</CodeBloc
             {/* Performance Architecture */}
             <Collapsible title="Performance Architecture" icon={Zap} color="text-amber-500">
                 <div className="space-y-4 text-xs text-text-secondary dark:text-text-secondary-dark">
-                    <p>InsightsTrack uses four Phase 1 optimisations to handle millions of events with sub-second query latency.</p>
+                    <p>InsightsTrack uses four Phase 1 optimisations aimed at keeping analytics reads responsive as the dataset grows.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {[
                             { label: 'DuckDB connection pool', detail: 'Pool of 4 connections (DUCKDB_POOL_SIZE). Concurrent analytics queries run truly in parallel instead of serialising. 4× throughput for concurrent users.' },
                             { label: 'Request coalescing', detail: 'When 50 users hit the same cache-miss simultaneously, only 1 DuckDB query fires. Others await the same Promise. Eliminates thundering herd on cache expiry.' },
                             { label: 'Debounced sync', detail: 'triggerSync() is debounced 5s (SYNC_DEBOUNCE_MS). Cache invalidated only after sync succeeds. At 1K events/sec: 1 sync per 5s instead of 1K/s.' },
                             { label: 'Daily rollup (daily_stats)', detail: 'After each sync, events are aggregated into daily_stats (1 row per site per day). KPI/traffic queries for historical ranges read daily_stats — 100M events returns in <5ms.' },
-                            { label: 'DuckDB ART indexes', detail: '5 composite indexes on (site_id, timestamp), (type, site_id), (path, site_id), etc. 5–20× faster on selective single-site queries.' },
-                            { label: 'Hot/cold Parquet (S3)', detail: 'Events older than ARCHIVE_DAYS go to S3/R2 as Hive-partitioned Parquet. DuckDB UNION ALL view covers both hot RAM and cold S3 transparently.' },
+                            { label: 'DuckDB ART indexes', detail: '5 composite indexes on (site_id, timestamp), (type, site_id), (path, site_id), etc. Intended to speed up selective single-site, date-filtered queries; not benchmarked in this repository', detail: 'Events older than ARCHIVE_DAYS go to S3/R2 as Hive-partitioned Parquet. DuckDB UNION ALL view covers both hot RAM and cold S3 transparently.' },
                         ].map(({ label, detail }) => (
                             <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
                                 <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>

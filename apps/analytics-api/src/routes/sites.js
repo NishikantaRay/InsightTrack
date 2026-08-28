@@ -118,7 +118,12 @@ router.get('/:siteId/script', async (req, res) => {
         const script = sitesService.getRawTrackingScript(req.params.siteId, serverUrl);
 
         res.set('Content-Type', 'application/javascript');
-        res.set('Cache-Control', 'public, max-age=3600');
+        // Short TTL + revalidation. The script embeds privacy behaviour (the
+        // DNT/GPC opt-out), so a long cache means a visitor can keep running an
+        // outdated copy after a fix ships. 5 minutes with must-revalidate keeps
+        // the CDN/browser benefit while bounding that window; the server-side
+        // opt-out check in routes/tracking.js covers the interval regardless.
+        res.set('Cache-Control', 'public, max-age=300, must-revalidate');
         res.send(script);
     } catch (error) {
         console.error('Error fetching script:', error);

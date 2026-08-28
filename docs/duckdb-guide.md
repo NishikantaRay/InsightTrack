@@ -22,7 +22,14 @@ Analytics reads (charts, KPIs)   ◀──  DuckDB (OLAP)
 
 ### Performance Comparison
 
-| Query Type | PostgreSQL (Row-Store) | DuckDB (Column-Store) |
+> **⚠️ Illustrative figures — not measured in this repository.**
+> No PostgreSQL benchmark exists here, and neither column below is produced by any
+> script in the repository. These numbers are retained to illustrate the *shape* of
+> the row-store vs column-store difference for analytical queries, **not** as a
+> measured comparison of InsightTrack's two engines. See
+> [`PERFORMANCE_BENCHMARK_AUDIT.md`](./PERFORMANCE_BENCHMARK_AUDIT.md).
+
+| Query Type | Row-Store (illustrative) | Column-Store (illustrative) |
 |-----------|------------------------|-----------------------|
 | `COUNT(DISTINCT user_id)` over 100K rows | ~120ms | ~8ms |
 | `GROUP BY date` with 3 aggregations | ~200ms | ~15ms |
