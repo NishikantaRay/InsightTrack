@@ -4,6 +4,7 @@
 
 ### Self-hosted, privacy-first web analytics — the open-source alternative to Google Analytics
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22148654.svg)](https://doi.org/10.5281/zenodo.22148654)
 [![Open Source](https://img.shields.io/badge/Open%20Source-MIT-6366f1)](LICENSE)
 [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-✓-10b981)]()
 [![No Cookies](https://img.shields.io/badge/Cookies-0-ef4444)]()
