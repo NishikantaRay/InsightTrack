@@ -2,7 +2,7 @@
   "name": "insightstrack-server",
   "version": "1.0.0",
   "license": "MIT",
-  "description": "InsightsTrack unified backend \u2014 Express + PostgreSQL (writes) + DuckDB (analytics reads)",
+  "description": "InsightsTrack unified backend — Express + PostgreSQL (writes) + DuckDB (analytics reads)",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -26,12 +26,12 @@
     "duckdb": "^1.1.3",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
-    "geoip-lite": "^1.4.7",
+    "geoip-lite": "^2.0.3",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "node-sql-parser": "^5.4.0",
     "pg": "^8.18.0",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "supertest": "^7.2.2",
