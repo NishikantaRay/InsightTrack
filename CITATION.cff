@@ -6,10 +6,7 @@ authors:
   - family-names: Ray
     given-names: Nishikanta
     affiliation: "Independent researcher"
-    # Register a free ORCID at https://orcid.org and add it here as:
-    #   orcid: "https://orcid.org/0000-0000-0000-0000"
-    # It disambiguates you from other authors sharing a name. Zenodo picks it
-    # up on the NEXT release; the v1.0.0 record's authorship is already fixed.
+    orcid: "https://orcid.org/0009-0006-8210-5093"
 repository-code: "https://github.com/NishikantaRay/InsightTrack"
 abstract: >-
   InsightTrack is a self-hosted web analytics platform that separates its write

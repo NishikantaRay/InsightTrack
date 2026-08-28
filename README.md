@@ -382,6 +382,7 @@ Archived on Zenodo. If you use InsightTrack in academic work, please cite it:
 ```bibtex
 @software{ray_insighttrack,
   author  = {Ray, Nishikanta},
+  orcid   = {0009-0006-8210-5093},
   title   = {{InsightTrack: a self-hosted web analytics platform
              with a dual-database architecture}},
   year    = {2026},
