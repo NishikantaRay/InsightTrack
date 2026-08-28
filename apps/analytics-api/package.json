@@ -1,6 +1,6 @@
 {
   "name": "insightstrack-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "description": "InsightsTrack unified backend — Express + PostgreSQL (writes) + DuckDB (analytics reads)",
   "main": "src/index.js",

@@ -27,7 +27,7 @@ keywords:
   - OLAP
   - privacy
 license: MIT
-version: 1.0.0
+version: 1.0.1
 date-released: "2026-08-28"
 # Concept DOI — always resolves to the latest released version.
 doi: "10.5281/zenodo.22148654"
