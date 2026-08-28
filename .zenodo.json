@@ -6,7 +6,8 @@
   "access_right": "open",
   "creators": [
     {
-      "name": "Ray, Nishikanta"
+      "name": "Ray, Nishikanta",
+      "affiliation": "Independent researcher"
     }
   ],
   "keywords": [
@@ -23,6 +24,13 @@
       "identifier": "https://github.com/NishikantaRay/InsightTrack",
       "relation": "isSupplementTo",
       "scheme": "url"
+    },
+    {
+      "identifier": "https://github.com/NishikantaRay/InsightTrack/tree/v1.0.0",
+      "relation": "isIdenticalTo",
+      "scheme": "url"
     }
-  ]
+  ],
+  "language": "eng",
+  "notes": "Reproducible engine benchmark: seeded deterministic dataset generator, 30 measured iterations per query, median/p95/p99 and standard deviation reported, raw samples committed as JSON and CSV under benchmark-results/. Environment (OS, CPU, Node, PostgreSQL and DuckDB versions) is captured automatically in each result file."
 }

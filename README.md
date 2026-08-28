@@ -373,6 +373,30 @@ A ⭐ on the repo also helps a lot!
 
 ---
 
+## Citing this software
+
+Archived on Zenodo. If you use InsightTrack in academic work, please cite it:
+
+[![DOI](https://zenodo.org/badge/1220281926.svg)](https://doi.org/10.5281/zenodo.22148654)
+
+```bibtex
+@software{ray_insighttrack,
+  author  = {Ray, Nishikanta},
+  title   = {{InsightTrack: a self-hosted web analytics platform
+             with a dual-database architecture}},
+  year    = {2026},
+  version = {1.0.0},
+  doi     = {10.5281/zenodo.22148654},
+  url     = {https://github.com/NishikantaRay/InsightTrack}
+}
+```
+
+The DOI above is the *concept* DOI — it always resolves to the latest release.
+To cite v1.0.0 specifically, use `10.5281/zenodo.22148655`.
+Machine-readable metadata lives in [`CITATION.cff`](CITATION.cff).
+
+---
+
 ## License
 
 [MIT](LICENSE) — free to self-host, modify, and run forever.
