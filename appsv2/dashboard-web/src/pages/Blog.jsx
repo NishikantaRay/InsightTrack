@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { BarChart3, ArrowLeft, ArrowRight, Clock, Calendar } from 'lucide-react';
-import { BLOG_POSTS, getPost } from '../data/blogPosts';
+import { BLOG_POSTS, getPost, getTags, getPostsByTag, tagSlug } from '../data/blogPosts';
 import { useSeo, ORIGIN } from '../hooks/useSeo';
 
 // ── tiny markdown renderer (headings, tables, code, lists, paragraphs) ──────────
@@ -28,17 +28,17 @@ function renderMarkdown(md) {
         }
         // table
         if (line.includes('|') && lines[i + 1]?.includes('---')) {
-            const header = line.split('|').map(s => s.trim()).filter(Boolean);
+            const header = splitRow(line);
             const rows = [];
             i += 2;
             while (i < lines.length && lines[i].includes('|')) {
-                rows.push(lines[i].split('|').map(s => s.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length));
+                rows.push(splitRow(lines[i]));
                 i++;
             }
             out.push(
                 <div key={key++} className="my-5 overflow-x-auto">
                     <table className="w-full text-sm border-collapse">
-                        <thead><tr>{header.map((h, j) => <th key={j} className="text-left font-semibold px-3 py-2 border-b border-gray-200 dark:border-gray-700">{h}</th>)}</tr></thead>
+                        <thead><tr>{header.map((h, j) => <th key={j} className="text-left font-semibold px-3 py-2 border-b border-gray-200 dark:border-gray-700">{inline(h)}</th>)}</tr></thead>
                         <tbody>{rows.map((r, ri) => <tr key={ri}>{r.map((c, ci) => <td key={ci} className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400">{inline(c)}</td>)}</tr>)}</tbody>
                     </table>
                 </div>
@@ -46,8 +46,8 @@ function renderMarkdown(md) {
             continue;
         }
         // headings
-        if (line.startsWith('## ')) { out.push(<h2 key={key++} className="text-2xl font-bold mt-10 mb-3 tracking-tight">{line.slice(3)}</h2>); i++; continue; }
-        if (line.startsWith('### ')) { out.push(<h3 key={key++} className="text-lg font-bold mt-6 mb-2">{line.slice(4)}</h3>); i++; continue; }
+        if (line.startsWith('## ')) { out.push(<h2 key={key++} className="text-2xl font-bold mt-10 mb-3 tracking-tight">{inline(line.slice(3))}</h2>); i++; continue; }
+        if (line.startsWith('### ')) { out.push(<h3 key={key++} className="text-lg font-bold mt-6 mb-2">{inline(line.slice(4))}</h3>); i++; continue; }
         // list
         if (line.startsWith('- ')) {
             const items = [];
@@ -61,12 +61,42 @@ function renderMarkdown(md) {
     }
     return out;
 }
-// inline: **bold** and `code`
+// split a markdown table row into cells, dropping only the empty strings the
+// leading/trailing pipes produce — an intentionally blank cell (e.g. a corner
+// label) is preserved so header and body rows keep the same column count.
+function splitRow(line) {
+    const cells = line.split('|').map(s => s.trim());
+    if (cells[0] === '') cells.shift();
+    if (cells[cells.length - 1] === '') cells.pop();
+    return cells;
+}
+
+// inline: **bold**, `code`, *italic*, and [text](href)
+//
+// Order in the alternation matters. `code` is matched before *italic* so the
+// asterisks in inline SQL like `count(*)` are captured as code and never
+// re-scanned as emphasis; **bold** precedes it for the same reason. Links are
+// matched first so bold/code inside a label can't split the pattern.
+const LINK_CLASS = 'text-indigo-600 dark:text-indigo-400 underline underline-offset-2 hover:text-indigo-500';
+
 function inline(text) {
-    const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+    const parts = text.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*`\n]+\*)/g);
     return parts.map((p, i) => {
+        if (!p) return null;
+        if (p.startsWith('[')) {
+            const m = p.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+            if (!m) return p;
+            const [, label, href] = m;
+            // Internal links use Link so navigation stays client-side; it still
+            // renders a real <a href> for crawlers and the prerenderer.
+            if (href.startsWith('/')) {
+                return <Link key={i} to={href} className={LINK_CLASS}>{label}</Link>;
+            }
+            return <a key={i} href={href} className={LINK_CLASS} target="_blank" rel="noopener noreferrer">{label}</a>;
+        }
         if (p.startsWith('**')) return <strong key={i} className="text-gray-900 dark:text-white font-semibold">{p.slice(2, -2)}</strong>;
         if (p.startsWith('`')) return <code key={i} className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 text-[0.9em] font-mono">{p.slice(1, -1)}</code>;
+        if (p.startsWith('*') && p.endsWith('*') && p.length > 2) return <em key={i} className="italic">{p.slice(1, -1)}</em>;
         return p;
     });
 }
@@ -90,73 +120,186 @@ function Shell({ children }) {
     );
 }
 
-export default function Blog() {
-    const { slug } = useParams();
 
-    // ── Blog index ──────────────────────────────────────────────────────────
-    if (!slug) {
-        useSeo({
-            title: 'Blog — Privacy-First Analytics Guides',
-            description: 'Guides on open-source analytics, self-hosting with Docker, cookieless tracking, and getting off Google Analytics — from the InsightsTrack team.',
-            path: '/blog',
-            jsonLd: {
-                '@context': 'https://schema.org',
-                '@type': 'Blog',
-                name: 'InsightsTrack Blog',
-                url: `${ORIGIN}/blog`,
-                blogPost: BLOG_POSTS.map(p => ({
-                    '@type': 'BlogPosting',
-                    headline: p.title,
-                    url: `${ORIGIN}/blog/${p.slug}`,
-                    datePublished: p.date,
-                    description: p.description,
-                })),
-            },
-        });
-        return (
-            <Shell>
-                <main className="max-w-3xl mx-auto px-5 py-12">
-                    <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">Blog</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mb-10">
-                        Guides on privacy-first analytics, self-hosting, and moving off Google Analytics.
-                    </p>
-                    <div className="space-y-4">
-                        {BLOG_POSTS.map(p => (
-                            <Link key={p.slug} to={`/blog/${p.slug}`}
-                                className="block p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-colors">
-                                <h2 className="text-lg font-bold mb-1.5">{p.title}</h2>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{p.description}</p>
-                                <div className="flex items-center gap-4 text-xs text-gray-400">
-                                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{p.readingMinutes} min read</span>
-                                    <span className="ml-auto text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">Read <ArrowRight className="w-3 h-3" /></span>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                </main>
-            </Shell>
-        );
-    }
+const AUTHOR = { '@type': 'Person', name: 'Nishikanta Ray', url: 'https://nishikanta.in/' };
 
-    // ── Single post ─────────────────────────────────────────────────────────
-    const post = getPost(slug);
-    if (!post) {
-        useSeo({ title: 'Post not found', noindex: true });
+function PostMeta({ post, size = 'sm' }) {
+    const icon = size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5';
+    return (
+        <>
+            <span className="flex items-center gap-1">
+                <Calendar className={icon} />
+                {new Date(post.date).toLocaleDateString('en-US', { month: size === 'sm' ? 'short' : 'long', day: 'numeric', year: 'numeric' })}
+            </span>
+            <span className="flex items-center gap-1"><Clock className={icon} />{post.readingMinutes} min read</span>
+        </>
+    );
+}
+
+function TagChips({ tags, className = '' }) {
+    if (!tags?.length) return null;
+    return (
+        <div className={`flex flex-wrap gap-1.5 ${className}`}>
+            {tags.map(t => (
+                <Link key={t} to={`/blog/tag/${tagSlug(t)}`}
+                    className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+                    {t}
+                </Link>
+            ))}
+        </div>
+    );
+}
+
+function PostCard({ post }) {
+    return (
+        <Link to={`/blog/${post.slug}`}
+            className="block p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-colors">
+            <h2 className="text-lg font-bold mb-1.5">{post.title}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{post.description}</p>
+            <div className="flex items-center gap-4 text-xs text-gray-400">
+                <PostMeta post={post} />
+                <span className="ml-auto text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">Read <ArrowRight className="w-3 h-3" /></span>
+            </div>
+        </Link>
+    );
+}
+
+function TagNav({ activeSlug }) {
+    return (
+        <div className="flex flex-wrap gap-2 mb-10">
+            <Link to="/blog"
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${!activeSlug
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                All {BLOG_POSTS.length}
+            </Link>
+            {getTags().map(({ tag, slug, count }) => (
+                <Link key={slug} to={`/blog/tag/${slug}`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${activeSlug === slug
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                    {tag} {count}
+                </Link>
+            ))}
+        </div>
+    );
+}
+
+// ── Blog index ──────────────────────────────────────────────────────────────
+function BlogIndex() {
+    useSeo({
+        title: 'Blog — Privacy-First Analytics Guides',
+        description: 'Guides on open-source analytics, self-hosting with Docker, cookieless tracking, DuckDB architecture, and getting off Google Analytics — from the InsightsTrack team.',
+        path: '/blog',
+        jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'Blog',
+            name: 'InsightsTrack Blog',
+            url: `${ORIGIN}/blog`,
+            blogPost: BLOG_POSTS.map(p => ({
+                '@type': 'BlogPosting',
+                headline: p.title,
+                url: `${ORIGIN}/blog/${p.slug}`,
+                datePublished: p.date,
+                dateModified: p.updated || p.date,
+                description: p.description,
+            })),
+        },
+    });
+    const posts = [...BLOG_POSTS].sort((a, b) => b.date.localeCompare(a.date));
+    return (
+        <Shell>
+            <main className="max-w-3xl mx-auto px-5 py-12">
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">Blog</h1>
+                <p className="text-gray-500 dark:text-gray-400 mb-8">
+                    Guides on privacy-first analytics, self-hosting, DuckDB architecture, and moving off Google Analytics.
+                </p>
+                <TagNav />
+                <div className="space-y-4">
+                    {posts.map(p => <PostCard key={p.slug} post={p} />)}
+                </div>
+            </main>
+        </Shell>
+    );
+}
+
+// ── Tag archive ─────────────────────────────────────────────────────────────
+function TagPage({ tagParam }) {
+    const posts = getPostsByTag(tagParam);
+    const label = posts[0]?.tags.find(t => tagSlug(t) === tagParam) || tagParam;
+    const found = posts.length > 0;
+
+    useSeo(found ? {
+        title: `${label} — Analytics Guides`,
+        description: `${posts.length} in-depth guide${posts.length === 1 ? '' : 's'} on ${label.toLowerCase()} for self-hosted, privacy-first web analytics.`,
+        path: `/blog/tag/${tagParam}`,
+        jsonLd: {
+            '@context': 'https://schema.org',
+            '@graph': [
+                {
+                    '@type': 'CollectionPage',
+                    name: `${label} — InsightsTrack Blog`,
+                    url: `${ORIGIN}/blog/tag/${tagParam}`,
+                    mainEntity: {
+                        '@type': 'ItemList',
+                        itemListElement: posts.map((p, i) => ({
+                            '@type': 'ListItem',
+                            position: i + 1,
+                            url: `${ORIGIN}/blog/${p.slug}`,
+                            name: p.title,
+                        })),
+                    },
+                },
+                {
+                    '@type': 'BreadcrumbList',
+                    itemListElement: [
+                        { '@type': 'ListItem', position: 1, name: 'Home', item: ORIGIN },
+                        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${ORIGIN}/blog` },
+                        { '@type': 'ListItem', position: 3, name: label, item: `${ORIGIN}/blog/tag/${tagParam}` },
+                    ],
+                },
+            ],
+        },
+    } : { title: 'Tag not found', noindex: true });
+
+    if (!found) {
         return (
             <Shell>
                 <main className="max-w-3xl mx-auto px-5 py-20 text-center">
-                    <h1 className="text-2xl font-bold mb-3">Post not found</h1>
+                    <h1 className="text-2xl font-bold mb-3">Tag not found</h1>
                     <Link to="/blog" className="text-indigo-600 dark:text-indigo-400 font-semibold">← Back to blog</Link>
                 </main>
             </Shell>
         );
     }
 
+    return (
+        <Shell>
+            <main className="max-w-3xl mx-auto px-5 py-12">
+                <nav className="text-xs text-gray-400 mb-4" aria-label="Breadcrumb">
+                    <Link to="/landing" className="hover:underline">Home</Link> / <Link to="/blog" className="hover:underline">Blog</Link> / <span className="text-gray-500 dark:text-gray-300">{label}</span>
+                </nav>
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">{label}</h1>
+                <p className="text-gray-500 dark:text-gray-400 mb-8">
+                    {posts.length} guide{posts.length === 1 ? '' : 's'} on {label.toLowerCase()}.
+                </p>
+                <TagNav activeSlug={tagParam} />
+                <div className="space-y-4">
+                    {posts.map(p => <PostCard key={p.slug} post={p} />)}
+                </div>
+            </main>
+        </Shell>
+    );
+}
+
+// ── Single post ─────────────────────────────────────────────────────────────
+function BlogPost({ post }) {
     useSeo({
         title: post.title,
         description: post.description,
         path: `/blog/${post.slug}`,
+        // Per-post card generated at build time by scripts/og-images.mjs.
+        image: `${ORIGIN}/og/${post.slug}.png`,
         jsonLd: {
             '@context': 'https://schema.org',
             '@graph': [
@@ -165,12 +308,18 @@ export default function Blog() {
                     headline: post.title,
                     description: post.description,
                     datePublished: post.date,
-                    dateModified: post.date,
-                    keywords: post.keyword,
-                    author: { '@type': 'Person', name: 'Nishikanta Ray', url: 'https://nishikanta.in/' },
+                    // dateModified tracks real revisions when `updated` is set,
+                    // so a re-edited evergreen post can signal freshness.
+                    dateModified: post.updated || post.date,
+                    keywords: [post.keyword, ...(post.tags || [])].join(', '),
+                    articleSection: post.tags?.[0],
+                    wordCount: post.body.trim().split(/\s+/).length,
+                    timeRequired: `PT${post.readingMinutes}M`,
+                    inLanguage: 'en',
+                    author: AUTHOR,
                     publisher: { '@type': 'Organization', name: 'InsightsTrack', url: ORIGIN },
                     mainEntityOfPage: `${ORIGIN}/blog/${post.slug}`,
-                    image: `${ORIGIN}/og-image.png`,
+                    image: `${ORIGIN}/og/${post.slug}.png`,
                 },
                 {
                     '@type': 'BreadcrumbList',
@@ -184,6 +333,16 @@ export default function Blog() {
         },
     });
 
+    // Related posts: most tags in common, newest first. Gives every post a
+    // crawlable path to its topical neighbours instead of only back to /blog.
+    const related = BLOG_POSTS
+        .filter(p => p.slug !== post.slug)
+        .map(p => ({ p, overlap: (p.tags || []).filter(t => (post.tags || []).includes(t)).length }))
+        .filter(x => x.overlap > 0)
+        .sort((a, b) => b.overlap - a.overlap || b.p.date.localeCompare(a.p.date))
+        .slice(0, 3)
+        .map(x => x.p);
+
     return (
         <Shell>
             <article className="max-w-3xl mx-auto px-5 py-12">
@@ -194,11 +353,26 @@ export default function Blog() {
                     <Link to="/landing" className="hover:underline">Home</Link> / <Link to="/blog" className="hover:underline">Blog</Link> / <span className="text-gray-500 dark:text-gray-300">{post.title}</span>
                 </nav>
                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight mb-4">{post.title}</h1>
-                <div className="flex items-center gap-4 text-sm text-gray-400 mb-8 pb-8 border-b border-gray-200 dark:border-gray-800">
-                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{post.readingMinutes} min read</span>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-4">
+                    <PostMeta post={post} size="lg" />
                 </div>
+                <TagChips tags={post.tags} className="mb-8 pb-8 border-b border-gray-200 dark:border-gray-800" />
                 <div className="prose-content">{renderMarkdown(post.body)}</div>
+
+                {related.length > 0 && (
+                    <aside className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
+                        <h2 className="text-lg font-bold mb-4">Related guides</h2>
+                        <div className="space-y-3">
+                            {related.map(p => (
+                                <Link key={p.slug} to={`/blog/${p.slug}`}
+                                    className="block p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-colors">
+                                    <div className="font-semibold text-sm mb-1">{p.title}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">{p.description}</div>
+                                </Link>
+                            ))}
+                        </div>
+                    </aside>
+                )}
 
                 <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-500/10 dark:to-violet-500/10 border border-indigo-100 dark:border-indigo-500/20 text-center">
                     <h3 className="text-lg font-bold mb-2">Try InsightsTrack free</h3>
@@ -210,4 +384,27 @@ export default function Blog() {
             </article>
         </Shell>
     );
+}
+
+function NotFoundPost() {
+    useSeo({ title: 'Post not found', noindex: true });
+    return (
+        <Shell>
+            <main className="max-w-3xl mx-auto px-5 py-20 text-center">
+                <h1 className="text-2xl font-bold mb-3">Post not found</h1>
+                <Link to="/blog" className="text-indigo-600 dark:text-indigo-400 font-semibold">← Back to blog</Link>
+            </main>
+        </Shell>
+    );
+}
+
+// Routing shim. Each branch is its own component so useSeo is called
+// unconditionally inside it — calling a hook after an early return violates
+// the rules of hooks and breaks when the route changes without a remount.
+export default function Blog() {
+    const { slug, tag } = useParams();
+    if (tag) return <TagPage tagParam={tag} />;
+    if (!slug) return <BlogIndex />;
+    const post = getPost(slug);
+    return post ? <BlogPost post={post} /> : <NotFoundPost />;
 }

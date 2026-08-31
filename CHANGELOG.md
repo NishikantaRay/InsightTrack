@@ -2,39 +2,85 @@
 
 All notable changes to InsightTrack.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-This project does not yet follow [Semantic Versioning](https://semver.org/) —
-see [Versioning](#versioning) below.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+and this project follows [Semantic Versioning](https://semver.org/) from
+`v1.0.0` onward — see [Versioning](#versioning) below.
 
 Entries are derived from Git history. Dates are commit dates.
 
 ## Versioning
 
-**There are no releases yet.** The repository has no Git tags, no GitHub
-releases, and the `version` field in every `package.json` has read `1.0.0` since
-the initial commit without ever being bumped — so package versions do not
-correspond to releases and cannot be used to date changes.
+Releases are tagged in Git and follow [Semantic Versioning](https://semver.org/)
+from `v1.0.0` onward. The `version` field in the shipped `package.json` files
+(`analytics-api`, `dashboard-web`) tracks the release tag.
 
-Because of that, the sections below are dated development milestones, **not
-released versions**. Versioning starts at the first tagged release.
+Entries below `v1.0.0` are dated development milestones, **not released
+versions** — the packages read `1.0.0` throughout that period without ever being
+bumped, so those versions do not identify releases.
+
+`mcp-server` and `mcp-toolkit-core` are versioned separately and remain
+pre-1.0 (`0.1.0`).
 
 ---
 
-## [Unreleased]
+## [1.1.0] - 2026-08-31
 
-Release-preparation work: security hardening, licensing, CI, and reproducible
-benchmarks.
+A/B test significance, custom-event property redaction, and blog/SEO
+distribution.
 
-> **Note:** these commits exist in the repository but are not currently on any
-> branch — the branch pointer was reset after they were made. They are reachable
-> via the reflog (`d597356` and its three ancestors) and the working tree still
-> matches them.
+### Added
+- Statistical significance for A/B conversion tests (`abStats.js`): a
+  two-proportion z-test reporting p-value, confidence and a winner call, so a
+  result is no longer judged on raw conversion rates alone. Fixed-horizon and
+  control-relative by design; the limits (peeking, multi-variant error
+  compounding) are documented rather than hidden (`docs/ab-testing.md`).
+- Deterministic client-side variant assignment via
+  `window.analytics.getVariant(testId, variants)`. Variants are chosen by
+  hashing visitor id with test id, so assignment is stable with no server
+  round-trip and no flash of the wrong content; exposure is reported once per
+  session as an `experiment_view` event.
+- Per-post Open Graph images (`og-images.mjs`), rendered by the headless
+  Chromium the prerender step already installs — no new dependency. Every post
+  previously shared one generic card.
+- RSS 2.0 feed at `/feed.xml` (`feed.mjs`), generated from the same source as
+  the posts and sitemap so it cannot drift, and advertised via `<link
+  rel="alternate">`.
+- Related-posts links on blog articles, ranked by shared tags, plus per-post
+  JSON-LD structured data and `blogSeo` regression tests.
 
 ### Security
-- SQL Editor rewritten around an allowlist (`sqlGuard.js`), closing arbitrary
-  local/remote file reads, `ATTACH`-based credential exposure, and cross-tenant
-  reads. Queries are re-validated after template substitution and scoped to the
-  caller's site.
+- Custom-event `properties` are now redacted at ingest (`sanitiseProperties`).
+  A call such as `trackEvent('signup', { email: user.email })` previously
+  persisted a plaintext email, readable through the dashboard, SQL Editor,
+  exports and Pulse — quietly falsifying the product's no-personal-data claim.
+  Sensitive keys are matched against the same denylist used for query
+  parameters, walking nested objects to a bounded depth and breadth so a
+  pathological payload cannot burn CPU at ingest. As with URLs this is a
+  denylist, not a guarantee.
+
+### Changed
+- `build:seo` now chains OG-image and feed generation into the prerender step.
+- Landing-page copy states "Cookieless, GDPR-friendly tracking (no cookies, no
+  IP storage)" in place of the stronger "GDPR-compliant" claim.
+
+## [1.0.1] - 2026-08-28
+
+### Added
+- Citation metadata for Zenodo, including ORCID and the canonical DOI badge.
+
+### Fixed
+- Untracked Playwright run artifacts that had been committed.
+
+## [1.0.0] - 2026-08-28
+
+First tagged release. Release-preparation work: security hardening, licensing,
+CI, and reproducible benchmarks.
+
+### Security
+- SQL Editor rewritten around an allowlist (`src/routes/sqlGuard.js`), closing
+  arbitrary local/remote file reads, `ATTACH`-based credential exposure, and
+  cross-tenant reads. Queries are re-validated after template substitution and
+  scoped to the caller's site.
 - API container drops root and runs as the unprivileged `node` user.
 - PostgreSQL and pgAdmin bound to `127.0.0.1` instead of all interfaces.
 - Removed a hardcoded database password from `scripts/benchmark.js`.

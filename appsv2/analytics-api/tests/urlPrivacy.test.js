@@ -6,7 +6,7 @@
  * readable through the dashboard, SQL Editor, exports and Pulse.
  */
 import { describe, it, expect } from 'vitest';
-import { sanitiseUrl, sanitiseReferrer } from '../src/utils/urlPrivacy.js';
+import { sanitiseUrl, sanitiseReferrer, sanitiseProperties } from '../src/utils/urlPrivacy.js';
 
 describe('sanitiseUrl — redacts sensitive query parameters', () => {
     const cases = [
@@ -118,5 +118,51 @@ describe('sanitiseReferrer', () => {
     it('keeps an ordinary referrer usable for attribution', () => {
         expect(sanitiseReferrer('https://news.ycombinator.com/item?id=123'))
             .toBe('https://news.ycombinator.com/item?id=123');
+    });
+});
+
+describe('sanitiseProperties — redacts sensitive custom-event properties', () => {
+    it('redacts well-known sensitive keys', () => {
+        const out = sanitiseProperties({
+            email: 'a@b.com', password: 'hunter2', token: 'abc',
+            api_key: 'sk-live', phone: '+1555', plan: 'pro', count: 3,
+        });
+        expect(out.email).toBe('REDACTED');
+        expect(out.password).toBe('REDACTED');
+        expect(out.token).toBe('REDACTED');
+        expect(out.api_key).toBe('REDACTED');
+        expect(out.phone).toBe('REDACTED');
+        // non-sensitive business data is preserved
+        expect(out.plan).toBe('pro');
+        expect(out.count).toBe(3);
+    });
+
+    it('is case-insensitive on keys', () => {
+        const out = sanitiseProperties({ Email: 'a@b.com', TOKEN: 'x' });
+        expect(out.Email).toBe('REDACTED');
+        expect(out.TOKEN).toBe('REDACTED');
+    });
+
+    it('walks nested objects and arrays', () => {
+        const out = sanitiseProperties({
+            user: { email: 'a@b.com', tier: 'gold' },
+            items: [{ sku: 'A1', secret: 'shh' }],
+        });
+        expect(out.user.email).toBe('REDACTED');
+        expect(out.user.tier).toBe('gold');
+        expect(out.items[0].sku).toBe('A1');
+        expect(out.items[0].secret).toBe('REDACTED');
+    });
+
+    it('returns {} for non-objects rather than throwing', () => {
+        expect(sanitiseProperties(null)).toEqual({});
+        expect(sanitiseProperties('str')).toEqual({});
+        expect(sanitiseProperties(undefined)).toEqual({});
+    });
+
+    it('does not blow up on deeply nested payloads', () => {
+        let deep = { email: 'a@b.com' };
+        for (let i = 0; i < 50; i++) deep = { nested: deep };
+        expect(() => sanitiseProperties(deep)).not.toThrow();
     });
 });

@@ -1,7 +1,7 @@
 # InsightTrack — Implementation Patterns & Utilities
 
 Copy-paste-grade examples matching the real codebase. Paths use the `traffic`
-layout (`analytics-db`, `analytics-dashboard`); translate for traffic2 per the
+layout (`analytics-db`, `analytics-dashboard`); translate for InsightTrack per the
 skill's layout table.
 
 ## 1. Backend: analytics read endpoint (DuckDB)

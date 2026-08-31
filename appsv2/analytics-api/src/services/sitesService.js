@@ -661,6 +661,45 @@ export const sitesService = {
           id: String(uid), exp: Date.now() + UID_TTL_MS
         }));
       } catch (e) {}
+    },
+    // Deterministic A/B variant assignment.
+    //
+    //   var v = window.analytics.getVariant('checkout_copy', ['a', 'b']);
+    //
+    // The variant is derived by hashing the visitor id with the test id, so the
+    // same visitor always sees the same variant with no server round-trip and no
+    // flash of the wrong content. Assignment is reported once per session as an
+    // experiment_view event carrying { test, variant }, which is what the
+    // results query groups by.
+    //
+    // Note the visitor id rotates on its TTL, so a visitor returning after the
+    // window elapses may be reassigned. For short tests this is immaterial; for
+    // long-running ones it biases toward the control over time.
+    getVariant: function(testId, variants) {
+      if (!testId || !variants || !variants.length) return null;
+      // FNV-1a over (visitorId + testId) — small, fast, well-distributed.
+      var str = String(userId) + ':' + String(testId);
+      var h = 2166136261;
+      for (var i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+      }
+      var chosen = variants[h % variants.length];
+
+      // Report the exposure once per session, not per call.
+      try {
+        var seenKey = '_ab_' + testId;
+        if (sessionStorage.getItem(seenKey) !== String(chosen)) {
+          sessionStorage.setItem(seenKey, String(chosen));
+          send('/api/track/event', {
+            siteId: siteId, userId: userId, sessionId: sessionId, type: 'experiment_view',
+            url: window.location.href, path: window.location.pathname,
+            properties: { test: String(testId), variant: String(chosen) }
+          });
+        }
+      } catch (e) { /* sessionStorage unavailable — assignment still works */ }
+
+      return chosen;
     }
   };
 })();`;

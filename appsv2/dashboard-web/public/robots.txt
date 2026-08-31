@@ -4,8 +4,10 @@
 User-agent: *
 Allow: /$
 Allow: /index.md
+Allow: /feed.xml
 Allow: /landing
 Allow: /blog
+Allow: /blog/tag/
 Allow: /privacy-policy
 Allow: /terms
 

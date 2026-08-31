@@ -34,14 +34,21 @@ from Claude Desktop and other MCP clients.
 
 ## Key facts
 
-- **Privacy:** no cookies, no fingerprinting, no IP storage; anonymous
-  first-party visitor IDs; honors Do Not Track (DNT) and Global Privacy Control
-  (GPC); GDPR-compliant without a cookie banner in most jurisdictions.
-- **Performance:** the tracking script is ~2 KB and loads asynchronously; the
-  DuckDB columnar engine answers 90-day queries in under 100 ms across millions
-  of events.
+- **Privacy:** no cookies, no fingerprinting, no IP addresses stored;
+  pseudonymous first-party visitor IDs held in localStorage with a rolling
+  expiry; honors Do Not Track (DNT) and Global Privacy Control (GPC).
+  GDPR-friendly by design — whether a consent banner is required depends on your
+  jurisdiction and deployment, since many regulators treat any storage on a
+  visitor's device as in scope regardless of whether it is technically a cookie.
+  Confirm with your own legal counsel.
+- **Performance:** the tracking script is ~2 KB and loads asynchronously. In an
+  isolated local test at ~101K events, 90-day analytics requests completed in
+  well under 100 ms measured at the HTTP/API layer including the response cache
+  — that is not DuckDB execution time and is not a guarantee at larger datasets.
 - **Architecture:** PostgreSQL handles all writes; a background sync streams
-  data into DuckDB, which powers all analytics reads (10–100× faster OLAP).
+  data into DuckDB, which powers all analytics reads. Columnar storage suits the
+  wide aggregations a dashboard issues; real-world latency depends on dataset
+  size, hardware, and query shape.
 - **Integration:** a single `<script>` tag works with any site or framework
   (React, Next.js, Vue, Nuxt, SvelteKit, WordPress, Shopify, plain HTML). Custom
   events via `window.trackEvent(name, props)`.

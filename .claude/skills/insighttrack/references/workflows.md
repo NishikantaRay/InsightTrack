@@ -8,12 +8,12 @@ docker run -d --name analytics-pg \
   -e POSTGRES_USER=analytics -e POSTGRES_PASSWORD=analytics123 \
   -e POSTGRES_DB=analytics_db -p 5432:5432 postgres:16
 
-# Backend (traffic: analytics-db | traffic2: apps/analytics-api)
+# Backend (traffic: analytics-db | InsightTrack: apps/analytics-api)
 cd analytics-db && npm install
 npm run migrate && npm run seed && npm run init   # PG schema, sample data, DuckDB
 npm run dev                                        # port 3001, starts sync loop
 
-# Frontend (traffic: analytics-dashboard | traffic2: apps/dashboard-web)
+# Frontend (traffic: analytics-dashboard | InsightTrack: apps/dashboard-web)
 cd analytics-dashboard && npm install && npm run dev   # Vite, port 5173 dev / 4173 preview
 ```
 
@@ -83,15 +83,14 @@ changes need `docker compose build <backend>`, not just a restart.
 
 ## 4. Three-copy sync procedure (mandatory after every feature)
 
-Copies: `traffic/` (root layout), `traffic2/apps/`, `traffic2/appsv2/`.
+Copies: `traffic/` (root layout), `InsightTrack/apps/`, `InsightTrack/appsv2/`.
+**Two separate git repos** — syncing needs a commit+push in each.
 Mapping: `analytics-dashboard ⇄ dashboard-web`, `analytics-db ⇄
 analytics-api`; `mcp-server`, `mcp-toolkit-core`, `docs` map by name.
 
 ```bash
-# Set these to wherever the copies live on your machine. `traffic` is a
-# separate private repository, not part of this checkout.
-T=${TRAFFIC_REPO:?set TRAFFIC_REPO to the traffic/ checkout}
-T2=${INSIGHTTRACK_REPO:-$(git rev-parse --show-toplevel)}
+T=/Users/nishikantaray/Desktop/Personal/traffic
+T2=/Users/nishikantaray/Desktop/Personal/InsightTrack   # NOT 'traffic2' — that path does not exist
 
 # 1. Verify current drift (expect: only files you just changed)
 diff -rq $T/analytics-db/src        $T2/apps/analytics-api/src
@@ -113,7 +112,7 @@ package `name` fields and path-naming header comments (e.g.
 `tests/testHelper.js` line 2, Dockerfile line 1), each repo's `CLAUDE.md`
 package-structure section, and docs that exist in only one repo (e.g.
 `alerts.md` in traffic; `blogs/`, `hot-cold-analytics-architecture.md` in
-traffic2). The entire `.claude/` directory is identical in both repos — the
+InsightTrack). The entire `.claude/` directory is identical in both repos — the
 skill describes all layouts.
 
 Everything else must match. Full sweep (expect only the items above):

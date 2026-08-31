@@ -41,5 +41,5 @@ needed.
 - Architecture/convention changes → update `skills/insighttrack/` in the same
   change. When the skill and the code disagree, the code wins — fix the skill.
 - This directory must stay **byte-identical** between the `traffic` and
-  `traffic2` repositories (the skill is layout-aware and covers both).
+  `InsightTrack` repositories (the skill is layout-aware and covers both).
 - Full guide: `docs/claude-skill.md`.

@@ -88,3 +88,47 @@ export function sanitiseReferrer(raw) {
 }
 
 export const _internals = { SENSITIVE_PARAM, REDACTED };
+
+/**
+ * Redact sensitive values from a custom-event `properties` object.
+ *
+ * `properties` is whatever a site owner passes to `trackEvent(name, props)`.
+ * It was previously stored verbatim, so an integration written as
+ * `trackEvent('signup', { email: user.email })` persisted a plaintext email
+ * that is then readable through the dashboard, SQL Editor, exports and Pulse —
+ * silently making the product's "no personal data" claim untrue for that site.
+ *
+ * The same denylist used for query parameters is matched against property
+ * *keys*, so `email`, `password`, `token`, `api_key` and friends are redacted
+ * wherever they appear. As with URLs this is a denylist, not a guarantee: a
+ * key named `customer_ref` still passes through. It closes the common
+ * accidental leak without breaking operators who track their own domain data.
+ *
+ * Nested objects are walked to a bounded depth; arrays keep their shape. Depth
+ * and breadth are capped so a pathological payload cannot burn CPU at ingest.
+ *
+ * @param {unknown} props
+ * @param {number} [depth] internal recursion counter
+ * @returns {object} a new object safe to persist
+ */
+export function sanitiseProperties(props, depth = 0) {
+    const MAX_DEPTH = 4;
+    const MAX_KEYS = 100;
+
+    if (typeof props !== 'object' || props === null) return {};
+
+    const walk = (value, d) => {
+        if (d > MAX_DEPTH) return null;
+        if (Array.isArray(value)) return value.slice(0, MAX_KEYS).map((v) => walk(v, d + 1));
+        if (typeof value === 'object' && value !== null) {
+            const out = {};
+            for (const [k, v] of Object.entries(value).slice(0, MAX_KEYS)) {
+                out[k] = SENSITIVE_PARAM.test(k) ? REDACTED : walk(v, d + 1);
+            }
+            return out;
+        }
+        return value;
+    };
+
+    return walk(props, depth);
+}

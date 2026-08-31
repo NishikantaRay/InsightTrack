@@ -5,8 +5,8 @@ description: >-
   (PostgreSQL writes + DuckDB reads, React/Vite dashboard, Express API,
   MCP/AI Analyst). Use whenever working in this repository — adding features,
   fixing bugs, reviewing code, writing tests, or answering questions about the
-  architecture. Encodes the repo layout map (traffic / traffic2/apps /
-  traffic2/appsv2), critical invariants, coding patterns, and workflows.
+  architecture. Encodes the repo layout map (traffic / InsightTrack apps /
+  appsv2), critical invariants, coding patterns, and workflows.
 ---
 
 # InsightTrack Project Skill
@@ -23,24 +23,37 @@ The same product lives in **three places**, and they must be kept
 
 | Copy | Frontend | Backend | Extras |
 |------|----------|---------|--------|
-| `traffic/` (repo root) | `analytics-dashboard/` | `analytics-db/` | legacy `analytics-server/` kept for reference |
-| `traffic2/apps/` | `dashboard-web/` | `analytics-api/` | — |
-| `traffic2/appsv2/` | `dashboard-web/` | `analytics-api/` | `data-lake/` Parquet cold storage, `routes/sync.js`, `passmark-tests/` |
+They live in **two separate git repos**, not one:
+
+| Copy | Repo / path | Frontend | Backend | Extras |
+|------|-------------|----------|---------|--------|
+| 1 | `Personal/traffic/` — `github.com/NishikantaRay/traffic` | `analytics-dashboard/` | `analytics-db/` | legacy `analytics-server/` kept for reference |
+| 2 | `Personal/InsightTrack/apps/` — `github.com/NishikantaRay/InsightTrack` | `dashboard-web/` | `analytics-api/` | — |
+| 3 | `Personal/InsightTrack/appsv2/` — same repo as 2 | `dashboard-web/` | `analytics-api/` | `data-lake/` Parquet cold storage, `routes/sync.js`, `passmark-tests/` |
+
+> Older notes call copies 2 and 3 `traffic2/`. **That directory does not
+> exist.** The path is `Personal/InsightTrack/`, and it is a *different* GitHub
+> repo from `traffic/` — so syncing means two commits and two pushes, not one.
 
 Path translation when porting a change:
 
 ```
-traffic/analytics-dashboard/…  ⇄  traffic2/{apps,appsv2}/dashboard-web/…
-traffic/analytics-db/…         ⇄  traffic2/{apps,appsv2}/analytics-api/…
-traffic/mcp-server/…           ⇄  traffic2/{apps,appsv2}/mcp-server/…
-traffic/mcp-toolkit-core/…     ⇄  traffic2/{apps,appsv2}/mcp-toolkit-core/…
-traffic/docs/…                 ⇄  traffic2/docs/…
+traffic/analytics-dashboard/…  ⇄  InsightTrack/{apps,appsv2}/dashboard-web/…
+traffic/analytics-db/…         ⇄  InsightTrack/{apps,appsv2}/analytics-api/…
+traffic/mcp-server/…           ⇄  InsightTrack/{apps,appsv2}/mcp-server/…
+traffic/mcp-toolkit-core/…     ⇄  InsightTrack/{apps,appsv2}/mcp-toolkit-core/…
+traffic/docs/…                 ⇄  InsightTrack/docs/…
 ```
+
+**`package.json` is not a straight copy.** The three copies carry different
+`version` values (traffic 1.0.0, both InsightTrack copies 1.0.1). Patch the
+`scripts` / `dependencies` keys and leave `version` alone, or you silently
+downgrade a copy.
 
 After finishing a change in one copy, port it to the other two (`diff -rq`
 between the `src/` trees to verify). `traffic/analytics-server/` is the
-**legacy** backend (archived as `archive/analytics-api-legacy` in traffic2) —
-do not add features there.
+**legacy** backend (archived as `archive/analytics-api-legacy` in
+InsightTrack) — do not add features there.
 
 ## 2. Golden rules (invariants — never break these)
 
@@ -67,6 +80,15 @@ do not add features there.
 9. **Update `docs/` after completing any feature** (and create a doc for
    significant new features).
 10. **Port every change to all three copies** (section 1).
+11. **The public site ships via `npm run build:seo`, not `npm run build`.**
+    Plain `build` emits one empty-shell page and silently de-indexes the whole
+    site. See section 6.
+12. **Public-facing claims must match measured evidence.** `README.md`,
+    `public/llms.txt`, `public/index.md`, `index.html` JSON-LD, and
+    `pages/Landing.jsx` all make privacy and performance claims. The audits in
+    `docs/PERFORMANCE_BENCHMARK_AUDIT.md` and `docs/REPOSITORY_AUDIT.md` grade
+    them — "10–100× faster" and "GDPR-compliant, no cookie banner" are both
+    **unsupported** and must stay hedged. Update every surface together.
 
 ## 3. Architecture in one page
 
@@ -209,7 +231,7 @@ More full examples (stores, tracking, team roles, MCP tools, tests):
 ## 6. Commands
 
 Run from the package directory (`analytics-dashboard`/`analytics-db` in
-traffic; `apps/dashboard-web`/`apps/analytics-api` in traffic2):
+traffic; `apps/dashboard-web`/`apps/analytics-api` in InsightTrack):
 
 ```bash
 npm run dev            # frontend: Vite dev server | backend: node --watch
@@ -220,6 +242,62 @@ npm run migrate && npm run seed && npm run init   # backend: PG schema, sample d
 npm run sync -- --full # full PG→DuckDB re-sync
 docker-compose up --build    # full stack from repo root
 ```
+
+### Building the public site (SEO) — use `build:seo`, never `build`
+
+`npm run build` is a plain Vite build: it emits **one** `index.html` with an
+empty `<div id="root">`. Crawlers that don't execute JS — Bing and every AI
+crawler allowlisted in `robots.txt` (GPTBot, ClaudeBot, PerplexityBot) — then
+see **zero content**, and every URL shares the home page's title and canonical.
+
+```bash
+npm run build:seo   # vite build → install chromium → OG cards → RSS → prerender
+```
+
+The pipeline (`package.json` scripts, all in `dashboard-web`/`analytics-dashboard`):
+
+| Step | Script | Output |
+|------|--------|--------|
+| 1 | `vite build` | SPA bundle |
+| 2 | `prerender:install` | Chromium for Playwright (idempotent; ~0.3s when cached) |
+| 3 | `og:images` → `scripts/og-images.mjs` | `dist/og/<slug>.png`, one card per post |
+| 4 | `feed` → `scripts/feed.mjs` | `dist/feed.xml` (RSS 2.0) |
+| 5 | `prerender` → `scripts/prerender.mjs` | real HTML per route + `dist/404.html` |
+
+Rules that keep it correct:
+
+- **Routes are derived from `BLOG_POSTS` and `getTags()`**, never hardcoded.
+  Adding a post automatically prerenders it, generates its OG card, and adds a
+  feed item. A hardcoded list goes stale silently.
+- **`scripts/prerender.mjs` self-checks and exits 1** if any page has an empty
+  root, a duplicate `title`/`canonical`/`og:title`/`og:url`, or if `404.html`
+  stops looking like a 404. A broken SEO build fails the deploy instead of
+  shipping.
+- **The SPA fallback must serve the pristine shell**, captured before any route
+  overwrites `dist/index.html`. Serving the file from disk hands later routes a
+  pre-rendered landing page to hydrate.
+- **`dist/404.html` comes from the `/__not-found__` route**, which must stay
+  *outside* the `ProtectedRoute` catch-all in `App.jsx`. Inside it, a signed-out
+  visitor hitting an unknown URL is redirected to the landing page — a soft 404
+  that returns 200 with duplicate content.
+- **Cloudflare Pages build command must be `npm run build:seo`.** Root
+  directory `analytics-dashboard`, output `dist`.
+
+### Blog content (`src/data/blogPosts.js`)
+
+One array of post objects; `slug`, `title`, `description`, `keyword`, `date`,
+`readingMinutes`, `tags`, `body` are all required (`blogSeo.test.jsx` enforces
+this). `body` is markdown rendered by the small renderer in `pages/Blog.jsx` —
+it supports headings, tables, code fences, lists, `**bold**`, `` `code` ``,
+`*italic*`, and `[text](/blog/slug)` links, and nothing else.
+
+- **Every post must link out to, and be linked from, another post.** The test
+  suite fails on orphans and on broken or self-referential links.
+- **Never anchor a script on `grep '^];$'`** to find the array terminator —
+  posts contain JS code samples with `];` inside code fences. Match the *last*
+  occurrence.
+- Editing post prose? Watch backtick escaping: inline code is stored as
+  `\`` (backslash-backtick) inside the template literal.
 
 Backend tests need PostgreSQL running (they use the real `analytics_db` and
 clean up `site_test%` rows via `tests/testHelper.js`).
@@ -243,7 +321,7 @@ src/App.jsx  src/services/api.js  src/hooks/useAnalytics.js  tailwind.config.js
 grep -rn "authMiddleware\|getOrFetch" src/ --include='*.js' -l
 
 # Confirm copy drift before and after any change
-diff -rq traffic/analytics-db/src traffic2/apps/analytics-api/src
+diff -rq traffic/analytics-db/src InsightTrack/apps/analytics-api/src
 ```
 
 Copy an existing neighbor (the route above yours, the store next to yours)
@@ -259,7 +337,7 @@ change.
 - Hard-coded hex colors in JSX — use Tailwind theme tokens / `CHART_COLORS`.
 - Echoing request URLs, stack traces, paths, or env names in API errors.
 - Editing `dist/`, `node_modules/`, `duckdb/*.duckdb`, or `data-lake/` files.
-- Touching the legacy `analytics-server/` (traffic) / `archive/` (traffic2).
+- Touching the legacy `analytics-server/` (traffic) / `archive/` (InsightTrack).
 - Skipping the three-copy sync or the `docs/` update after a feature.
 
 ## 9. Workflows & further reading

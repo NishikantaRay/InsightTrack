@@ -1,6 +1,6 @@
 import { query, getPool } from '../db/postgres.js';
 import { v4 as uuidv4 } from 'uuid';
-import { sanitiseUrl, sanitiseReferrer } from '../utils/urlPrivacy.js';
+import { sanitiseUrl, sanitiseReferrer, sanitiseProperties } from '../utils/urlPrivacy.js';
 
 export const trackingService = {
     async trackEvent(eventData) {
@@ -20,7 +20,7 @@ export const trackingService = {
             throw new Error('siteId and userId are required');
         }
 
-        const ALLOWED_TYPES = ['pageview', 'click', 'impression', 'add_to_cart', 'checkout', 'purchase', 'signup', 'custom', 'form_submit', 'lead', 'scroll_depth', 'time_on_page', 'button_click', 'signup_start', 'video_play', 'web_vital', 'js_error', 'heatmap_click', 'rage_click', 'site_search'];
+        const ALLOWED_TYPES = ['pageview', 'click', 'impression', 'add_to_cart', 'checkout', 'purchase', 'signup', 'custom', 'form_submit', 'lead', 'scroll_depth', 'time_on_page', 'button_click', 'signup_start', 'video_play', 'web_vital', 'js_error', 'heatmap_click', 'rage_click', 'site_search', 'experiment_view'];
         const safeType = ALLOWED_TYPES.includes(type) ? type : 'custom';
         const safeStr = (s, max = 255) => (typeof s === 'string' ? s.slice(0, max) : '');
 
@@ -39,7 +39,9 @@ export const trackingService = {
                 safeStr(device, 50), safeStr(browser, 255), safeStr(os, 100),
                 safeStr(country, 100), safeStr(city, 255),
                 new Date().toISOString(),
-                JSON.stringify(typeof mergedProps === 'object' && mergedProps !== null ? mergedProps : {}),
+                // Sensitive keys (email, token, password…) are redacted before
+                // storage — see utils/urlPrivacy.js.
+                JSON.stringify(sanitiseProperties(mergedProps)),
                 safeStr(utm_source, 255), safeStr(utm_medium, 255), safeStr(utm_campaign, 255),
                 safeStr(utm_term, 255), safeStr(utm_content, 255),
             ]
@@ -126,7 +128,7 @@ export const trackingService = {
                     event.browser || '', event.os || '',
                     event.country || '', event.city || '',
                     event.timestamp || new Date().toISOString(),
-                    JSON.stringify(event.props || {}),
+                    JSON.stringify(sanitiseProperties(event.props || {})),
                 ]);
             }
 

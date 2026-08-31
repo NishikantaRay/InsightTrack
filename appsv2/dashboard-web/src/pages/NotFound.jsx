@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom';
 import { BarChart3, Home, ArrowLeft } from 'lucide-react';
+import { useSeo } from '../hooks/useSeo';
 
 /**
  * 404 — shown for any unknown route. Returns a real "page not found" screen
  * instead of silently redirecting, so deep links and crawlers get a clear signal.
  */
 export default function NotFound() {
+    // noindex: a 404 must never be indexed, and the static dist/404.html this
+    // renders into is served for every unknown URL.
+    useSeo({ title: 'Page not found', noindex: true });
     return (
         <div className="min-h-screen flex items-center justify-center bg-bg dark:bg-bg-dark px-4">
             <div className="text-center max-w-md">

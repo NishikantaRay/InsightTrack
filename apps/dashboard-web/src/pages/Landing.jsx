@@ -1682,6 +1682,42 @@ export default function Landing() {
                 </div>
             </section>
 
+            {/* ── GUIDES ─────────────────────────────────────────────────────
+                Deep links into the blog. The landing page is the site's highest-
+                authority page; linking only to /blog passed almost none of that
+                to the content itself. */}
+            <section id="guides" className="py-24 px-4 sm:px-6 bg-white dark:bg-gray-900/20 border-t border-gray-200 dark:border-gray-800">
+                <div className="max-w-4xl mx-auto">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-center mb-3">
+                        Guides &amp; deep-dives
+                    </h2>
+                    <p className="text-center text-gray-500 dark:text-gray-400 mb-10">
+                        How the platform works, and how to get more out of your analytics.
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                        {[
+                            { to: '/blog/open-source-google-analytics-alternative', t: 'The best open-source Google Analytics alternative', d: 'Self-hosted, cookieless, and free — how it compares to GA4.' },
+                            { to: '/blog/migrate-from-google-analytics', t: 'How to migrate off Google Analytics', d: 'A step-by-step switch without losing tracking.' },
+                            { to: '/blog/self-host-analytics-with-docker', t: 'Self-host analytics with Docker in 15 minutes', d: 'The full stack from one docker-compose command.' },
+                            { to: '/blog/postgres-duckdb-analytics-architecture', t: 'Why we built on PostgreSQL + DuckDB', d: 'The dual-database architecture, in depth.' },
+                            { to: '/blog/cookieless-analytics-explained', t: 'Cookieless analytics, explained', d: 'Measuring traffic without cookies or fingerprinting.' },
+                            { to: '/blog/core-web-vitals-monitoring-guide', t: 'Monitoring Core Web Vitals from your own analytics', d: 'LCP, CLS, and INP from real users, at p75.' },
+                        ].map(({ to, t, d }) => (
+                            <Link key={to} to={to}
+                                className="block p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-[#fafafa] dark:bg-gray-900/40 hover:border-indigo-300 dark:hover:border-indigo-500/40 transition-colors">
+                                <div className="font-semibold text-sm mb-1">{t}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{d}</div>
+                            </Link>
+                        ))}
+                    </div>
+                    <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
+                        <Link to="/blog" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                            Browse all guides →
+                        </Link>
+                    </p>
+                </div>
+            </section>
+
             {/* ── FOOTER ─────────────────────────────────────────────────── */}
             <footer className="border-t border-gray-200 dark:border-gray-800 py-10 px-4 sm:px-6 bg-white dark:bg-gray-900/20">
                 <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5">

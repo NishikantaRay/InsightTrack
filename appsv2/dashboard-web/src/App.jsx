@@ -185,7 +185,16 @@ function AppContent() {
 
                             {/* Public blog (SEO content, indexable, no auth) */}
                             <Route path="/blog" element={<Blog />} />
+                            <Route path="/blog/tag/:tag" element={<Blog />} />
                             <Route path="/blog/:slug" element={<Blog />} />
+
+                            {/* Public 404. The catch-all below lives inside
+                                ProtectedRoute, so without this an unknown URL
+                                redirects a signed-out visitor to the landing page
+                                — a soft 404 that returns 200 and duplicate content.
+                                This path is also what scripts/prerender.mjs renders
+                                into dist/404.html. */}
+                            <Route path="/__not-found__" element={<NotFound />} />
 
                             {/* Auth routes (no layout) */}
                             <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />

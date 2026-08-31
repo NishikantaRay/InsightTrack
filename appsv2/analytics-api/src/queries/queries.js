@@ -30,6 +30,7 @@ import path from 'node:path';
 import { existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { duckAll, duckRun, closeDuck } from '../db/duckdb.js';
+import { addSignificance } from '../utils/abStats.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_LAKE = path.resolve(__dirname, '..', '..', 'data-lake');
@@ -1643,7 +1644,10 @@ export async function getABTestResults(siteId, dateRange = '30d') {
             testName: test.name,
             status: test.status,
             goalId: test.goal_id,
-            variants: variantResults,
+            // Raw conversion rates invite calling a winner on noise; each
+            // non-control variant carries a two-proportion z-test against the
+            // first variant. See utils/abStats.js for the caveats.
+            variants: addSignificance(variantResults),
         });
     }
 

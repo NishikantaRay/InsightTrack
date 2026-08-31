@@ -1707,7 +1707,8 @@ DELETE /api/invite/:token                  → cancel pending invite`}</CodeBloc
                             { label: 'Request coalescing', detail: 'When 50 users hit the same cache-miss simultaneously, only 1 DuckDB query fires. Others await the same Promise. Eliminates thundering herd on cache expiry.' },
                             { label: 'Debounced sync', detail: 'triggerSync() is debounced 5s (SYNC_DEBOUNCE_MS). Cache invalidated only after sync succeeds. At 1K events/sec: 1 sync per 5s instead of 1K/s.' },
                             { label: 'Daily rollup (daily_stats)', detail: 'After each sync, events are aggregated into daily_stats (1 row per site per day). KPI/traffic queries for historical ranges read daily_stats — 100M events returns in <5ms.' },
-                            { label: 'DuckDB ART indexes', detail: '5 composite indexes on (site_id, timestamp), (type, site_id), (path, site_id), etc. Intended to speed up selective single-site, date-filtered queries; not benchmarked in this repository', detail: 'Events older than ARCHIVE_DAYS go to S3/R2 as Hive-partitioned Parquet. DuckDB UNION ALL view covers both hot RAM and cold S3 transparently.' },
+                            { label: 'DuckDB ART indexes', detail: '5 composite indexes on (site_id, timestamp), (type, site_id), (path, site_id), etc. Intended to speed up selective single-site, date-filtered queries; not benchmarked in this repository.' },
+                            { label: 'Cold storage tiering', detail: 'Events older than ARCHIVE_DAYS go to S3/R2 as Hive-partitioned Parquet. DuckDB UNION ALL view covers both hot RAM and cold S3 transparently.' },
                         ].map(({ label, detail }) => (
                             <div key={label} className="p-2.5 rounded-lg border border-border dark:border-border-dark">
                                 <p className="font-semibold text-text-primary dark:text-text-primary-dark mb-0.5">{label}</p>
