@@ -186,6 +186,11 @@ async function main() {
         const html = readFileSync(file, 'utf8');
         const pick = (re) => html.match(re)?.[1] || '';
         if (/<div id="root">\s*<\/div>/.test(html)) problems.push(`${out}: empty #root`);
+        // The host serves dist/<path>/index.html at a trailing-slash URL and
+        // 308-redirects the bare path to it. A canonical without the slash
+        // names a URL that redirects, so Google must guess which is real.
+        const canon = pick(/<link rel="canonical" href="([^"]*)"/);
+        if (canon && !canon.endsWith('/')) problems.push(`${out}: canonical "${canon}" lacks the trailing slash the host redirects to`);
         for (const [key, re] of [
             ['title', /<title>([\s\S]*?)<\/title>/],
             ['canonical', /<link rel="canonical" href="([^"]*)"/],

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:seo": "vite build && npm run prerender:install && npm run og:images && npm run feed && npm run prerender",
+    "build:seo": "vite build && npm run prerender:install && npm run og:images && npm run feed && npm run sitemap && npm run prerender",
     "prerender": "node scripts/prerender.mjs",
     "preview": "vite preview",
     "test": "vitest run",
@@ -18,7 +18,8 @@
     "benchmark:marketing": "node scripts/benchmarking/make-marketing-slides.js",
     "prerender:install": "playwright install chromium || playwright install --with-deps chromium",
     "og:images": "node scripts/og-images.mjs",
-    "feed": "node scripts/feed.mjs"
+    "feed": "node scripts/feed.mjs",
+    "sitemap": "node scripts/sitemap.mjs"
   },
   "dependencies": {
     "@codemirror/lang-sql": "^6.10.0",

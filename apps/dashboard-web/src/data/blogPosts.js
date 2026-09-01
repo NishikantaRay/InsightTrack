@@ -163,7 +163,7 @@ Create a site in **Settings**, then paste the snippet into your website's \`<hea
 <script src="https://your-domain/api/sites/YOUR_SITE_ID/script"></script>
 \`\`\`
 
-The script is about 2 KB and loads asynchronously, so it never slows your site. Pageviews, sessions, clicks, scroll depth, Web Vitals, and heatmap data start flowing immediately.
+The script is about 9 KB gzipped and loads asynchronously, so it does not block rendering. Pageviews, sessions, clicks, scroll depth, Web Vitals, and heatmap data start flowing immediately.
 
 ## What each container does
 
@@ -3278,6 +3278,7 @@ Also worth reading: [the full open-source roundup](/blog/best-open-source-analyt
             'An honest comparison of Plausible and InsightsTrack — simplicity vs depth, heatmaps, SQL access, and the architectural difference between ClickHouse and embedded DuckDB.',
         keyword: 'plausible alternative',
         date: '2026-08-22',
+        updated: '2026-09-01',
         readingMinutes: 8,
         tags: ['Comparison', 'Privacy'],
         body: `
@@ -3291,7 +3292,7 @@ People look for a Plausible alternative for two reasons: they hit the ceiling of
 
 - **Simplicity.** The dashboard is one screen and needs no explanation. That is a real feature.
 - **Maturity.** Years of production use, a funded team, an established hosted service.
-- **Script size.** Around 1 KB — smaller than most alternatives including this one.
+- **Script size.** Around 1 KB — meaningfully smaller than InsightsTrack's ~9 KB gzipped, because Plausible collects far less. If script weight is your binding constraint, that gap is real and it favours Plausible.
 - **Reputation.** Well known and widely trusted in the privacy community.
 
 If "one page of numbers, nothing to think about" describes what you want, use Plausible.
@@ -3324,7 +3325,7 @@ InsightsTrack's read layer is **embedded DuckDB**: no service, no cluster, one f
 | Heatmaps | ❌ | ✅ |
 | Web Vitals | Partial | ✅ |
 | Raw SQL access | Via ClickHouse directly | Built-in SQL editor |
-| Script size | ~1 KB | ~2 KB |
+| Script size | ~1 KB | ~9 KB gzipped |
 
 ### Licensing
 
@@ -3338,9 +3339,71 @@ This is not a differentiator, and it would be dishonest to claim it is. Both too
 
 One nuance that applies to both: "no cookies" does not automatically mean "no consent banner." Several regulators treat any storage on a visitor's device as in scope regardless of mechanism. See [the GDPR guide](/blog/gdpr-compliant-analytics-guide).
 
+## The ClickHouse question, in detail
+
+"Run ClickHouse" is easy to write and does not convey much, so here is what it actually means.
+
+ClickHouse is an excellent column store and Plausible uses it well. Self-hosting it means owning:
+
+- **Sizing and memory.** ClickHouse is memory-hungry by design; under-provisioning surfaces as query failures rather than slow queries.
+- **Merges and parts.** The storage engine merges data parts in the background. High insert rates with small batches produce many parts, and "too many parts" is a real error you can hit.
+- **Upgrades.** A second database with its own release cadence, migration notes, and failure modes.
+- **Backups.** A separate backup path from your Postgres backups, because Plausible needs both.
+
+For a team that already runs ClickHouse, none of this is a burden. For a solo developer or a small team, it is a second database to become competent in.
+
+InsightsTrack's DuckDB read layer is embedded — it runs inside the API process and reads one file. There is no cluster, no merge tuning, and no separate backup, because the file is derived from Postgres and rebuilds if lost.
+
+The honest counterpoint: embedded means the read layer scales with one machine. ClickHouse scales across many. At genuinely large volumes, ClickHouse's ceiling is much higher, and that is a point in Plausible's favour rather than against it. [DuckDB vs ClickHouse vs Postgres](/blog/duckdb-vs-clickhouse-vs-postgres-analytics) covers where each engine stops being the right answer.
+
+## Hosted vs self-hosted
+
+This is a real difference and it mostly favours Plausible.
+
+Plausible offers a mature, paid, hosted service run by the people who build it. If you would rather not operate anything, that is the strongest reason in this comparison to choose Plausible, and no amount of feature comparison changes it.
+
+InsightsTrack is self-hosted. You run it, you own the uptime, and you also own the data and pay no per-pageview fee. That trade suits people who already run infrastructure and dislike usage-based pricing; it suits people who want a vendor to page at 3am considerably less.
+
+## Migrating from Plausible
+
+Plausible exports cleanly, which makes evaluation easy:
+
+1. Export your Plausible stats to CSV from the dashboard, or pull them via its stats API.
+2. Add the InsightsTrack script alongside the Plausible one — both are async and cookieless.
+3. Run both for two to four weeks and compare trends, not totals.
+4. Keep the CSV export as your historical archive. There is no importer that reconstructs Plausible's history inside InsightsTrack, and a lossy import would produce numbers that disagree with your old reports.
+
+Expect small discrepancies. Every tool defines a session and filters bots differently ([metrics explained](/blog/website-analytics-metrics-explained)); differences under about 15% are normal.
+
+## Frequently asked questions
+
+### Is InsightsTrack a drop-in Plausible replacement?
+
+For traffic reporting, broadly yes — pageviews, sources, pages, countries, devices, and goals all have equivalents. It is not a replacement for Plausible's hosted service, and it is a heavier script.
+
+### Do I need ClickHouse for InsightsTrack?
+
+No. The read layer is embedded DuckDB, which is a file rather than a service. The stack is Postgres, the API, and the dashboard.
+
+### Which has the smaller tracking script?
+
+Plausible, clearly — roughly 1 KB against InsightsTrack's ~9 KB gzipped. InsightsTrack's script also captures heatmap, scroll-depth, Web Vitals, and error data, so it is doing more work, but if script weight is your constraint then Plausible wins that point outright.
+
+### Can I self-host Plausible for free?
+
+Yes. Plausible Community Edition is self-hostable under AGPL-3.0. Note the AGPL's network clause if you plan to build a product on top of it or offer it as a service — for running analytics on your own site it is not a concern.
+
+### Does either need a cookie banner?
+
+Neither sets cookies. Whether a banner is still required depends on your jurisdiction and what else your site stores. See [the GDPR guide](/blog/gdpr-compliant-analytics-guide).
+
+### Which should I pick for a small personal site?
+
+Probably Plausible, especially hosted. The depth InsightsTrack adds — heatmaps, funnels, SQL, Web Vitals — pays off when you have enough traffic to act on it. On a low-traffic personal site, the simpler tool is the better tool.
+
 ## How to decide
 
-Choose **Plausible** if you want the simplest possible dashboard, prefer a mature hosted option, or are happy running ClickHouse.
+Choose **Plausible** if you want the simplest possible dashboard, prefer a mature hosted option, need the smallest possible script, or are happy running ClickHouse.
 
 Choose **InsightsTrack** if you want heatmaps, Web Vitals, and error tracking in the same tool; if you want SQL access to your own data; if you would rather not operate a second database; or if AGPL is a problem for your use case.
 
@@ -3356,6 +3419,7 @@ Both install as a single script tag, so run them side by side for a week. Expect
             'Comparing Matomo and InsightsTrack — feature breadth vs operational weight, MySQL vs columnar reads, licensing, and when Matomo is still the better fit.',
         keyword: 'matomo alternative',
         date: '2026-08-24',
+        updated: '2026-09-01',
         readingMinutes: 8,
         tags: ['Comparison', 'Self-Hosting'],
         body: `
@@ -3401,9 +3465,64 @@ InsightsTrack has no cookie mode to configure — there are no cookies, no IP st
 
 Matomo is **GPL-3.0**; some official plugins are commercially licensed. InsightsTrack is **MIT** with no paid tier.
 
+### The archiving problem, concretely
+
+Matomo's archiving is the part that surprises people, so it is worth being specific about what it is.
+
+Because MySQL cannot aggregate raw hits fast enough for interactive reports, Matomo pre-computes them into summary tables on a schedule. On a small site this is invisible. As traffic grows, three things tend to happen:
+
+- **The cron run stops finishing** before the next one starts, and reports fall behind.
+- **Browser-triggered archiving** (the default on some installs) makes whoever opens the dashboard pay for the computation, so the first view of the day is slow.
+- **Re-processing history** — after a segment change or a data fix — becomes an expensive batch job rather than an instant re-query.
+
+None of this is a flaw in Matomo so much as the cost of serving column-shaped questions from a row store. The standard fixes are real work: tune the cron cadence, disable browser archiving, add segment pre-processing, and give MySQL more memory.
+
+InsightsTrack does not have an archiving layer, because DuckDB aggregates at query time cheaply enough not to need one. That removes a category of operational failure; it also means there is no pre-computed cache to fall back on if a query is genuinely expensive. Optional rollups exist for very large datasets. [Columnar vs row storage](/blog/columnar-vs-row-storage-explained) covers the underlying reason.
+
+## What migrating actually involves
+
+Matomo has years of history in it, and that history is the main reason to stay. Be clear-eyed about what moves and what does not.
+
+**What does not transfer:** historical reports. The schemas are structurally different — Matomo stores pre-aggregated archive tables keyed to its own segment and session definitions. There is no faithful mapping, and a lossy import would give you numbers that silently disagree with your old dashboards.
+
+**What you can do instead:**
+
+1. Keep the Matomo instance running read-only. It costs little and stays authoritative for historical questions.
+2. Run both trackers in parallel for a full reporting cycle, then cut over new reporting to the new tool.
+3. Export the Matomo reports you actually reference — usually a handful of monthly summaries — to CSV for the archive.
+4. Expect different absolute numbers. Matomo counts cookie-based returning visitors by default; a cookieless tool cannot, so your returning-visitor rate will drop even though real behaviour has not changed.
+
+That last point causes the most confusion in migrations. It is a definition change, not a traffic change. [The GA4 migration guide](/blog/migrate-from-google-analytics) covers the same parallel-run method in more detail.
+
+## Frequently asked questions
+
+### Is InsightsTrack a drop-in Matomo replacement?
+
+No, and it would be misleading to claim otherwise. Matomo has ecommerce tracking, a tag manager, log importing, and a plugin marketplace that InsightsTrack does not attempt to match. It is a replacement for the traffic-and-behaviour subset of Matomo, not for the whole catalogue.
+
+### Can I import my Matomo history?
+
+Not faithfully. The archive schemas do not map cleanly. Keep the old instance running read-only for historical lookups and run the two in parallel going forward.
+
+### Will my visitor numbers change after switching?
+
+Almost certainly, and mostly in returning-visitor metrics. Matomo's default cookie-based visitor identification recognises people across sessions in ways cookieless tracking deliberately does not. Pageviews should stay close; unique and returning visitors will not.
+
+### Does Matomo require a cookie banner?
+
+By default Matomo sets cookies, which generally puts it in scope. It can be configured for cookieless tracking, and Matomo documents a consent mode — but it is a configuration you have to apply and verify, rather than the default state.
+
+### Which is cheaper to run?
+
+For a small site, both are inexpensive. Matomo's PHP + MySQL + archiving-worker footprint is heavier at the same traffic level, mainly because archiving needs headroom. The larger cost difference is usually operator time, not hosting.
+
+### Is GPL vs MIT a practical difference?
+
+For running analytics on your own site, no. It matters if you intend to modify the code and distribute it, or build a product on top — GPL-3.0 carries obligations MIT does not. Check with whoever handles licensing at your organisation rather than taking a blog's word for it.
+
 ## How to decide
 
-Choose **Matomo** if you need ecommerce tracking, a tag manager, or specific GA4 reports reproduced; if you want log importing; or if plugin breadth matters more than speed.
+Choose **Matomo** if you need ecommerce tracking, a tag manager, or specific GA4 reports reproduced; if you want log importing; if you need the historical continuity of an existing install; or if plugin breadth matters more than speed.
 
 Choose **InsightsTrack** if you want fast reports without an archiving system to babysit; if cookieless-by-default matters; if you prefer a small stack; or if you want raw SQL over your own data.
 
@@ -3419,6 +3538,7 @@ Matomo's data does not import cleanly — the schemas differ fundamentally. Run 
             'Comparing Umami and InsightsTrack — both lightweight and privacy-first, but differing on heatmaps, Web Vitals, SQL access, and read performance at scale.',
         keyword: 'umami alternative',
         date: '2026-08-26',
+        updated: '2026-09-01',
         readingMinutes: 7,
         tags: ['Comparison', 'Privacy'],
         body: `
@@ -3432,7 +3552,7 @@ The reason to look elsewhere is usually depth. Umami answers "how much traffic, 
 
 - **Deployment simplicity.** One Node app plus one database. Marginally simpler than this stack.
 - **Maturity and adoption.** Larger community and longer track record.
-- **Script size.** Around 2 KB, comparable, and Umami has done more work on minimising it.
+- **Script size.** Umami's tracker is roughly 2 KB; InsightsTrack's is ~9 KB gzipped, because it also captures heatmap, scroll, Web Vitals, and error data. Umami is the lighter script by a clear margin.
 - **Multi-tenancy.** Well-established patterns for running many sites.
 
 Both tools are MIT, both are cookieless, both are self-hosted. This is a close comparison, not a lopsided one.
@@ -3473,9 +3593,65 @@ InsightsTrack splits the workloads: PostgreSQL takes writes, a background sync f
 
 Umami has a clean API but no built-in query surface. InsightsTrack ships a **read-only SQL editor** over DuckDB, so you can answer questions the UI does not have a screen for — see [12 SQL queries every dashboard needs](/blog/sql-queries-for-web-analytics).
 
+## What each one costs to run
+
+Both are modest, but they are not identical. Umami is one Node process and one database. InsightsTrack is a Node API, Postgres, and a DuckDB file on a volume — the DuckDB part is embedded, so it is a file rather than a service, but the API process needs enough memory to hold query working sets.
+
+| | Umami | InsightsTrack |
+|---|---|---|
+| Processes to run | App + database | API + dashboard + Postgres |
+| Extra analytics service | None | None (DuckDB is embedded) |
+| Realistic small-site footprint | ~512 MB RAM | ~1 GB RAM |
+| Backup surface | One database dump | Postgres dump (DuckDB rebuilds from it) |
+
+The DuckDB file is a derived cache, not a source of truth — every event lives in Postgres first. If the file is lost, the sync rebuilds it. That means your backup story stays "back up Postgres," same as Umami.
+
+## Data ownership and export
+
+Both tools keep data on your infrastructure, so neither locks you in. The practical difference is how you get data *out*.
+
+Umami exposes a documented REST API and you can always query its Postgres/MySQL tables directly with standard SQL — a genuine advantage of storing analytics in a database you already know.
+
+InsightsTrack has the same property plus a built-in read-only SQL editor, so exploratory queries do not require database credentials or a separate client. Results export to CSV, and scheduled reports can email them on a cadence. Both are honest answers; Umami's is simpler, InsightsTrack's is more self-service.
+
+## Migrating between them
+
+There is no importer in either direction, and building one is harder than it sounds — the session definitions differ, so historical numbers would not line up even with a perfect row-for-row copy.
+
+The workable approach is to run both for two to four weeks:
+
+1. Add the second script alongside the first. Both are async and cookieless; two trackers will not meaningfully affect page performance.
+2. Compare *trends*, not absolute totals. Direction and relative page rankings should agree closely.
+3. Expect 5–15% differences in visitor counts. Bot filtering and session-timeout rules differ between every analytics tool ([metrics explained](/blog/website-analytics-metrics-explained)).
+4. Keep the old tool running through at least one full monthly reporting cycle before cutting over.
+
+If the two disagree by more than about 20%, something is misconfigured — usually a script missing from a subset of pages, or one tool filtering bots the other counts.
+
+## Frequently asked questions
+
+### Is Umami or InsightsTrack faster?
+
+For collection, both are negligible — Umami's script is smaller. For *reporting*, it depends on data volume. Below a few hundred thousand events, both feel instant. Above that, InsightsTrack's columnar reads pull ahead on wide date ranges, because a 90-day aggregation reads only the columns it needs instead of walking rows. Below that threshold the difference is not worth switching for.
+
+### Can I use Umami and InsightsTrack together?
+
+Yes, and it is the recommended way to evaluate them. Both are cookieless and async, so running both costs one extra network request per page.
+
+### Does either require a cookie banner?
+
+Neither sets cookies. Whether you still need a banner depends on your jurisdiction and what else your site stores — several regulators treat any device storage as in scope regardless of mechanism. See [the GDPR guide](/blog/gdpr-compliant-analytics-guide).
+
+### Which has better support for multiple sites?
+
+Umami's multi-tenancy is more established. InsightsTrack supports multiple sites with per-site team roles, but Umami has more production mileage running many sites on one install.
+
+### Why would I pick Umami over InsightsTrack?
+
+If traffic counts answer your questions, Umami is the smaller, simpler, more proven tool, with a lighter script. That is a good reason and this comparison should not talk you out of it.
+
 ## How to decide
 
-Choose **Umami** if traffic numbers are all you need, if you want the smallest possible stack, or if you value a larger community.
+Choose **Umami** if traffic numbers are all you need, if you want the smallest possible stack, if script weight matters, or if you value a larger community.
 
 Choose **InsightsTrack** if you want heatmaps, Web Vitals, and error tracking in one place; if you want SQL access; or if your event volume is large enough that row-store aggregations have started to drag.
 

@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { BarChart3, ArrowLeft, ArrowRight, Clock, Calendar } from 'lucide-react';
 import { BLOG_POSTS, getPost, getTags, getPostsByTag, tagSlug } from '../data/blogPosts';
-import { useSeo, ORIGIN } from '../hooks/useSeo';
+import { useSeo, ORIGIN, canonicalUrl } from '../hooks/useSeo';
 
 // ── tiny markdown renderer (headings, tables, code, lists, paragraphs) ──────────
 function renderMarkdown(md) {
@@ -125,12 +125,19 @@ const AUTHOR = { '@type': 'Person', name: 'Nishikanta Ray', url: 'https://nishik
 
 function PostMeta({ post, size = 'sm' }) {
     const icon = size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5';
+    const fmt = (d) => new Date(d).toLocaleDateString('en-US', { month: size === 'sm' ? 'short' : 'long', day: 'numeric', year: 'numeric' });
     return (
         <>
             <span className="flex items-center gap-1">
                 <Calendar className={icon} />
-                {new Date(post.date).toLocaleDateString('en-US', { month: size === 'sm' ? 'short' : 'long', day: 'numeric', year: 'numeric' })}
+                {fmt(post.date)}
             </span>
+            {/* Structured data reports `updated` as dateModified, and Google
+                expects marked-up values to be visible on the page — so a post
+                that advertises a revision has to show it. */}
+            {post.updated && post.updated !== post.date && (
+                <span className="flex items-center gap-1">Updated {fmt(post.updated)}</span>
+            )}
             <span className="flex items-center gap-1"><Clock className={icon} />{post.readingMinutes} min read</span>
         </>
     );
@@ -195,13 +202,13 @@ function BlogIndex() {
             '@context': 'https://schema.org',
             '@type': 'Blog',
             name: 'InsightsTrack Blog',
-            url: `${ORIGIN}/blog`,
+            url: canonicalUrl('/blog'),
             blogPost: BLOG_POSTS.map(p => ({
                 '@type': 'BlogPosting',
                 headline: p.title,
-                url: `${ORIGIN}/blog/${p.slug}`,
-                datePublished: p.date,
-                dateModified: p.updated || p.date,
+                url: canonicalUrl(`/blog/${p.slug}`),
+                datePublished: isoDate(p.date),
+                dateModified: isoDate(p.updated || p.date),
                 description: p.description,
             })),
         },
@@ -239,13 +246,13 @@ function TagPage({ tagParam }) {
                 {
                     '@type': 'CollectionPage',
                     name: `${label} — InsightsTrack Blog`,
-                    url: `${ORIGIN}/blog/tag/${tagParam}`,
+                    url: canonicalUrl(`/blog/tag/${tagParam}`),
                     mainEntity: {
                         '@type': 'ItemList',
                         itemListElement: posts.map((p, i) => ({
                             '@type': 'ListItem',
                             position: i + 1,
-                            url: `${ORIGIN}/blog/${p.slug}`,
+                            url: canonicalUrl(`/blog/${p.slug}`),
                             name: p.title,
                         })),
                     },
@@ -253,9 +260,9 @@ function TagPage({ tagParam }) {
                 {
                     '@type': 'BreadcrumbList',
                     itemListElement: [
-                        { '@type': 'ListItem', position: 1, name: 'Home', item: ORIGIN },
-                        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${ORIGIN}/blog` },
-                        { '@type': 'ListItem', position: 3, name: label, item: `${ORIGIN}/blog/tag/${tagParam}` },
+                        { '@type': 'ListItem', position: 1, name: 'Home', item: canonicalUrl('/') },
+                        { '@type': 'ListItem', position: 2, name: 'Blog', item: canonicalUrl('/blog') },
+                        { '@type': 'ListItem', position: 3, name: label, item: canonicalUrl(`/blog/tag/${tagParam}`) },
                     ],
                 },
             ],
@@ -293,7 +300,38 @@ function TagPage({ tagParam }) {
 }
 
 // ── Single post ─────────────────────────────────────────────────────────────
+
+// Pulls the "## Frequently asked questions" section out of a post body as
+// question/answer pairs. Derived from the body rather than duplicated in the
+// post data, so the structured data cannot drift from what the page shows —
+// Google requires the marked-up answer to match the visible text.
+// Google's Article guidance asks for ISO 8601 dates "with timezone information".
+// Posts carry a plain YYYY-MM-DD, which is valid ISO 8601 but leaves the zone
+// for Google to assume. Pinning it to UTC midnight states it explicitly.
+const isoDate = (d) => `${d}T00:00:00+00:00`;
+
+function extractFaq(body) {
+    const section = body.split(/^## Frequently asked questions\s*$/m)[1];
+    if (!section) return [];
+    // Stop at the next h2, so a trailing "## How to decide" is not swallowed.
+    const scoped = section.split(/^## /m)[0];
+    // `(?=^### |$(?![\s\S]))` — next question, or true end of input. JS has no
+    // \Z, and a bare `$` under /m would match the first line ending and cut
+    // every answer to one line.
+    return [...scoped.matchAll(/^### (.+?)[^\S\n]*\n([\s\S]*?)(?=^### |$(?![\s\S]))/gm)]
+        .map(([, q, a]) => ({
+            q: q.trim(),
+            // Strip markdown links/emphasis to plain text for the schema value.
+            a: a.trim()
+                .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+                .replace(/\*\*([^*]+)\*\*/g, '$1')
+                .replace(/\s+/g, ' '),
+        }))
+        .filter((x) => x.q && x.a);
+}
 function BlogPost({ post }) {
+    const faq = extractFaq(post.body);
+
     useSeo({
         title: post.title,
         description: post.description,
@@ -307,28 +345,45 @@ function BlogPost({ post }) {
                     '@type': 'BlogPosting',
                     headline: post.title,
                     description: post.description,
-                    datePublished: post.date,
+                    datePublished: isoDate(post.date),
                     // dateModified tracks real revisions when `updated` is set,
                     // so a re-edited evergreen post can signal freshness.
-                    dateModified: post.updated || post.date,
+                    dateModified: isoDate(post.updated || post.date),
                     keywords: [post.keyword, ...(post.tags || [])].join(', '),
                     articleSection: post.tags?.[0],
                     wordCount: post.body.trim().split(/\s+/).length,
                     timeRequired: `PT${post.readingMinutes}M`,
                     inLanguage: 'en',
                     author: AUTHOR,
-                    publisher: { '@type': 'Organization', name: 'InsightsTrack', url: ORIGIN },
-                    mainEntityOfPage: `${ORIGIN}/blog/${post.slug}`,
+                    publisher: { '@type': 'Organization', name: 'InsightsTrack', url: canonicalUrl('/') },
+                    mainEntityOfPage: canonicalUrl(`/blog/${post.slug}`),
                     image: `${ORIGIN}/og/${post.slug}.png`,
                 },
                 {
                     '@type': 'BreadcrumbList',
                     itemListElement: [
-                        { '@type': 'ListItem', position: 1, name: 'Home', item: ORIGIN },
-                        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${ORIGIN}/blog` },
-                        { '@type': 'ListItem', position: 3, name: post.title, item: `${ORIGIN}/blog/${post.slug}` },
+                        { '@type': 'ListItem', position: 1, name: 'Home', item: canonicalUrl('/') },
+                        { '@type': 'ListItem', position: 2, name: 'Blog', item: canonicalUrl('/blog') },
+                        { '@type': 'ListItem', position: 3, name: post.title, item: canonicalUrl(`/blog/${post.slug}`) },
                     ],
                 },
+                // Only emitted for posts that actually show an FAQ section.
+                //
+                // Google retired the FAQ rich result (announced 2023, fully gone
+                // from Search by May 2026), so this earns no snippet there and
+                // FAQPage is no longer in Google's rich-results gallery. It is
+                // kept because it is cheap, valid, matches the visible text, and
+                // is still consumed by Bing and by the AI answer engines this
+                // site targets — see docs/aeo.md. Do not add it expecting a
+                // Google rich result.
+                ...(faq.length ? [{
+                    '@type': 'FAQPage',
+                    mainEntity: faq.map(({ q, a }) => ({
+                        '@type': 'Question',
+                        name: q,
+                        acceptedAnswer: { '@type': 'Answer', text: a },
+                    })),
+                }] : []),
             ],
         },
     });

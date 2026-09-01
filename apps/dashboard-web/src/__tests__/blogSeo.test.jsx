@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Blog from '../pages/Blog';
 import { BLOG_POSTS, getTags, getPostsByTag, tagSlug } from '../data/blogPosts';
+import { canonicalUrl } from '../hooks/useSeo';
 
 const mountPost = (slug) => render(
     <MemoryRouter initialEntries={[`/blog/${slug}`]}>
@@ -136,5 +137,81 @@ describe('regressions', () => {
         const dates = order.map(slug => BLOG_POSTS.find(p => p.slug === slug)?.date).filter(Boolean);
         expect(dates).toEqual([...dates].sort((a, b) => b.localeCompare(a)));
         expect(dates.length).toBe(BLOG_POSTS.length);
+    });
+});
+
+describe('canonical URLs', () => {
+    // The host serves dist/<path>/index.html and 308-redirects the bare path to
+    // the trailing-slash URL. Canonicals used to name the pre-redirect URL, so
+    // every page declared a canonical that immediately redirected.
+    it('always carries the trailing slash the host serves', () => {
+        for (const p of ['/blog', '/blog/bounce-rate-explained', '/privacy-policy', '/terms']) {
+            expect(canonicalUrl(p)).toBe(`https://insightstrack.dev${p}/`);
+        }
+    });
+
+    it('leaves the root as a single slash and never doubles one', () => {
+        expect(canonicalUrl('/')).toBe('https://insightstrack.dev/');
+        expect(canonicalUrl('/blog/')).toBe('https://insightstrack.dev/blog/');
+    });
+
+    it('drops query strings and fragments', () => {
+        expect(canonicalUrl('/blog?page=2')).toBe('https://insightstrack.dev/blog/');
+        expect(canonicalUrl('/blog#top')).toBe('https://insightstrack.dev/blog/');
+    });
+
+    it('is what the rendered page declares', () => {
+        mountPost('bounce-rate-explained');
+        expect(document.querySelector('link[rel="canonical"]').getAttribute('href'))
+            .toBe('https://insightstrack.dev/blog/bounce-rate-explained/');
+    });
+
+    // Article/breadcrumb JSON-LD naming a different URL than the canonical tells
+    // Google two different things about the same page.
+    it('matches the page URLs in the post JSON-LD', () => {
+        mountPost('bounce-rate-explained');
+        const ld = JSON.parse(document.getElementById('page-jsonld').textContent);
+        const article = ld['@graph'].find((n) => n['@type'] === 'BlogPosting');
+        const crumbs = ld['@graph'].find((n) => n['@type'] === 'BreadcrumbList');
+        const expected = 'https://insightstrack.dev/blog/bounce-rate-explained/';
+        expect(article.mainEntityOfPage).toBe(expected);
+        expect(crumbs.itemListElement.at(-1).item).toBe(expected);
+        // Image URLs are files, not routes — they must not gain a slash.
+        expect(article.image).toBe('https://insightstrack.dev/og/bounce-rate-explained.png');
+    });
+});
+
+describe('article dates', () => {
+    // Google's Article guidance asks for ISO 8601 "with timezone information".
+    it('carries an explicit timezone offset in the schema', () => {
+        mountPost('plausible-alternative');
+        const ld = JSON.parse(document.getElementById('page-jsonld').textContent);
+        const a = ld['@graph'].find((n) => n['@type'] === 'BlogPosting');
+        expect(a.datePublished).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$/);
+        expect(a.dateModified).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$/);
+    });
+
+    // Google expects marked-up values to be visible on the page.
+    it('shows the update date on posts that advertise one', () => {
+        const { container } = mountPost('plausible-alternative');
+        expect(container.textContent).toMatch(/Updated\s+\w+ \d+, \d{4}/);
+    });
+
+    it('shows no update line on posts that were never revised', () => {
+        const { container } = mountPost('bounce-rate-explained');
+        expect(container.textContent).not.toMatch(/Updated\s+\w+ \d+, \d{4}/);
+    });
+
+    // lastmod must be verifiably accurate, so a substantially rewritten post
+    // has to advertise the rewrite rather than its original publish date.
+    it('reports dateModified later than datePublished for revised posts', () => {
+        for (const slug of ['plausible-alternative', 'matomo-alternative', 'umami-alternative']) {
+            const { unmount } = mountPost(slug);
+            const ld = JSON.parse(document.getElementById('page-jsonld').textContent);
+            const a = ld['@graph'].find((n) => n['@type'] === 'BlogPosting');
+            expect(new Date(a.dateModified).getTime(), slug)
+                .toBeGreaterThan(new Date(a.datePublished).getTime());
+            unmount();
+        }
     });
 });

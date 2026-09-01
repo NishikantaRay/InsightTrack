@@ -251,7 +251,7 @@ crawler allowlisted in `robots.txt` (GPTBot, ClaudeBot, PerplexityBot) — then
 see **zero content**, and every URL shares the home page's title and canonical.
 
 ```bash
-npm run build:seo   # vite build → install chromium → OG cards → RSS → prerender
+npm run build:seo   # vite build → install chromium → OG cards → RSS → sitemap → prerender
 ```
 
 The pipeline (`package.json` scripts, all in `dashboard-web`/`analytics-dashboard`):
@@ -262,17 +262,41 @@ The pipeline (`package.json` scripts, all in `dashboard-web`/`analytics-dashboar
 | 2 | `prerender:install` | Chromium for Playwright (idempotent; ~0.3s when cached) |
 | 3 | `og:images` → `scripts/og-images.mjs` | `dist/og/<slug>.png`, one card per post |
 | 4 | `feed` → `scripts/feed.mjs` | `dist/feed.xml` (RSS 2.0) |
-| 5 | `prerender` → `scripts/prerender.mjs` | real HTML per route + `dist/404.html` |
+| 5 | `sitemap` → `scripts/sitemap.mjs` | `dist/sitemap.xml`, every URL with a `<lastmod>` |
+| 6 | `prerender` → `scripts/prerender.mjs` | real HTML per route + `dist/404.html` |
 
 Rules that keep it correct:
 
 - **Routes are derived from `BLOG_POSTS` and `getTags()`**, never hardcoded.
   Adding a post automatically prerenders it, generates its OG card, and adds a
-  feed item. A hardcoded list goes stale silently.
+  feed item and a sitemap entry. A hardcoded list goes stale silently — the
+  sitemap was hand-maintained once and drifted into 8 URLs with no `<lastmod>`.
+- **An FAQ section becomes FAQPage schema automatically.** A `## Frequently
+  asked questions` heading with `### ` questions under it is parsed by
+  `extractFaq()` in `src/pages/Blog.jsx` and emitted as FAQPage JSON-LD. It is
+  derived from the body, never duplicated in post data, because marked-up
+  answers must match the visible text. Posts without the section emit no
+  FAQPage node. **Google retired the FAQ rich result** (gone from Search by
+  May 2026; FAQPage is no longer in the rich-results gallery), so this earns no
+  Google snippet — it is kept for Bing and the AI answer engines. Write FAQ
+  sections because the questions are worth answering, not for rich results.
+- **`updated` drives freshness.** Setting `updated: 'YYYY-MM-DD'` on a post
+  feeds `dateModified`, the sitemap `<lastmod>`, and a visible "Updated …" line
+  in `PostMeta`. Set it whenever a post is materially rewritten — `lastmod` is
+  only used by Google when it is verifiably accurate, and the visible line is
+  what keeps the markup honest. Schema dates carry an explicit `+00:00` offset
+  via `isoDate()`.
+- **Every public URL ends in a trailing slash.** The host serves
+  `dist/<path>/index.html` and 308-redirects the bare path to it, so a canonical
+  without the slash names a URL that immediately redirects. `canonicalUrl()` in
+  `src/hooks/useSeo.js` is the single place that builds public URLs — canonical,
+  `og:url`, and the Article/Breadcrumb JSON-LD all go through it, and
+  `scripts/sitemap.mjs` mirrors it. Image URLs (`/og/<slug>.png`) are files, not
+  routes, and must **not** gain a slash.
 - **`scripts/prerender.mjs` self-checks and exits 1** if any page has an empty
-  root, a duplicate `title`/`canonical`/`og:title`/`og:url`, or if `404.html`
-  stops looking like a 404. A broken SEO build fails the deploy instead of
-  shipping.
+  root, a duplicate `title`/`canonical`/`og:title`/`og:url`, a canonical
+  missing its trailing slash, or if `404.html` stops looking like a 404. A
+  broken SEO build fails the deploy instead of shipping.
 - **The SPA fallback must serve the pristine shell**, captured before any route
   overwrites `dist/index.html`. Serving the file from disk hands later routes a
   pre-rendered landing page to hydrate.
