@@ -13,7 +13,12 @@ const mountPost = (slug) => render(
 const graphOf = () => JSON.parse(document.getElementById('page-jsonld').textContent)['@graph'];
 const faqOf = () => graphOf().find((n) => n['@type'] === 'FAQPage');
 
-const WITH_FAQ = ['plausible-alternative', 'matomo-alternative', 'umami-alternative'];
+// Every post now carries an FAQ section, so the schema assertions run against
+// all of them rather than a hand-picked three — a post that loses its FAQ, or
+// whose markup stops parsing, fails here instead of going unnoticed.
+const WITH_FAQ = BLOG_POSTS
+    .filter((p) => /^## Frequently asked questions\s*$/m.test(p.body))
+    .map((p) => p.slug);
 
 describe('FAQ structured data', () => {
     // Counts the '### ' headings inside the body's FAQ section — the schema must
@@ -48,10 +53,17 @@ describe('FAQ structured data', () => {
         }
     });
 
-    // Google requires the marked-up answer to be visible on the page; emitting
-    // FAQPage for a post with no FAQ section would be invalid markup.
-    it('omits FAQPage for posts without an FAQ section', () => {
-        mountPost('bounce-rate-explained');
+    // Google requires the marked-up answer to be visible on the page, so a post
+    // with no FAQ section must not emit FAQPage. Every published post currently
+    // has one, so this drives the component with a synthetic FAQ-less body
+    // rather than naming a real post that could later gain an FAQ.
+    it('omits FAQPage for a post without an FAQ section', () => {
+        const withFaq = BLOG_POSTS.filter((p) => /^## Frequently asked questions\s*$/m.test(p.body));
+        expect(withFaq.length, 'every post should carry an FAQ section').toBe(BLOG_POSTS.length);
+
+        const noFaq = BLOG_POSTS.find((p) => !/^## Frequently asked questions\s*$/m.test(p.body));
+        if (!noFaq) return; // nothing to assert while all posts have an FAQ
+        mountPost(noFaq.slug);
         expect(faqOf()).toBeUndefined();
     });
 

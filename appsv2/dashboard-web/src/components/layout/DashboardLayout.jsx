@@ -1,10 +1,15 @@
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Menu, Monitor, X } from 'lucide-react';
 import { useFocusModeStore } from '../../store/useFocusModeStore';
 import { useAssistantStore } from '../../store/useAssistantStore';
-import AssistantPanel from '../assistant/AssistantPanel';
+// Lazily loaded: AssistantPanel pulls in Recharts (for Pulse's result cards),
+// and DashboardLayout is imported eagerly by App.jsx — so a static import put
+// the whole charting library in the entry chunk that every visitor downloads,
+// including blog readers who never open the panel. The panel renders nothing
+// until `open` is set, so deferring it costs nothing at first paint.
+const AssistantPanel = lazy(() => import('../assistant/AssistantPanel'));
 
 // ── Mobile warning banner ─────────────────────────────────────────────────────
 // InsightsTrack's analytics dashboard is designed for desktop/laptop use.
@@ -120,7 +125,9 @@ export default function DashboardLayout({ children }) {
                     Ask Pulse
                 </button>
             )}
-            <AssistantPanel />
+            <Suspense fallback={null}>
+                <AssistantPanel />
+            </Suspense>
         </div>
     );
 }

@@ -20,13 +20,13 @@ export default function PrivacyPolicy() {
         <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0f] text-gray-900 dark:text-white">
             <header className="border-b border-gray-200 dark:border-gray-800">
                 <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
-                    <Link to="/landing" className="flex items-center gap-2.5">
+                    <Link to="/" className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
                             <BarChart3 className="w-4 h-4 text-white" />
                         </div>
                         <span className="font-bold text-[15px]">InsightsTrack</span>
                     </Link>
-                    <Link to="/landing" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
                         <ArrowLeft className="w-4 h-4" /> Back to home
                     </Link>
                 </div>

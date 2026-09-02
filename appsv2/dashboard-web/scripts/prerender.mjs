@@ -155,6 +155,25 @@ async function main() {
         setProp('name', 'twitter:image', ogImage);
         // Blog routes are articles, not the site's home page.
         if (route.startsWith('/blog')) html = html.replace(/(<meta property="og:type"\s+content=")[^"]*(")/, `$1article$2`);
+        // article:* timestamps for post pages. The dates already exist in the
+        // BlogPosting JSON-LD this route emitted, so they are read back from
+        // there rather than threaded through separately — one source of truth,
+        // and no risk of the OG date drifting from the structured-data date.
+        if (jsonLd) {
+            try {
+                const graph = JSON.parse(jsonLd)['@graph'] || [];
+                const post = graph.find((n) => n['@type'] === 'BlogPosting');
+                if (post) {
+                    const tags = [
+                        post.datePublished && `<meta property="article:published_time" content="${esc(post.datePublished)}" />`,
+                        post.dateModified && `<meta property="article:modified_time" content="${esc(post.dateModified)}" />`,
+                        post.articleSection && `<meta property="article:section" content="${esc(post.articleSection)}" />`,
+                        post.author?.name && `<meta property="article:author" content="${esc(post.author.name)}" />`,
+                    ].filter(Boolean).join('\n    ');
+                    if (tags) html = html.replace('</head>', `  ${tags}\n</head>`);
+                }
+            } catch { /* malformed JSON-LD is caught by the self-check below */ }
+        }
         // Inject the page's JSON-LD (Article/BreadcrumbList) into <head> so crawlers
         // and AI engines see it in the static HTML.
         if (jsonLd) html = html.replace('</head>', `  <script type="application/ld+json" id="page-jsonld">${jsonLd}</script>\n</head>`);

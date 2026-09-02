@@ -75,7 +75,12 @@ export function useSeo({
     jsonLd = null,
 } = {}) {
     useEffect(() => {
-        const fullTitle = title ? `${title} — ${SITE}` : `${SITE} — Privacy-Friendly Website Analytics for Developers`;
+        // Google truncates around 60 characters. Appending "— InsightsTrack"
+        // to an already-long post title pushes the distinctive part out of the
+        // SERP, so the brand suffix is only added when it actually fits; the
+        // brand still appears in og:site_name and the visible page chrome.
+        const branded = title ? `${title} — ${SITE}` : `${SITE} — Self-Hosted, Privacy-First Analytics`;
+        const fullTitle = title && branded.length > 60 ? title : branded;
         const url = canonicalUrl(path || (typeof window !== 'undefined' ? window.location.pathname : ''));
 
         document.title = fullTitle;

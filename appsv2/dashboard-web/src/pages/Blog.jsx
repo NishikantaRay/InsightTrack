@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { BarChart3, ArrowLeft, ArrowRight, Clock, Calendar } from 'lucide-react';
-import { BLOG_POSTS, getPost, getTags, getPostsByTag, tagSlug } from '../data/blogPosts';
+import { BLOG_POSTS, getPost, getTags, getPostsByTag, getTagIntro, tagSlug } from '../data/blogPosts';
 import { useSeo, ORIGIN, canonicalUrl } from '../hooks/useSeo';
 
 // ── tiny markdown renderer (headings, tables, code, lists, paragraphs) ──────────
@@ -106,7 +106,7 @@ function Shell({ children }) {
         <div className="min-h-screen bg-[#fafafa] dark:bg-[#0a0a0f] text-gray-900 dark:text-white">
             <header className="border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-[#fafafa]/90 dark:bg-[#0a0a0f]/90 backdrop-blur z-10">
                 <div className="max-w-3xl mx-auto px-5 h-16 flex items-center justify-between">
-                    <Link to="/landing" className="flex items-center gap-2.5">
+                    <Link to="/" className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
                             <BarChart3 className="w-4 h-4 text-white" />
                         </div>
@@ -235,10 +235,11 @@ function TagPage({ tagParam }) {
     const posts = getPostsByTag(tagParam);
     const label = posts[0]?.tags.find(t => tagSlug(t) === tagParam) || tagParam;
     const found = posts.length > 0;
+    const intro = getTagIntro(tagParam, label, posts.length);
 
     useSeo(found ? {
         title: `${label} — Analytics Guides`,
-        description: `${posts.length} in-depth guide${posts.length === 1 ? '' : 's'} on ${label.toLowerCase()} for self-hosted, privacy-first web analytics.`,
+        description: intro.length > 160 ? `${intro.slice(0, 157).trimEnd()}…` : intro,
         path: `/blog/tag/${tagParam}`,
         jsonLd: {
             '@context': 'https://schema.org',
@@ -284,10 +285,13 @@ function TagPage({ tagParam }) {
         <Shell>
             <main className="max-w-3xl mx-auto px-5 py-12">
                 <nav className="text-xs text-gray-400 mb-4" aria-label="Breadcrumb">
-                    <Link to="/landing" className="hover:underline">Home</Link> / <Link to="/blog" className="hover:underline">Blog</Link> / <span className="text-gray-500 dark:text-gray-300">{label}</span>
+                    <Link to="/" className="hover:underline">Home</Link> / <Link to="/blog" className="hover:underline">Blog</Link> / <span className="text-gray-500 dark:text-gray-300">{label}</span>
                 </nav>
                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">{label}</h1>
-                <p className="text-gray-500 dark:text-gray-400 mb-8">
+                <p className="text-[15px] leading-relaxed text-gray-600 dark:text-gray-300 mb-3">
+                    {intro}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
                     {posts.length} guide{posts.length === 1 ? '' : 's'} on {label.toLowerCase()}.
                 </p>
                 <TagNav activeSlug={tagParam} />
@@ -333,7 +337,10 @@ function BlogPost({ post }) {
     const faq = extractFaq(post.body);
 
     useSeo({
-        title: post.title,
+        // seoTitle (optional) is a shorter variant used only for the <title>
+        // tag, so long editorial headlines stay intact as the on-page H1 while
+        // the SERP still shows the whole title instead of a truncation.
+        title: post.seoTitle || post.title,
         description: post.description,
         path: `/blog/${post.slug}`,
         // Per-post card generated at build time by scripts/og-images.mjs.
@@ -405,7 +412,7 @@ function BlogPost({ post }) {
                     <ArrowLeft className="w-4 h-4" /> All posts
                 </Link>
                 <nav className="text-xs text-gray-400 mb-4" aria-label="Breadcrumb">
-                    <Link to="/landing" className="hover:underline">Home</Link> / <Link to="/blog" className="hover:underline">Blog</Link> / <span className="text-gray-500 dark:text-gray-300">{post.title}</span>
+                    <Link to="/" className="hover:underline">Home</Link> / <Link to="/blog" className="hover:underline">Blog</Link> / <span className="text-gray-500 dark:text-gray-300">{post.title}</span>
                 </nav>
                 <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight mb-4">{post.title}</h1>
                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-4">
@@ -432,7 +439,7 @@ function BlogPost({ post }) {
                 <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-500/10 dark:to-violet-500/10 border border-indigo-100 dark:border-indigo-500/20 text-center">
                     <h3 className="text-lg font-bold mb-2">Try InsightsTrack free</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Open-source, self-hosted, privacy-first analytics — explore the live demo, no install required.</p>
-                    <Link to="/register?redirect=/demo" className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 transition-all">
+                    <Link rel="nofollow" to="/register?redirect=/demo" className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 transition-all">
                         Open live dashboard <ArrowRight className="w-4 h-4" />
                     </Link>
                 </div>

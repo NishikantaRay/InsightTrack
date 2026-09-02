@@ -2,7 +2,7 @@
 # Public marketing + legal pages are indexable; the authenticated app is not.
 
 User-agent: *
-Allow: /$
+Allow: /
 Allow: /index.md
 Allow: /feed.xml
 Allow: /landing

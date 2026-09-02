@@ -34,7 +34,7 @@ export default function NotFound() {
                             shadow-md shadow-indigo-500/25 transition-all">
                         <Home className="w-4 h-4" /> Go to dashboard
                     </Link>
-                    <Link to="/landing"
+                    <Link to="/"
                         className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl
                             border border-border dark:border-border-dark text-text-primary dark:text-text-primary-dark
                             hover:bg-card dark:hover:bg-card-dark transition-colors">

@@ -652,7 +652,7 @@ export default function Landing() {
                             className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-all">
                             <Mail className="w-3.5 h-3.5" /> Book a Demo
                         </a>
-                        <Link to="/register?redirect=/demo" className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white rounded-xl
+                        <Link rel="nofollow" to="/register?redirect=/demo" className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white rounded-xl
                             bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500
                             shadow-md shadow-indigo-500/25 transition-all hover:shadow-lg hover:shadow-indigo-500/30 hover:-translate-y-px">
                             Try Demo <ArrowRight className="w-3.5 h-3.5" />
@@ -672,7 +672,7 @@ export default function Landing() {
                         ))}
                         <div className="pt-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-2">
                             <a href="mailto:nishikantaray1@gmail.com?subject=InsightsTrack%20Demo%20Request" className="py-2.5 text-sm font-medium text-center rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Book a Demo</a>
-                            <Link to="/register?redirect=/demo" className="py-2.5 text-sm font-semibold text-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Try Demo</Link>
+                            <Link rel="nofollow" to="/register?redirect=/demo" className="py-2.5 text-sm font-semibold text-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Try Demo</Link>
                         </div>
                     </div>
                 )}
@@ -687,15 +687,15 @@ export default function Landing() {
                         The data you see is pre-seeded sample data, not real traffic from your website.
                     </p>
                     <div className="flex items-center gap-3 flex-wrap text-xs font-semibold">
-                        <Link to="/login?redirect=/demo"
+                        <Link rel="nofollow" to="/login?redirect=/demo"
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/60 transition-colors whitespace-nowrap">
                             <Activity className="w-3.5 h-3.5" /> Open live dashboard
                         </Link>
-                        <Link to="/register"
+                        <Link rel="nofollow" to="/register"
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/60 transition-colors whitespace-nowrap">
                             <Users className="w-3.5 h-3.5" /> Try with a new account
                         </Link>
-                        <Link to="/register"
+                        <Link rel="nofollow" to="/register"
                             className="underline underline-offset-2 text-amber-700 dark:text-amber-400 hover:no-underline whitespace-nowrap">
                             Set up your own instance →
                         </Link>
@@ -770,7 +770,7 @@ export default function Landing() {
                 {/* ── CTAs ── */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 mb-16"
                     style={{ animation: 'fadeUp 0.7s 0.28s ease-out both' }}>
-                    <Link to="/register?redirect=/demo"
+                    <Link rel="nofollow" to="/register?redirect=/demo"
                         className="group inline-flex items-center gap-2 px-7 py-3.5 text-sm font-bold text-white rounded-xl
                             bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500
                             shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/40
@@ -804,6 +804,7 @@ export default function Landing() {
                         <img
                             src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183103&theme=${dark ? 'dark' : 'light'}`}
                             alt="InsightsTrack - Open-source, privacy-first analytics with a live demo | Product Hunt"
+                            loading="lazy" decoding="async"
                             width="250" height="54"
                             style={{ width: 250, height: 54 }}
                         />
@@ -1521,9 +1522,10 @@ export default function Landing() {
                                 className="inline-flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                 <Github className="w-4 h-4" /> View on GitHub <ExternalLink className="w-3 h-3" />
                             </a>
-                            <Link to="/docs" className="inline-flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                <FileText className="w-4 h-4" /> Read the deployment docs
-                            </Link>
+                            <a href="https://github.com/NishikantaRay/InsightTrack/tree/main/docs" target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                <FileText className="w-4 h-4" /> Read the deployment docs <ExternalLink className="w-3 h-3" />
+                            </a>
                         </div>
                     </Reveal>
                 </div>
@@ -1598,12 +1600,12 @@ export default function Landing() {
                                 5 minutes to set up. 17 pages of analytics. Your data, your server, your rules.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                                <Link to="/register"
+                                <Link rel="nofollow" to="/register"
                                     className="group inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-bold text-indigo-700 bg-white hover:bg-gray-50 rounded-xl transition-all shadow-xl hover:-translate-y-0.5">
                                     Create free account
                                     <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                                 </Link>
-                                <Link to="/login"
+                                <Link rel="nofollow" to="/login"
                                     className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-semibold text-white/90 bg-white/10 hover:bg-white/20 rounded-xl border border-white/20 transition-all hover:-translate-y-0.5">
                                     Sign in
                                 </Link>
@@ -1733,7 +1735,7 @@ export default function Landing() {
                             <a key={l} href={h} className="hover:text-gray-900 dark:hover:text-white transition-colors">{l}</a>
                         ))}
                         <Link to="/blog" className="hover:text-gray-900 dark:hover:text-white transition-colors">Blog</Link>
-                        <Link to="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign in</Link>
+                        <Link rel="nofollow" to="/login" className="hover:text-gray-900 dark:hover:text-white transition-colors">Sign in</Link>
                         <Link to="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white transition-colors">Privacy</Link>
                         <Link to="/terms" className="hover:text-gray-900 dark:hover:text-white transition-colors">Terms</Link>
                     </div>
@@ -1742,7 +1744,8 @@ export default function Landing() {
                             target="_blank" rel="noopener noreferrer">
                             <img
                                 src={`https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1183103&theme=${dark ? 'dark' : 'light'}`}
-                                alt="InsightsTrack on Product Hunt" width="200" height="43"
+                                alt="InsightsTrack on Product Hunt" loading="lazy" decoding="async"
+                                width="200" height="43"
                                 style={{ width: 200, height: 43 }}
                             />
                         </a>

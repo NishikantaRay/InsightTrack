@@ -54,6 +54,8 @@ Start here. Docs are grouped by what you're trying to do.
 | [api-reference.md](api-reference.md) | REST API reference |
 | [testing.md](testing.md) | Test strategy: Vitest, Testing Library, Playwright |
 | [deployment.md](deployment.md) | Production deployment notes |
+| [seo.md](seo.md) | On-page & technical SEO: prerender, titles, canonicals, structured data |
+| [aeo.md](aeo.md) | Answer Engine Optimization: Markdown twin, AI crawlers, edge worker |
 | [claude-skill.md](claude-skill.md) | The `insighttrack` Claude Code skill: usage & maintenance |
 | [posthog-gap-analysis.md](posthog-gap-analysis.md) | Feature comparison vs PostHog + prioritized roadmap of gaps |
 

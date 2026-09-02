@@ -7,6 +7,7 @@ export const BLOG_POSTS = [
     {
         slug: 'open-source-google-analytics-alternative',
         title: 'The Best Open-Source Google Analytics Alternative (Self-Hosted & Free)',
+        seoTitle: 'Best Open-Source Google Analytics Alternative',
         description:
             'Looking for an open-source, self-hosted alternative to Google Analytics? Here is how InsightsTrack gives you cookieless, privacy-first web analytics you fully own — free forever.',
         keyword: 'open source google analytics alternative',
@@ -95,6 +96,28 @@ Compare *trends*, not absolute totals. If both tools agree traffic rose 12% week
 You do not have to clone a repo to see if it fits. InsightsTrack ships a **live demo**: open the dashboard, sign up, and you are instantly exploring real sample data — heatmaps, funnels, realtime, and more.
 
 When you are ready to self-host, it is a single \`docker-compose up\` — see the [15-minute Docker guide](/blog/self-host-analytics-with-docker). Already on GA4? Follow the [migration walkthrough](/blog/migrate-from-google-analytics).
+
+## Frequently asked questions
+
+### Is there a truly free alternative to Google Analytics?
+
+Yes. InsightsTrack is MIT licensed with no seat limits or event caps, and Matomo, Plausible, and Umami all publish self-hostable editions. "Free" here means no licence fee — you still pay for the server it runs on, which for a small site is a few dollars a month.
+
+### Will my numbers match Google Analytics?
+
+No, and you should not expect them to. GA4 defines sessions, engagement, and bounce differently, and ad blockers suppress GA far more aggressively than a self-hosted first-party script. Self-hosted numbers are usually higher. Run both in parallel for a few weeks and compare trends rather than absolute totals.
+
+### Do I need to be a developer to self-host analytics?
+
+You need to be comfortable running a Docker container and pointing a domain at it. If \`docker compose up\` and a DNS record are familiar, you can do this in an afternoon. If they are not, a hosted service will cost you less in time than you save in fees.
+
+### What do I actually give up by leaving Google Analytics?
+
+Google Ads and Search Console integration, GA4's machine-learning attribution modelling, BigQuery export, and the enormous body of tutorials written for GA. If your reporting depends on the Google advertising stack, that integration is genuinely hard to replace.
+
+### Is self-hosted analytics GDPR compliant by default?
+
+Self-hosting removes the international-transfer problem and keeps the data under your control, which resolves the hardest part. It does not make you compliant on its own — you still need a lawful basis, a retention policy, and an accurate privacy notice. See [the GDPR guide](/blog/gdpr-compliant-analytics-guide).
 
 ## The bottom line
 
@@ -210,6 +233,28 @@ Restore into a fresh stack and re-run the sync to rebuild DuckDB. **Test this at
 - **Container restarts on boot.** Usually \`memory_limit\` exceeding what the container actually has. Set DuckDB's limit to match the container, not the host.
 - **Tracking works locally, not in production.** Almost always mixed content or a missing HTTPS certificate — the script must load over the same scheme as the page.
 
+## Frequently asked questions
+
+### How long does the Docker setup actually take?
+
+About fifteen minutes on a machine that already has Docker installed, most of which is the image build and pulling PostgreSQL. Adding the tracking script to your site and seeing the first pageview arrive is another couple of minutes.
+
+### What server size do I need?
+
+For most sites, 1 vCPU and 1 GB of RAM is enough — the stack is PostgreSQL, a Node API, and a static dashboard. Give it 2 GB if you are running the demo seed data alongside real traffic, and watch disk rather than CPU as your event volume grows.
+
+### Do I need to expose PostgreSQL to the internet?
+
+No, and you should not. Compose puts the database on an internal network reachable only by the API container. Only the API and dashboard ports need to be published, and the database port should stay unmapped.
+
+### How do I back this up?
+
+\`pg_dump\` against the PostgreSQL container is the whole backup — it holds every write. The DuckDB file is derived state rebuilt by the sync, so it does not need backing up, though snapshotting it saves a resync on restore.
+
+### Can I run it behind an existing reverse proxy?
+
+Yes. Point Nginx, Caddy, or Traefik at the published API and dashboard ports and terminate TLS there. The tracking script must be served over HTTPS from the same origin your site uses, or browsers will block it as mixed content.
+
 ## Step 5 — Go to production
 
 Put the stack behind HTTPS (Caddy or Nginx + Let's Encrypt), set your real \`CORS_ORIGINS\` and \`APP_BASE_URL\`, and mount a volume for the DuckDB file so data persists across restarts.
@@ -220,6 +265,7 @@ That is it — self-hosted, privacy-first analytics running in about 15 minutes.
     {
         slug: 'cookieless-analytics-explained',
         title: 'Cookieless Analytics, Explained: Track Visitors Without Cookies or Consent Banners',
+        seoTitle: 'Cookieless Analytics: Tracking Without Consent Banners',
         description:
             'What is cookieless analytics and how does it work? Learn how privacy-first tools track visitors with pseudonymous identifiers and no cookies.',
         keyword: 'cookieless analytics',
@@ -295,6 +341,28 @@ Cookieless does not mean limited. With InsightsTrack you still get:
 - Click heatmaps
 - Core Web Vitals and JS error tracking
 
+## Frequently asked questions
+
+### How does cookieless analytics identify a returning visitor?
+
+It does not, across days — that is the deliberate trade-off. A visitor is identified within a rotating window by hashing coarse request attributes with a salt that rotates on a schedule. Once the salt rotates, the same person is a new visitor, which is what makes the identifier non-persistent.
+
+### Is cookieless the same as fingerprinting?
+
+No, and the distinction matters legally. Fingerprinting collects enough entropy — canvas, fonts, hardware — to single out a device across sites and time. A rotating pseudonymous hash is designed to expire and to be useless off your own domain.
+
+### Do I still need a cookie banner?
+
+If you set no cookies and store nothing on the device, the ePrivacy storage rule that triggers the banner does not apply. Whether you need one overall depends on everything else your site stores — embedded video, chat widgets, and ad pixels usually reintroduce the requirement.
+
+### What can't you measure without cookies?
+
+Multi-day user journeys, accurate returning-visitor rates over long windows, and cross-device stitching. Same-session behaviour — pages, referrer, funnel steps, scroll depth, conversions — is unaffected.
+
+### Does cookieless tracking still work with ad blockers?
+
+Better than third-party analytics, because the script is served first-party from your own domain rather than a known tracker host. Blocklists do catch some self-hosted endpoints, so expect a small gap rather than none.
+
 ## Why it matters
 
 For the schema-level view, see [privacy-first database design](/blog/privacy-first-analytics-database-design) and the [GDPR guide](/blog/gdpr-compliant-analytics-guide). Cookieless, privacy-first analytics respects your visitors **and** simplifies your compliance — no banner, no data-sharing agreements, no risk. You understand your traffic; your visitors keep their privacy.
@@ -305,6 +373,7 @@ Want to see it in action? Try the InsightsTrack live demo — no install, no sig
     {
         slug: 'postgres-duckdb-analytics-architecture',
         title: 'Why We Built Analytics on PostgreSQL + DuckDB (Architecture Deep-Dive)',
+        seoTitle: 'Why We Built Analytics on PostgreSQL + DuckDB',
         description:
             'A technical deep-dive into the dual-database analytics architecture behind InsightsTrack: PostgreSQL for writes, DuckDB for reads, and how it answers 90-day queries in under 100 ms.',
         keyword: 'duckdb analytics architecture',
@@ -353,6 +422,28 @@ We fixed both with a **keyset cursor on the monotonic event id** (the [increment
 
 For very large datasets, the v2 layout adds a **hot/cold** tier: the last 30 days live in a DuckDB hot table (RAM-speed), and older data is exported to **Parquet files** (optionally on S3 or Cloudflare R2). A transparent \`UNION ALL\` view stitches them together, so queries still just say \`FROM events\` and get the full history — recent data fast, historical data cheap.
 
+## Frequently asked questions
+
+### Why not just use PostgreSQL for both reads and writes?
+
+You can, and for small sites you should. The split earns its keep when dashboard queries scan wide date ranges — a row store reads every column of every row to aggregate one, while a columnar engine reads only the columns named. Below a few million events the difference rarely justifies the extra moving part.
+
+### Does the sync mean my dashboard shows stale data?
+
+Slightly, by design. The sync runs on an interval, so analytics reads trail live writes by that interval. Realtime counters bypass DuckDB and read fresh state, so the live visitor count stays current while historical aggregates lag by a sync cycle.
+
+### What happens if the sync breaks?
+
+Writes continue into PostgreSQL, which is the source of truth, so no data is lost — the dashboard simply stops advancing. Because the sync is idempotent and checkpointed, restarting it resumes from the last committed cursor rather than replaying everything.
+
+### Is DuckDB safe to use with concurrent readers?
+
+Multiple readers in one process are fine, which is the pattern here — one instance, pooled connections. DuckDB is not designed for multiple processes writing the same file concurrently, which is why every write goes to PostgreSQL and only the sync worker writes DuckDB.
+
+### At what scale does this design stop working?
+
+When the working set stops fitting comfortably on one machine. The usual next step is tiering cold partitions to Parquet rather than replacing DuckDB — see [DuckDB + Parquet cold storage](/blog/duckdb-parquet-cold-storage).
+
 ## What this buys you
 
 - Fast dashboards at any scale, on a single node
@@ -368,6 +459,7 @@ Curious how it feels? The InsightsTrack live demo runs this exact stack with sam
     {
         slug: 'migrate-from-google-analytics',
         title: 'How to Migrate from Google Analytics to Self-Hosted Analytics',
+        seoTitle: 'Migrating from Google Analytics to Self-Hosted',
         description:
             'A practical, step-by-step guide to migrating off Google Analytics 4 to a self-hosted, privacy-first alternative — without losing tracking or breaking your site.',
         keyword: 'migrate from google analytics',
@@ -462,6 +554,28 @@ A **stable ratio** is the signal you want. It means both tools are seeing the sa
 - **Forgetting server-side events.** Purchases and signups should fire from your backend where they cannot be blocked or double-fired.
 - **Comparing bounce rate across tools.** GA4's definition is engagement-based and not comparable — see [bounce rate explained](/blog/bounce-rate-explained).
 
+## Frequently asked questions
+
+### Can I import my historical Google Analytics data?
+
+Not directly — GA4's export gives you aggregated reports, not the raw event stream, so there is nothing to replay into a new schema. The practical approach is to export the reports you care about as CSV for reference and start fresh.
+
+### How long should I run both tools in parallel?
+
+Two to four weeks. That is long enough to see how the two count the same traffic, establish the ratio between them, and catch tagging gaps before you lose the GA4 safety net.
+
+### Why is my self-hosted traffic higher than GA4 reported?
+
+Mostly ad blockers. A first-party script on your own domain is blocked far less than \`google-analytics.com\`, so you are seeing visitors GA4 never counted. Definitional differences in sessions and engagement account for the rest.
+
+### What should I do with my existing UTM links?
+
+Nothing — UTM parameters are a URL convention, not a Google feature. Any analytics tool that parses query strings picks them up, so live campaign links keep working unchanged.
+
+### When is it safe to remove the GA4 tag?
+
+Once your key reports are reproducible in the new tool, your goals and funnels are configured, and you have a parallel period showing a stable ratio between the two. Removing it before that leaves you with no baseline to debug against.
+
 ## Migration checklist
 
 - [ ] Install new analytics alongside GA4
@@ -477,6 +591,7 @@ Related: [what cookieless tracking actually measures](/blog/cookieless-analytics
     {
         slug: 'core-web-vitals-monitoring-guide',
         title: 'Monitoring Core Web Vitals (LCP, CLS, INP) From Your Own Analytics',
+        seoTitle: 'Monitoring Core Web Vitals: LCP, CLS and INP',
         description:
             'Learn what Core Web Vitals are, the thresholds Google uses, and how to monitor LCP, CLS, and INP from real users with self-hosted, privacy-first analytics.',
         keyword: 'core web vitals monitoring',
@@ -590,6 +705,28 @@ Expect it, and do not treat it as a bug:
 
 Use Lighthouse to *diagnose* a page you already know is slow from field data. Use field data to decide which page that is.
 
+## Frequently asked questions
+
+### What is the difference between lab and field data?
+
+Lab data comes from a synthetic run on fixed hardware and network — repeatable, good for debugging. Field data comes from real visitors on real devices. Google ranks on field data, so lab scores are a development tool, not the thing being measured.
+
+### Why use p75 instead of an average?
+
+An average hides the tail, and the tail is where bad experiences live. One slow visitor in four is a real problem that a mean comfortably conceals. Google itself assesses at the 75th percentile, so measuring the same way keeps your numbers comparable.
+
+### Does INP replace FID?
+
+Yes. INP became the responsiveness Core Web Vital in March 2024. FID measured only the first interaction's input delay; INP considers latency across the whole visit, which reflects what users actually feel.
+
+### Do I need Chrome UX Report data if I collect my own?
+
+No. CrUX is useful for competitive comparison and covers only Chrome users above a traffic threshold. Your own field data covers every browser, updates immediately, and can be segmented by page and device in ways CrUX cannot.
+
+### Why do my Web Vitals differ from PageSpeed Insights?
+
+PageSpeed's lab score is one simulated load on throttled hardware; your field data is thousands of real loads. They answer different questions, and a good lab score with poor field data usually points at real-world network or device variation.
+
 ## Why monitor it from your own analytics
 
 Monitoring Web Vitals inside the same tool you already use for traffic means you can correlate performance with behaviour: did a deploy regress LCP? Did a slow page hurt conversions? And because it is self-hosted and cookieless, you collect this real-user data without sending anything to a third party.
@@ -600,6 +737,7 @@ See live Core Web Vitals (LCP, CLS, INP, TTFB) scored against Google's threshold
     {
         slug: 'duckdb-vs-clickhouse-vs-postgres-analytics',
         title: 'DuckDB vs ClickHouse vs PostgreSQL for Analytics: How to Choose',
+        seoTitle: 'DuckDB vs ClickHouse vs PostgreSQL for Analytics',
         description:
             'A practical comparison of DuckDB, ClickHouse, and PostgreSQL for analytical workloads — operational cost, query shape, concurrency, and when each one is the right call.',
         keyword: 'duckdb vs clickhouse',
@@ -658,6 +796,28 @@ The cost is real: it is a service you run. Cluster sizing, replication topology,
 Analytics has two workloads with opposite shapes. Writes are single-row, frequent, and must be durable — that is Postgres. Reads are wide aggregations over date ranges — that is DuckDB. Trying to serve both from one engine means one of them is always compromised.
 
 So writes land in PostgreSQL, a background job syncs new rows into DuckDB, and every dashboard query reads from DuckDB — see the [full architecture](/blog/postgres-duckdb-analytics-architecture) and the [sync implementation](/blog/incremental-sync-postgres-to-duckdb). You get transactional durability and columnar read speed without running a data warehouse.
+
+## Frequently asked questions
+
+### When is PostgreSQL alone enough for analytics?
+
+Longer than most people assume. With sensible indexes and pre-aggregated rollups, PostgreSQL serves dashboards well into millions of rows. If your queries return in acceptable time today, adding an analytical engine buys complexity you do not yet need.
+
+### Is DuckDB a replacement for ClickHouse?
+
+Not at scale. DuckDB is an embedded single-node engine with no server to run; ClickHouse is a distributed database built for horizontal scale and high-concurrency serving. DuckDB wins on operational simplicity, ClickHouse wins once one machine is no longer enough.
+
+### Can DuckDB handle concurrent users?
+
+In-process, yes — many readers against one instance is the normal pattern. What it does not do is serve many independent processes writing the same file, so it fits an embedded read layer rather than a shared database server.
+
+### Why use two databases instead of picking one?
+
+Because ingestion and analysis want opposite storage layouts. Row storage makes single-row writes cheap; columnar storage makes wide aggregations cheap. Running both lets each side use the layout that suits it, at the cost of a sync.
+
+### How much data before I outgrow a single node?
+
+There is no fixed number, but the signal is consistent: when your hot working set no longer fits in memory and rollups have stopped helping. Tiering cold data to Parquet usually defers a distributed system by a long way.
 
 ## A decision rule
 
@@ -756,6 +916,28 @@ Two rules keep this correct:
 ## What this looks like in practice
 
 InsightsTrack's v2 storage layer runs exactly this shape: the last 30 days in a DuckDB hot table, older months exported to Parquet on S3 or R2, and a \`UNION ALL\` view named \`events\` that every analytics query reads from. Dashboards stay fast on recent windows, historical queries still work, and storage cost stops tracking data volume linearly.
+
+## Frequently asked questions
+
+### Why Parquet rather than compressed CSV?
+
+Parquet is columnar and self-describing, so a query touching three columns reads only those three, and it carries row-group statistics that let the reader skip whole blocks. Gzipped CSV must be decompressed end to end before anything can be filtered.
+
+### Can DuckDB query Parquet on S3 or R2 directly?
+
+Yes, via the httpfs extension. With range requests and row-group statistics it fetches only the byte ranges a query needs, so scanning a partitioned archive does not mean downloading it.
+
+### How do I query hot and cold data as one table?
+
+A view built from \`UNION ALL\` over the hot table and the cold Parquet glob. Callers query the view and never need to know where a row lives; adding a partition means re-creating the view, not rewriting queries.
+
+### What partition size works best?
+
+Monthly partitions suit most analytics workloads — large enough that row groups compress well and file counts stay manageable, small enough that a date filter prunes most of the archive. Daily files become a metadata problem at scale.
+
+### When is tiering not worth it?
+
+Below roughly a year of data on one node. The \`UNION ALL\` view, the export job, and the object-storage dependency all cost real complexity, and a few gigabytes of local DuckDB does not need any of it.
 
 ## When not to bother
 
@@ -928,6 +1110,28 @@ GROUP BY visitor_key, sess_num;
 
 Now bounce rate is \`avg(is_bounce)\` — one column, no subquery. The [window-function guide](/blog/sql-window-functions-sessionization) covers this sessionization pattern in depth.
 
+## Frequently asked questions
+
+### Does schema design still matter with a columnar engine?
+
+Yes, though less for storage than for clarity. Columnar compression forgives some denormalization, but grain confusion — mixing pageviews and sessions in one table — produces wrong numbers regardless of engine.
+
+### What grain should the pageview fact table use?
+
+One row per pageview. Choose the finest grain you will need to answer questions at, then derive sessions and daily rollups from it. Aggregating early is easy to do and impossible to undo.
+
+### Why keep a separate date dimension?
+
+So that fiscal periods, holidays, and week definitions live in one place instead of being recomputed in every query. It also makes calendar joins cheap and keeps date logic consistent across reports.
+
+### Should I denormalize dimensions into the fact table?
+
+For low-cardinality attributes read on nearly every query — device type, country, browser — yes. Columnar compression makes repeated values nearly free, and skipping the join is a real saving. Keep high-cardinality or frequently-changing attributes in dimensions.
+
+### How do I handle a dimension value that changes over time?
+
+Decide whether history matters. If you need to know what was true at event time, use a type-2 dimension with validity ranges; if you only care about the current value, overwrite it. Web analytics needs type 2 less often than classic BI does.
+
 ## Rules that keep the model honest
 
 1. **One grain per fact table**, declared in a comment at the top of the DDL.
@@ -1008,6 +1212,28 @@ This is the whole reason "just use one database" is an unsatisfying answer for a
 Serving a dashboard from a transactional row store means paying for full-row reads on every aggregation. Serving your application from a column store means paying for column reassembly on every lookup.
 
 InsightsTrack keeps them separate: PostgreSQL takes the writes — single-row, transactional, durable — and a [sync feeds DuckDB](/blog/incremental-sync-postgres-to-duckdb), which serves every read. The [architecture deep-dive](/blog/postgres-duckdb-analytics-architecture) covers the full design. Each engine runs the workload its layout was designed for.
+
+## Frequently asked questions
+
+### What makes columnar storage faster for analytics?
+
+It reads less. Aggregating one column in a row store still pulls every column of every matching row off disk; a columnar layout reads just that column. Add per-column compression and vectorized execution and the gap compounds.
+
+### Is columnar storage always the better choice?
+
+No. Fetching or updating a single complete record — the shape of most transactional work — means touching every column, which a row store does in one contiguous read and a columnar store does as many separate ones.
+
+### Why does columnar data compress so much better?
+
+Because a column holds one type with repeated values, which run-length and dictionary encoding exploit directly. A row mixes types and values, leaving far less structure for a compressor to work with.
+
+### What is vectorized execution?
+
+Processing values in batches through tight loops rather than one row at a time through an interpreter. It keeps data in CPU cache and lets the compiler emit SIMD instructions, which is why the speedup exceeds what reduced I/O alone would explain.
+
+### How do I know my workload is hitting the wrong layout?
+
+The symptom is a query that scans a lot to return a little — a \`SUM\` or \`COUNT\` over months of rows returning a handful of numbers, slow in proportion to table size rather than result size.
 
 ## Recognizing the symptom
 
@@ -1144,6 +1370,28 @@ await db.query(\`SELECT * FROM read_csv_auto('report.csv') LIMIT 10\`);
 
 This is what makes [hot/cold tiering](/blog/duckdb-parquet-cold-storage) practical: cold data stays as files and is still queryable.
 
+## Frequently asked questions
+
+### Should I run one DuckDB instance or several?
+
+One instance per process, with pooled connections from it. Opening the same database file from multiple instances risks corruption, and it is the single most common way people get into trouble.
+
+### Do I need parameterized queries if the input is internal?
+
+Yes. Beyond injection, parameter binding avoids per-query parse and plan work and prevents subtle type-coercion bugs from string concatenation. Treat it as unconditional.
+
+### Why are my bulk inserts so slow?
+
+Almost certainly one statement per row. Batch inserts into multi-row statements or an appender, wrap them in a transaction, and throughput improves by orders of magnitude.
+
+### Does DuckDB block the Node event loop?
+
+Long queries run on DuckDB's own threads, but result materialization crosses into JS and can stall the loop if a query returns a very large result set. Aggregate in SQL and return small results.
+
+### How do BIGINT values come back in JavaScript?
+
+As \`BigInt\`, not \`Number\`, because they can exceed \`Number.MAX_SAFE_INTEGER\`. Convert explicitly before arithmetic or JSON serialization — this surprises people at the API boundary more than anywhere else.
+
 ## A checklist
 
 1. One \`DuckDBInstance\` per file per process.
@@ -1270,6 +1518,28 @@ Then set \`last_id\` to the max id in the export and start the incremental loop.
 - **Lag as a health metric.** Track \`max(id)\` in Postgres minus \`last_id\` in DuckDB. Growing lag is the earliest signal that sync is failing, and it is far more useful than "the process is running."
 - **Log rows-per-second per batch.** When sync slows down, you want to know whether it is the read side or the write side before you start guessing.
 
+## Frequently asked questions
+
+### Why is a timestamp cursor unsafe for incremental sync?
+
+Because rows can commit out of timestamp order. A transaction that started before your cursor but commits after it has a timestamp you have already passed, so the next run skips it — silent, permanent row loss.
+
+### What should the cursor be instead?
+
+A monotonic id with keyset pagination — \`WHERE id > $last ORDER BY id\`. Ids are assigned at insert and visible only on commit, so nothing appears behind the cursor after you have moved past it.
+
+### How do I make restarts safe?
+
+Write the checkpoint in the same transaction as the batch it describes. If the process dies mid-batch, both roll back together and the next run replays that batch cleanly, giving idempotent restarts.
+
+### How do updates and deletes propagate?
+
+They do not, with an append-only cursor — it only sees new ids. Mutable rows need either a separate change feed keyed on an updated-at column, or periodic re-materialization of the affected partition.
+
+### Can I backfill without stopping live sync?
+
+Yes. Run the backfill downward from the starting id while live sync runs upward from it. The two never overlap, so neither blocks the other and the ranges meet in the middle.
+
 ## What good looks like
 
 A correct sync has three properties, and you should be able to state why each holds:
@@ -1284,6 +1554,7 @@ InsightsTrack's sync engine is built on exactly this: keyset cursor on the event
     {
         slug: 'event-schema-design-analytics',
         title: 'Event Schema Design: Naming, Properties, and Avoiding Analytics Debt',
+        seoTitle: 'Event Schema Design for Analytics',
         description:
             'How to design an analytics event taxonomy that survives three years — naming conventions, property design, versioning, and the anti-patterns that make data unqueryable.',
         keyword: 'analytics event schema design',
@@ -1403,6 +1674,28 @@ Validate against it in CI if you can. Even an unvalidated plan prevents the most
 - **Tracking everything.** 400 events nobody has ever queried is not thoroughness; it is noise that makes the 12 events that matter harder to find.
 - **Client-side revenue.** Money events belong on the server, where they cannot be blocked, spoofed, or double-fired by a retry.
 - **Renaming in place.** Renaming an event splits its history at the rename date. If you must, keep emitting both for a transition window.
+
+## Frequently asked questions
+
+### What naming convention should I use for events?
+
+Object-action in the past tense — \`checkout_completed\`, \`signup_started\`. It sorts related events together, reads unambiguously in a query, and avoids the drift that free-form naming produces across teams.
+
+### Should details be separate events or properties?
+
+Properties. \`button_clicked\` with a \`label\` property stays queryable as one series; a distinct event per button produces hundreds of names nobody can aggregate across. Reserve new event names for genuinely different actions.
+
+### How do I version an event schema?
+
+Version the schema, not the name. Adding \`checkout_completed_v2\` splits your history permanently. Carry a schema version property and keep changes additive so old rows stay readable.
+
+### What is a tracking plan and do I need one?
+
+A single document listing every event, its properties, and their types. Yes — without it, two engineers implement the same event differently within a quarter and neither realizes until the numbers disagree.
+
+### How should flexible properties be stored in a columnar engine?
+
+Promote the properties you query often to real columns so they compress and prune; keep the long tail in a JSON or MAP column. Querying everything out of one JSON blob forfeits most of what columnar storage offers.
 
 ## Start small
 
@@ -1583,6 +1876,28 @@ GROUP BY visitor_id;
 
 Group by \`first_seen\` week and you have a retention cohort table without leaving SQL.
 
+## Frequently asked questions
+
+### What is the gap-and-island technique?
+
+A two-step pattern: use \`LAG\` to compare each event's timestamp with the previous one and flag gaps over your threshold, then take a running \`SUM\` of those flags to number the resulting islands. Each island is a session.
+
+### What inactivity timeout should I use?
+
+Thirty minutes is the industry default and keeps your numbers comparable with other tools. What matters more is stating it explicitly — session counts are meaningless without the threshold that produced them.
+
+### How is time on page calculated for the last pageview?
+
+It cannot be, from pageviews alone — there is no next event to subtract from. Either treat it as null and exclude it, or bound it with an engagement ping. Silently counting it as zero drags every average down.
+
+### Why do funnel steps need explicit ordering?
+
+Because without an ordering constraint you are measuring who did all the steps, not who did them in sequence. Comparing each step's timestamp against the previous one is what makes it a funnel rather than a set intersection.
+
+### Are window functions slow on large tables?
+
+They require a sort, which is the main cost. Partitioning by visitor keeps each sort small, and columnar engines parallelize them well — filter to the date range before the window rather than after.
+
 ## Why DuckDB is pleasant for this
 
 These queries scan a lot of rows, touch few columns, and sort within partitions — precisely the shape a vectorized columnar engine handles well. Sessionizing tens of millions of events on a laptop is routine, which means you can iterate on the logic interactively instead of submitting jobs.
@@ -1704,6 +2019,28 @@ CREATE OR REPLACE TABLE events AS SELECT * FROM events ORDER BY site_id, timesta
 
 Single-row inserts are the most common cause of "DuckDB is slow" reports, and it is a write-path problem masquerading as a read-path one. Insert in batches of thousands. After a large load, run \`CHECKPOINT\` to flush the write-ahead log into the main file so subsequent reads are not replaying it.
 
+## Frequently asked questions
+
+### What should I measure before optimizing?
+
+\`EXPLAIN ANALYZE\` on the real query. It shows where time actually goes, which is regularly not where you assumed — usually a scan that failed to prune rather than the join you were suspicious of.
+
+### Does DuckDB need indexes?
+
+Rarely. Columnar scanning with zone maps and filter pushdown covers most analytical access patterns. Indexes help point lookups and enforce constraints, but adding them to speed up aggregations usually does nothing.
+
+### Why does wrapping a column in a function slow things down?
+
+It defeats pushdown. \`WHERE date_trunc('day', ts) = '2026-01-01'\` forces evaluation of every row, while \`WHERE ts >= '2026-01-01' AND ts < '2026-01-02'\` lets the scanner skip whole row groups on statistics.
+
+### Should I set memory_limit and threads explicitly?
+
+Yes, in any service context. Defaults are derived from the machine, which in a container often means the host's resources rather than the container's — the usual cause of an out-of-memory kill under load.
+
+### When should a view become a materialized table?
+
+When the same view is queried repeatedly between refreshes and its cost is non-trivial. A view recomputes every time; materializing trades storage and staleness for a fixed read cost.
+
 ## A tuning order of operations
 
 1. \`EXPLAIN ANALYZE\` the slow query — find the dominant node.
@@ -1820,6 +2157,28 @@ The strongest guarantee is not storing event-level rows at all. For metrics that
 
 Keep event-level rows only where a genuine product feature needs them: funnels, path analysis, session replay-style aggregates. Then make sure those rows expire.
 
+## Frequently asked questions
+
+### How can a schema make a privacy leak impossible?
+
+By having nowhere to put the data. If there is no column for an IP address, email, or user id, no code path can accidentally persist one — a stronger guarantee than a policy saying nobody should.
+
+### What is salt rotation and why does it matter?
+
+The visitor hash is computed with a secret salt that is replaced on a schedule. After rotation the same visitor hashes differently, so identifiers cannot be linked across periods and old data cannot be re-derived from a leaked salt.
+
+### Why store coarse geography instead of exact location?
+
+Country and region answer essentially every analytics question anyone actually asks, while city-or-finer combined with other fields starts to single out individuals. Resolving coarsely at the edge and discarding the IP keeps precision you never needed out of storage.
+
+### How should retention be enforced?
+
+As a scheduled deletion job against a partitioned table, so old partitions are dropped rather than scanned and deleted row by row. Retention that depends on someone remembering to run cleanup is not a retention policy.
+
+### Do I need to honour Do Not Track and Global Privacy Control?
+
+GPC is legally recognized in some jurisdictions and DNT largely is not, but both are cheap to respect and honouring them at the edge means the request never becomes stored data at all.
+
 ## The design checklist
 
 - [ ] No IP, raw user agent, or email column exists in any table
@@ -1840,6 +2199,7 @@ InsightsTrack implements this schema directly: no IPs, no cookies, rotating-salt
     {
         slug: 'bounce-rate-explained',
         title: 'What Is a Good Bounce Rate? (And Why the Metric Misleads You)',
+        seoTitle: 'What Is a Good Bounce Rate?',
         description:
             'How bounce rate is actually calculated, what counts as good by page type, why GA4 changed the definition, and the cases where a high bounce rate is fine.',
         keyword: 'what is a good bounce rate',
@@ -1923,6 +2283,28 @@ Bounce rate is a blunt instrument on its own. Read it alongside:
 - **Time on page** (median, not mean) — for the sessions where it is measurable.
 - **Scroll-adjusted bounce** — sessions with one pageview *and* under 25% scroll depth. That is much closer to what people mean when they say "bounce."
 - **Return rate** — did they come back later? A bounce followed by a return visit two days later is not a failure.
+
+## Frequently asked questions
+
+### What counts as a bounce?
+
+Classically, a session with exactly one interaction — one pageview and nothing else — regardless of how long the visitor stayed. That last part is why the metric misleads so often.
+
+### Why did GA4 change the definition?
+
+GA4 inverted it: engagement rate is the primary metric, and bounce rate is its complement — the share of sessions that were *not* engaged, where engagement means ten seconds, a conversion, or two pageviews. GA4 and Universal Analytics bounce rates are not comparable.
+
+### What is a good bounce rate?
+
+It depends entirely on page type. Blog posts and documentation routinely sit at 70-90% and are working correctly; a checkout page at 70% is broken. Compare a page against itself over time, not against a cross-industry benchmark.
+
+### When is a high bounce rate actually fine?
+
+When one page answers the question. Reference pages, contact details, and single-article visits from search all bounce by design — the visitor got what they came for and left satisfied.
+
+### What should I look at alongside bounce rate?
+
+Scroll depth and time on page. A bounce with 90% scroll is a satisfied reader; a bounce with 10% scroll in three seconds is a mismatch between your search snippet and your content.
 
 ## Fixing genuinely bad bounce rates
 
@@ -2044,6 +2426,28 @@ GROUP BY device_type;
 
 **Small numbers.** Below a few hundred entrants per step, week-to-week movement is mostly noise. Widen the window rather than reacting to it.
 
+## Frequently asked questions
+
+### How many steps should a funnel have?
+
+Three to five. Longer funnels fragment the population until each step's numbers are too small to act on, and they mix genuinely different journeys into one average.
+
+### What is the difference between strict and loose ordering?
+
+Strict requires the steps in exact sequence with nothing between; loose allows other events in between. Loose reflects real behaviour better, strict is right when the sequence itself is the thing being tested.
+
+### What attribution window should I use?
+
+Slightly longer than the decision naturally takes. A signup funnel might use one session; a B2B trial-to-paid funnel needs weeks. Too short and you discard real conversions, too long and you attribute unrelated ones.
+
+### Why read step-to-step conversion rather than from the top?
+
+Because top-of-funnel percentages hide where the loss happens — every step after a big drop looks bad. Step-to-step rates identify the one transition worth fixing.
+
+### What is the survivorship trap in funnel analysis?
+
+Concluding things about all users from the ones who reached a late step. People at step four are already self-selected as more motivated, so their behaviour says little about why step two lost everyone else.
+
 ## Turning drop-off into a fix
 
 Once you have found the leaking step, get specific:
@@ -2148,6 +2552,28 @@ UTMs record the touch; the **attribution model** decides which touch gets credit
 
 Most self-hosted, privacy-first tools do last-touch by session, because multi-touch attribution across weeks requires persistent cross-session identity — exactly the thing cookieless analytics deliberately avoids. That is a real limitation, and worth being explicit about rather than pretending the numbers mean more than they do.
 
+## Frequently asked questions
+
+### Which UTM parameters are actually required?
+
+\`utm_source\` alone is enough to attribute traffic; \`utm_medium\` and \`utm_campaign\` make reports readable. Term and content are optional and mostly matter for paid search and A/B-tested creative.
+
+### Are UTM parameters case sensitive?
+
+Yes, and this is the most common way UTM data gets corrupted — \`Facebook\` and \`facebook\` become two rows in every report. Standardize on lowercase and enforce it in a shared builder.
+
+### Should I put UTMs on internal links?
+
+No. Internal UTM links overwrite the original acquisition source, so a visitor who arrived from search is reattributed to your own newsletter. Use them only on links pointing into your site from outside it.
+
+### Do UTM parameters affect SEO?
+
+They create distinct URLs, which is why a canonical tag matters — it consolidates the variants to one indexable URL. Without one you risk duplicate-content dilution across campaign links.
+
+### How do UTMs relate to attribution models?
+
+UTMs record the touchpoint; the attribution model decides which touchpoint gets credit. Last-click is the common default, and no tagging scheme fixes a model that ignores earlier touches.
+
 ## A tagging checklist
 
 - [ ] Source, medium, campaign on every external campaign link
@@ -2165,6 +2591,7 @@ Related: [funnel analysis by channel](/blog/funnel-analysis-guide) and [retentio
     {
         slug: 'heatmaps-and-session-insights',
         title: 'Click Heatmaps and Scroll Depth: Reading What Users Actually Do',
+        seoTitle: 'Click Heatmaps and Scroll Depth Explained',
         description:
             'How click, move, and scroll heatmaps are captured and rendered, what rage clicks and dead clicks reveal, and how to act on the patterns without over-reading them.',
         keyword: 'click heatmap analytics',
@@ -2262,6 +2689,28 @@ Both are unusually actionable because they point at a specific element, not a va
 - **Nav items with near-zero clicks** → candidates for removal; every extra option costs attention.
 - **Heavy clicking below the fold on mobile** → your mobile layout is burying something people want.
 
+## Frequently asked questions
+
+### How do heatmaps survive a site redesign?
+
+By recording a stable element selector alongside the coordinates. Pixel positions become meaningless the moment layout changes, while element-anchored clicks stay comparable and work across viewport sizes.
+
+### What is a rage click and what does it indicate?
+
+Several rapid clicks on the same element, which almost always means the visitor expected something to happen and nothing did — a dead control, a slow handler, or something styled to look clickable that is not.
+
+### What is a dead click?
+
+A click on an element with no handler at all. Usually it is text styled like a link, an image users expect to enlarge, or a disabled control that gives no feedback about why it is disabled.
+
+### How much traffic do I need for a useful heatmap?
+
+A few hundred sessions per page before patterns separate from noise. Below that you are reading individual behaviour, which is interesting but not evidence.
+
+### Are heatmaps a privacy risk?
+
+They can be, if you record full session replay with form contents. Aggregate click and scroll data tied to a pseudonymous id carries far less risk — capture positions and selectors, never keystrokes or input values.
+
 ## Privacy considerations
 
 Heatmap capture is where analytics most easily drifts into collecting personal data. Keep it bounded:
@@ -2277,6 +2726,7 @@ InsightsTrack's heatmaps store relative coordinates plus element selectors, buck
     {
         slug: 'retention-cohort-analysis-sql',
         title: 'Cohort Retention Analysis in SQL: Building the Triangle Chart',
+        seoTitle: 'Cohort Retention Analysis in SQL',
         description:
             'How to compute cohort retention from raw events — the classic triangle table, N-day vs unbounded retention, and reading the curve without fooling yourself.',
         keyword: 'cohort retention analysis sql',
@@ -2395,6 +2845,28 @@ Pick one, label the chart with which it is, and never switch silently. Unbounded
 
 **Survivorship in segments.** "Users who did feature X retain better" is usually backwards — engaged users try more features. Correlation, not a causal reason to push feature X.
 
+## Frequently asked questions
+
+### What does a retention cohort actually measure?
+
+The share of a group that first appeared in one period and came back in a later one. Grouping by first-seen date is what makes cohorts comparable, since it holds acquisition timing constant.
+
+### What is the difference between N-day and unbounded retention?
+
+N-day counts a return on exactly day N; unbounded counts a return on day N or any day after. N-day is stricter and noisier on small cohorts; unbounded curves are smoother and never increase.
+
+### Why does my retention curve flatten out?
+
+That plateau is the healthy signal — it is the fraction of users who became habitual. A curve that keeps declining to zero means no durable core is forming, which is a product problem rather than a measurement one.
+
+### How large does a cohort need to be?
+
+Enough that one user is not a visible percentage. Below about a hundred, each person moves the line by more than a point and the triangle mostly displays noise — widen to weekly or monthly cohorts.
+
+### Why does the newest cohort look worse?
+
+Because it has not had time to return yet. The most recent row is always incomplete, and reading it as a decline is the most common misinterpretation of a retention triangle.
+
 ## From cohorts to action
 
 Split cohorts by acquisition channel and the chart starts paying for itself:
@@ -2417,6 +2889,7 @@ Cohort retention runs well on a columnar engine — it is a large scan over few 
     {
         slug: 'gdpr-compliant-analytics-guide',
         title: 'GDPR-Compliant Web Analytics: What the Rules Actually Require',
+        seoTitle: 'GDPR-Compliant Web Analytics: The Real Rules',
         description:
             'A practical walkthrough of GDPR and ePrivacy as they apply to web analytics — lawful basis, the cookie rule, data minimisation, transfers, and what self-hosting changes.',
         keyword: 'gdpr compliant analytics',
@@ -2504,6 +2977,28 @@ Keep, and actually maintain:
 - A **Legitimate Interests Assessment**, if that is your basis.
 - A **privacy policy** that names the tool, the data, the retention period, and the basis.
 - A **DPA** with any processor. Self-hosting means there is no processor for this data — one fewer agreement to maintain.
+
+## Frequently asked questions
+
+### Does removing cookies make me GDPR compliant?
+
+No. Two separate rules are being conflated: the ePrivacy storage rule governs cookies and triggers consent banners, while GDPR governs personal data regardless of how it is stored. Dropping cookies resolves the first, not the second.
+
+### Is an IP address personal data under GDPR?
+
+Yes — European case law has repeatedly held that IP addresses are personal data because they can identify a person when combined with other information. This is why not storing them at all is the cleanest position.
+
+### What lawful basis applies to analytics?
+
+Legitimate interest is usually the appropriate basis for privacy-preserving, aggregate analytics, provided you document a balancing test. Consent is required once tracking becomes cross-site or identifies individuals.
+
+### Does self-hosting solve international transfer problems?
+
+It solves them if you host inside your own jurisdiction, because there is no transfer. Self-hosting on a US-owned cloud region is a more nuanced question than it first appears.
+
+### What about data subject access and deletion requests?
+
+You still owe them, but properly pseudonymous analytics often cannot link a request to any row — and being unable to identify someone is a legitimate response under Article 11, provided you can explain the design.
 
 ## A practical checklist
 
@@ -2656,6 +3151,28 @@ app.get('/api/realtime/stream', (req, res) => {
 The \`req.on('close')\` cleanup is mandatory. Without it every disconnected client leaves a timer running forever, and the leak only becomes visible under real traffic.
 
 WebSockets are the wrong tool here — you gain bidirectionality you do not need and take on connection management you would rather avoid. Plain polling every 10 seconds is also perfectly respectable and simpler still.
+
+## Frequently asked questions
+
+### What counts as real-time?
+
+Whatever number you commit to. "Real-time" without a freshness budget is unfalsifiable; pick a target such as five seconds end to end and design against it, because that number decides every other choice.
+
+### Do I need Kafka for a real-time pipeline?
+
+Almost certainly not at one-node volumes. An in-process queue with batched writes handles thousands of events per second on modest hardware. Kafka earns its operational cost with multiple consumers and cross-machine durability.
+
+### What is the single biggest performance lever?
+
+Batching writes. Amortizing per-statement overhead across many rows typically improves ingestion throughput by an order of magnitude and costs only the batch interval in added latency.
+
+### How should backpressure be handled?
+
+Explicitly, with a bounded buffer and a stated drop policy. An unbounded queue does not remove backpressure, it converts it into memory growth and eventually an out-of-memory crash.
+
+### Why is the live visitor counter handled separately?
+
+Because it needs freshness, not history. It reads recent state directly rather than waiting for the sync into the analytics store, which is why it updates in seconds while historical charts lag a cycle.
 
 ## When you do need the heavy machinery
 
@@ -2895,6 +3412,28 @@ ORDER BY day DESC;
 
 The window frame ends at \`1 PRECEDING\` deliberately — including today in its own baseline dampens exactly the spike you are trying to detect.
 
+## Frequently asked questions
+
+### Why do trend queries need gap filling?
+
+Because days with no traffic produce no rows, and a chart drawn from that data connects across the gap as though the missing days did not exist. Joining against a generated date series makes zero days explicit.
+
+### How do I exclude internal referrers from a referrer report?
+
+Filter out your own hostname. Without it, internal navigation dominates the report and your actual acquisition sources are buried beneath your own pages.
+
+### What is the difference between exit rate and bounce rate?
+
+Bounce rate is the share of sessions that ended after a single page. Exit rate is the share of views of a given page that were the last in their session — a page can have a high exit rate and no bounces at all.
+
+### Should these queries run against raw events or rollups?
+
+Raw events while volume is small and flexibility matters. Once dashboards repeat the same aggregations over long ranges, precompute daily rollups and query those — it is the single biggest dashboard speedup available.
+
+### Will these queries work outside DuckDB?
+
+Mostly. They use standard SQL with window functions, so PostgreSQL and ClickHouse need only minor dialect changes — date functions and generated series are the usual edits.
+
 ## A note on running these safely
 
 If you expose SQL to users, run it on a **read-only connection**, enforce a statement timeout and a row limit, and parameterize every value. Never build these strings by interpolation — not even for internal IDs, which have a way of becoming user input later.
@@ -2905,6 +3444,7 @@ InsightsTrack's SQL Editor runs queries against a read-only DuckDB connection wi
     {
         slug: 'website-analytics-metrics-explained',
         title: 'Website Analytics Metrics Explained: What Each One Really Means',
+        seoTitle: 'Website Analytics Metrics, Explained',
         description:
             'A reference for the core web analytics metrics — pageviews, sessions, users, bounce and exit rate, engagement, conversion — how each is defined and where each misleads.',
         keyword: 'website analytics metrics explained',
@@ -3011,6 +3551,28 @@ One of the most honest engagement signals available, because it is hard to fake 
 Always read at the **75th percentile**, which is what Google uses. Averages hide the slowest quarter of your users, which is disproportionately mobile traffic on poor networks — the segment most likely to leave.
 
 Field data (real users) and lab data (Lighthouse) will disagree. Field data is what ranks.
+
+## Frequently asked questions
+
+### Why do two analytics tools report different numbers?
+
+Because they define the metrics differently and see different traffic. Session timeouts, engagement thresholds, bot filtering, and ad-blocker reach all vary, so a gap between tools is expected rather than a sign one is broken.
+
+### What is the difference between users and sessions?
+
+A session is one visit; a user is the person making visits. One person visiting three times is three sessions and one user — and cookieless tools deliberately weaken the user count, so trust sessions more.
+
+### Is a pageview the same as a visit?
+
+No. A pageview is one page load; a visit groups the pageviews from one continuous period of activity. A single visit reading four pages is four pageviews.
+
+### Which metric should I actually optimize?
+
+The one closest to the outcome you care about — usually conversions or a well-defined engagement event. Traffic metrics are diagnostic context, not goals, and optimizing them directly rewards the wrong behaviour.
+
+### Why does session duration look implausibly low?
+
+Because the final pageview of a session has no successor to measure against and is typically counted as zero. Single-page sessions therefore record no duration at all, which drags the average down.
 
 ## The metrics worth watching
 
@@ -3162,6 +3724,28 @@ Honest signals that a single node is no longer right:
 
 Notably absent: "we have a lot of data." Volume alone is handled by tiering. Scale out for concurrency, availability, and organizational structure — those are the constraints a bigger machine cannot solve.
 
+## Frequently asked questions
+
+### Can one server really run an analytics warehouse?
+
+For the volumes most teams actually have, comfortably. Modern hardware handles tens of gigabytes of columnar data on a single node, and the distributed alternatives were designed for problems most sites never reach.
+
+### Do I need dbt or Airflow for transformations?
+
+Not at this scale. Ordered SQL scripts run on a schedule with logging and failure alerts cover the same ground. Orchestrators earn their keep with complex dependency graphs and multiple teams.
+
+### Where does the performance actually come from?
+
+Rollups. Precomputing daily aggregates turns dashboard queries that scan millions of rows into ones that scan hundreds, and it is a much bigger lever than tuning the raw queries.
+
+### How do I keep storage costs flat as data grows?
+
+Tier it. Keep recent partitions hot and move older ones to compressed Parquet in object storage, stitched back through a view — see [DuckDB + Parquet cold storage](/blog/duckdb-parquet-cold-storage).
+
+### What signals mean it is time to scale out?
+
+Sustained memory pressure after rollups and tiering, ingestion falling behind during peaks, or concurrency demands a single node cannot serve. Data volume alone is rarely the reason.
+
 ## The point
 
 The complexity of your data stack should track the complexity of your problems, not the size of the companies whose blog posts you read. Start on one server, measure, and add distribution when a specific limit forces it. InsightsTrack ships this architecture in a single \`docker-compose up\` — Postgres, DuckDB, rollups, optional Parquet tiering, and a SQL editor — because for most sites, that is genuinely the right size. See [Parquet cold storage](/blog/duckdb-parquet-cold-storage), [the sync engine](/blog/incremental-sync-postgres-to-duckdb), and [DuckDB vs ClickHouse](/blog/duckdb-vs-clickhouse-vs-postgres-analytics).
@@ -3170,6 +3754,7 @@ The complexity of your data stack should track the complexity of your problems, 
     {
         slug: 'posthog-alternative',
         title: 'PostHog Alternative: A Lighter Self-Hosted Option (Honest Comparison)',
+        seoTitle: 'PostHog Alternative: A Lighter Self-Hosted Option',
         description:
             'Looking for a PostHog alternative? An honest comparison of features, operational cost, and licensing — including when PostHog is still the right choice.',
         keyword: 'posthog alternative',
@@ -3261,6 +3846,28 @@ Choose **PostHog** if you need session replay, feature flags, or experiments; if
 Choose **InsightsTrack** if you want website analytics rather than product analytics; if you are unwilling to operate ClickHouse; if cookieless and self-hosted is a requirement; or if you want raw SQL over your own data without a query service.
 
 Plenty of teams run both — PostHog on the authenticated product, a light cookieless tool on the marketing site. That is a legitimate setup, not a compromise.
+
+## Frequently asked questions
+
+### Is PostHog overkill for a marketing site?
+
+Usually. Session replay, feature flags, experimentation, and a data warehouse are product-analytics tooling. If your questions are about traffic, sources, and conversions, most of that surface goes unused while you still operate it.
+
+### What does PostHog cost to self-host?
+
+In money, nothing for the licence; in operations, considerably more than a single-container tool. The self-hosted stack includes ClickHouse, Kafka, Redis, and Postgres, and PostHog themselves steer smaller deployments toward the cloud.
+
+### What does PostHog do that a lighter tool cannot?
+
+Feature flags, experimentation, session replay, and product-analytics primitives like cohort-based funnels across long user journeys. If you need those, the operational cost is buying something real.
+
+### Is PostHog open source?
+
+Its main repository is MIT licensed, but some enterprise features are separately licensed. "Open source" is worth verifying feature by feature rather than assuming it covers everything you plan to use.
+
+### Can I migrate from PostHog to a lighter tool?
+
+Traffic reporting migrates cleanly. Feature flags and experiments do not — those are product infrastructure your application code depends on, and they need replacing rather than exporting.
 
 ## Migrating
 
@@ -3731,6 +4338,28 @@ Three things to check before committing, regardless of which you pick:
 - **Self-hosted parity.** PostHog's self-hosted edition is not feature-equivalent to cloud, and some Matomo capabilities are paid plugins. "Open source" does not always mean "everything, free."
 - **Who operates it.** The honest cost of self-hosting is your team's time, not the server. A tool needing one container is a genuinely different commitment from one needing a cluster.
 
+## Frequently asked questions
+
+### Which open-source analytics tool is easiest to self-host?
+
+Umami and InsightsTrack are the lightest — a database plus an app. Matomo needs PHP and MySQL, and PostHog's self-hosted stack is substantially heavier than the rest.
+
+### Does "open source" always mean free to use commercially?
+
+No, and the licence matters. MIT and GPL differ from AGPL, which adds a network clause affecting hosted services, and several projects reserve some features under a separate commercial licence.
+
+### Which tool has the smallest tracking script?
+
+Plausible and Umami, both around 1 KB. Heavier scripts are collecting more — heatmaps, Web Vitals, error tracking — so compare what a script does before comparing weight alone.
+
+### Why does the storage engine matter when choosing?
+
+Because it determines your operational burden more than the feature list does. A ClickHouse-backed tool and a SQLite-backed one may look similar in screenshots and differ enormously in what you maintain.
+
+### Can I try these without committing?
+
+Yes — every tool here has a live demo or a Docker image that runs in minutes. Running your real traffic through two in parallel for a fortnight beats any comparison table, including this one.
+
 ## Try before committing
 
 All of these install as a single script tag and can run in parallel. Two weeks of overlap tells you more than any comparison table, this one included — including how each tool's numbers differ, which they will ([metrics explained](/blog/website-analytics-metrics-explained)).
@@ -3748,6 +4377,34 @@ export function tagSlug(tag) {
 }
 
 /** All tags, sorted by post count (desc) then name. */
+/**
+ * Editorial intro for each tag archive, keyed by tag slug.
+ *
+ * Tag pages otherwise render as a heading plus a list of cards — a few dozen
+ * words of unique text, which reads as thin content to crawlers and gives a
+ * visitor no reason to stay. These paragraphs give each archive its own
+ * substance and let the hub page rank for the cluster's head term rather than
+ * only passing link equity to the posts inside it.
+ */
+export const TAG_INTROS = {
+    duckdb: 'DuckDB is an embedded columnar database that runs in-process, with no server to operate. These guides cover why it suits analytical reads, how it compares to ClickHouse and PostgreSQL, using it from Node.js, pairing it with Parquet for cheap cold storage, and the query patterns that keep dashboards responsive as event volume grows.',
+    architecture: 'How a self-hosted analytics stack fits together: separating writes from reads, choosing storage that matches your query shape, and keeping ingestion cheap while dashboards stay fast. These posts document the trade-offs behind InsightsTrack\'s PostgreSQL-plus-DuckDB design, and where a different split would serve you better.',
+    privacy: 'Analytics without cookies, fingerprinting, or stored IP addresses. These guides explain what GDPR actually requires, how cookieless tracking identifies visits without identifying people, when a consent banner stops being necessary, and how to keep useful measurement while collecting far less personal data.',
+    metrics: 'What each analytics number really means, and where it misleads. Bounce rate, sessions, engagement time, conversion rate — these guides define the metrics precisely, explain how GA4 changed several definitions, and show which ones deserve a place on a dashboard.',
+    sql: 'Analytical SQL for people who own their data. Window functions for sessionization, cohort retention triangles, funnel queries with drop-off between steps, and the query shapes that stay fast on columnar storage.',
+    comparison: 'Honest comparisons between analytics tools — Plausible, Matomo, Umami, PostHog, Google Analytics, and InsightsTrack. Each guide covers what a tool is genuinely good at, what it costs to run, and the cases where another option is the better pick.',
+    'self-hosting': 'Running analytics on your own infrastructure: Docker deployment, migrating off Google Analytics, sizing a server for your traffic, and the operational work self-hosting actually involves once the first deploy is done.',
+    performance: 'Measuring and improving real-world page speed. Core Web Vitals — LCP, CLS, INP — explained in terms of what users feel, how to collect field data from your own analytics rather than a lab tool, and how to read the numbers once you have them.',
+    'data-modeling': 'Designing an event schema you will not regret. Naming conventions, property design, avoiding the analytics debt that accumulates when events are added ad hoc, and structuring data so that tomorrow\'s questions remain answerable.',
+    'google-analytics': 'Moving away from Google Analytics: what GA4 changed, which metrics do not translate directly, how to migrate historical reporting expectations, and what a privacy-first replacement gives you in return.',
+};
+
+/** Intro paragraph for a tag archive, or a sensible generic fallback. */
+export function getTagIntro(slug, label, count) {
+    return TAG_INTROS[slug]
+        || `${count} in-depth guide${count === 1 ? '' : 's'} on ${String(label).toLowerCase()} for teams running self-hosted, privacy-first web analytics.`;
+}
+
 export function getTags() {
     const counts = new Map();
     for (const p of BLOG_POSTS) for (const t of p.tags || []) counts.set(t, (counts.get(t) || 0) + 1);
