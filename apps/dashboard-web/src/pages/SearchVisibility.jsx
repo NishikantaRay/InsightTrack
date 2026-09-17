@@ -34,7 +34,7 @@ export default function SearchVisibility() {
     const steady = pages.filter((p) => !p.traffic?.significant);
 
     return (
-        <div className="space-y-5 max-w-6xl mx-auto">
+        <div className="space-y-5">
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -85,7 +85,7 @@ export default function SearchVisibility() {
             {/* Summary tiles — a thin one-line strip made the page feel empty and
                 gave the key numbers no weight. */}
             {!loading && pages.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className={`rounded-xl border p-3 ${
                         significant > 0
                             ? 'border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30'

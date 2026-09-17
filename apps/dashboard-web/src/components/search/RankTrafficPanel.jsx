@@ -162,7 +162,7 @@ export default function RankTrafficPanel({ page }) {
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate" title={page.path}>
                         {page.path}
                     </h3>
-                    <p className="mt-1.5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <p className="mt-1.5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-4xl">
                         {page.explanation}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -180,7 +180,7 @@ export default function RankTrafficPanel({ page }) {
             {page.nextStep && (
                 <div className="flex items-start gap-2.5 px-4 py-3 border-t border-gray-100 dark:border-gray-800">
                     <Target className="w-4 h-4 mt-0.5 shrink-0 text-indigo-500" aria-hidden="true" />
-                    <div className="min-w-0 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <div className="min-w-0 text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-4xl">
                         {page.nextStep.text}
                         {page.nextStep.rival?.url && (
                             <a href={page.nextStep.rival.url} target="_blank" rel="noopener noreferrer"
