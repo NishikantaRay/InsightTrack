@@ -34,7 +34,7 @@ export default function SearchVisibility() {
     const steady = pages.filter((p) => !p.traffic?.significant);
 
     return (
-        <div className="space-y-5 max-w-5xl">
+        <div className="space-y-5 max-w-6xl mx-auto">
             {/* Header */}
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -44,6 +44,11 @@ export default function SearchVisibility() {
                     </h1>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Why your traffic changed — your analytics joined with live Google results.
+                    </p>
+                    {/* This view pins its own window, so the toolbar's date filter
+                        does not apply. Saying so prevents a silent mismatch. */}
+                    <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                        Always compares the last two complete weeks over a 90-day window.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">

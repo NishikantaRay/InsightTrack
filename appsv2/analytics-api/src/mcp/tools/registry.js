@@ -551,7 +551,7 @@ export const TOOLS = [
                 summary: f.found
                     ? `${domain} ranks #${f.position} for '${f.keyword}'` +
                       (move ? ` (${move > 0 ? 'up' : 'down'} ${Math.abs(move)} from #${f.previousPosition})` : '') +
-                      `.${f.hasAiOverview ? ` An AI Overview is present and ${f.domainIsCited ? 'cites you' : 'does NOT cite you'}.` : ''}`
+                      `.${f.hasAiOverview ? ` Google shows an AI answer box, and it ${f.domainIsCited ? 'quotes you' : 'does NOT quote you'}.` : ''}`
                     : `${domain} does not rank in the top results for '${f.keyword}'.`,
                 data: {
                     keyword: f.keyword, domain, position: f.position, previousPosition: f.previousPosition,
@@ -590,10 +590,10 @@ export const TOOLS = [
             });
             return {
                 summary: !f.hasAiOverview
-                    ? `No AI Overview appears for '${f.keyword}'.`
+                    ? `Google shows no AI answer box for '${f.keyword}'.`
                     : f.domainIsCited
-                        ? `An AI Overview appears for '${f.keyword}' and cites ${domain}.`
-                        : `An AI Overview appears for '${f.keyword}' but does NOT cite ${domain} — it cites ${f.newCitedDomains.slice(0, 3).join(', ') || 'other sources'}.`,
+                        ? `Google shows an AI answer box for '${f.keyword}' and it quotes ${domain}.`
+                        : `Google shows an AI answer box for '${f.keyword}' but it does NOT quote ${domain} — it quotes ${f.newCitedDomains.slice(0, 3).join(', ') || 'other sources'}.`,
                 data: {
                     keyword: f.keyword, hasAiOverview: f.hasAiOverview, domainIsCited: f.domainIsCited,
                     previouslyCited: f.previouslyCited, citationChange: f.citationChange,

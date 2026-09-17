@@ -4,7 +4,10 @@ import { useDateFilterStore } from '../store/useDateFilterStore';
 import { useSiteStore } from '../store/useSiteStore';
 
 export function useAnalytics(endpoint, options = {}) {
-    const { params = {}, enabled = true } = options;
+    // `dateRange` pins a hook to a fixed window, overriding the global filter.
+    // Used where a shorter range would silently produce a wrong answer rather
+    // than just less data (see useSearchVisibility).
+    const { params = {}, enabled = true, dateRange: fixedRange = null } = options;
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -28,9 +31,11 @@ export function useAnalytics(endpoint, options = {}) {
             const fetcher = analyticsAPI[endpoint];
             if (!fetcher) throw new Error(`Unknown endpoint: ${endpoint}`);
 
-            const effectiveDateRange = dateRange === 'custom' && customStart && customEnd
-                ? `custom:${customStart}:${customEnd}`
-                : dateRange;
+            const effectiveDateRange = fixedRange
+                ? fixedRange
+                : dateRange === 'custom' && customStart && customEnd
+                    ? `custom:${customStart}:${customEnd}`
+                    : dateRange;
 
             const result = await fetcher(siteId, effectiveDateRange, ...Object.values(params));
             if (!controller.signal.aborted) {
@@ -43,7 +48,7 @@ export function useAnalytics(endpoint, options = {}) {
                 setLoading(false);
             }
         }
-    }, [endpoint, siteId, dateRange, customStart, customEnd, enabled, JSON.stringify(params)]);
+    }, [endpoint, siteId, dateRange, customStart, customEnd, enabled, fixedRange, JSON.stringify(params)]);
 
     useEffect(() => {
         fetchData();
@@ -114,9 +119,17 @@ export function useRealtimeEventStream() {
 // Per project convention, components fetch through these hooks rather than
 // calling axios in a useEffect.
 
-/** Every tracked page with its traffic change, rank and AI Overview status. */
+/**
+ * Every tracked page with its traffic change, rank and AI answer status.
+ *
+ * Deliberately IGNORES the global date filter. The correlation buckets traffic
+ * into ISO weeks and compares the last two complete ones, which needs a long
+ * window to be reliable — page-level data is noisy at short ranges. Letting the
+ * toolbar set "Last 7 days" here would silently produce a comparison with one
+ * week of history and no prior week to compare against.
+ */
 export function useSearchVisibility(limit = 10) {
-    return useAnalytics('getSearchOverview', { params: { limit } });
+    return useAnalytics('getSearchOverview', { params: { limit }, dateRange: '90d' });
 }
 
 /** The joined traffic×SERP explanation for ONE page. */

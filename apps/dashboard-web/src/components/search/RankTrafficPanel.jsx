@@ -170,7 +170,7 @@ export default function RankTrafficPanel({ page }) {
                             {page.confidence} confidence
                         </span>
                         <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                            week over week · {t.windowUsed ?? '90d'} window
+                            last complete week vs. the one before
                         </span>
                     </div>
                 </div>

@@ -112,7 +112,7 @@ describe('attribution rules', () => {
             newCitedDomains: ['competitorx.com', 'competitory.com'],
         }, 'drop');
         expect(causes.map((c) => c.code)).toEqual(['ai_overview_displacement']);
-        expect(causes[0].phrase).toBe('a new AI Overview now cites competitorx.com and competitory.com instead of you');
+        expect(causes[0].phrase).toBe("Google's new AI answer box now quotes competitorx.com and competitory.com instead of you");
     });
 
     it('rule 3 — losing an existing citation', () => {
@@ -145,7 +145,7 @@ describe('explanations', () => {
         const r = explain({ path: '/guides/email-templates', traffic: drop, keywordFindings: [cited] });
         expect(r.explanation).toBe(
             "Traffic to /guides/email-templates dropped 33% this week (616 → 413 views). " +
-            "Likely cause: rank slipped #3 → #6 on 'free email templates' and a new AI Overview now cites competitorx.com and competitory.com instead of you.",
+            "Likely cause: rank slipped #3 → #6 on 'free email templates' and Google's new AI answer box now quotes competitorx.com and competitory.com instead of you.",
         );
         expect(r.confidence).toBe('high');
     });

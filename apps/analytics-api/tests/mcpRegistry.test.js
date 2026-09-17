@@ -256,10 +256,10 @@ describe('MCP tool registry', () => {
     describe('search visibility (SerpApi × traffic)', () => {
         const ctx = { siteId: 'site_sv', userId: 42 };
 
-        it('get_rankings reports position, movement and AI Overview status', async () => {
+        it('get_rankings reports position, movement and AI answer status', async () => {
             const env = await runTool('get_rankings', { keyword: 'free email templates' }, ctx);
             expect(env.summary).toContain('#6');
-            expect(env.summary).toContain('does NOT cite you');
+            expect(env.summary).toContain('does NOT quote you');
             expect(env.data.positionChange).toBe(-3);
             expect(env.data.competitors.length).toBeGreaterThan(0);
         });
@@ -284,7 +284,7 @@ describe('MCP tool registry', () => {
             expect(env.summary).toContain('dropped');
             expect(env.summary).toContain('33%');
             expect(env.summary).toContain('#3 → #6');
-            expect(env.summary).toContain('AI Overview');
+            expect(env.summary).toContain('AI answer');
             expect(env.data.confidence).toBe('high');
             expect(env.data.causes.map((c) => c.code)).toContain('rank_drop');
             expect(env.data.causes.map((c) => c.code)).toContain('ai_overview_displacement');

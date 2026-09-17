@@ -155,8 +155,8 @@ export function attributeKeyword(f, direction) {
         causes.push({
             code: 'ai_overview_displacement',
             phrase: others.length
-                ? `a new AI Overview now cites ${joinPhrases(others)} instead of you`
-                : `a new AI Overview now appears for '${f.keyword}' and does not cite you`,
+                ? `Google's new AI answer box now quotes ${joinPhrases(others)} instead of you`
+                : `Google now shows an AI answer box for '${f.keyword}' and it does not quote you`,
         });
     }
 
@@ -164,7 +164,7 @@ export function attributeKeyword(f, direction) {
     if (f.citationChange === 'lost') {
         causes.push({
             code: 'ai_citation_lost',
-            phrase: `you were dropped from the AI Overview for '${f.keyword}'`,
+            phrase: `you were dropped from Google's AI answer box for '${f.keyword}'`,
         });
     }
 
@@ -179,7 +179,7 @@ export function attributeKeyword(f, direction) {
         if (f.citationChange === 'gained') {
             causes.push({
                 code: 'ai_citation_gained',
-                phrase: `the AI Overview for '${f.keyword}' now cites you`,
+                phrase: `Google's AI answer box for '${f.keyword}' now quotes you`,
             });
         }
     }
@@ -246,7 +246,7 @@ export function nextStep(causes, keywordFindings, direction) {
     return {
         action: 'study_rival',
         text: codes.has('ai_overview_displacement') || codes.has('ai_citation_lost')
-            ? `Compare your page against ${rival.domain}, which now ranks #${rival.position}${rival.alsoCitedInAiOverview ? ' and is cited in the AI Overview' : ''} — AI Overviews tend to quote pages that answer the question directly and early.`
+            ? `Compare your page against ${rival.domain}, which now ranks #${rival.position}${rival.alsoCitedInAiOverview ? " and is quoted in Google's AI answer" : ''} — AI answers tend to quote pages that address the question directly and early.`
             : `Compare your page against ${rival.domain}, which now ranks #${rival.position} for this term.`,
         rival,
     };
@@ -306,7 +306,7 @@ export function explain({ path, traffic, keywordFindings = [], windowUsed = '90d
             traffic: { ...traffic, windowUsed },
             keywordFindings,
             causes: [{ code: 'unexplained_by_serp', phrase: 'no search-side change detected' }],
-            explanation: `${headline} Search position and AI Overview status are unchanged${checked ? ` across ${checked} tracked keyword${checked === 1 ? '' : 's'}` : ''}, so the cause is probably not search — check referrers, campaigns, or a recent deploy.`,
+            explanation: `${headline} Search position and AI answer status are unchanged${checked ? ` across ${checked} tracked keyword${checked === 1 ? '' : 's'}` : ''}, so the cause is probably not search — check referrers, campaigns, or a recent deploy.`,
             confidence: 'low',
             caveats: notes,
             nextStep: nextStep([{ code: 'unexplained_by_serp' }], keywordFindings, direction),
