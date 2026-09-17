@@ -31,6 +31,7 @@ InsightsTrack is a complete, production-grade web analytics platform you run you
 - 🔒 **Privacy by design** — no cookies, no fingerprinting, pseudonymous visitor IDs, no stored IP addresses, and DNT/GPC opt-out honored in both the tracking script and the API. GDPR-friendly by design; compliance depends on your deployment.
 - ⚡ **Built for analytical reads** — a dual-database design (PostgreSQL for writes, DuckDB for reads). In an isolated local test with ~101K events, representative 90-day analytics requests completed in well under 100 ms measured at the **HTTP/API layer** (which includes the application response cache). That is not a measurement of DuckDB execution time and is not a guarantee at larger datasets — see [`docs/PERFORMANCE_BENCHMARK_AUDIT.md`](docs/PERFORMANCE_BENCHMARK_AUDIT.md).
 - 🧩 **Everything in one place** — 17 analytics pages: dashboard, pages, realtime, funnels, heatmaps, engagement, performance, audience, acquisition, conversions, user flow, reporting studio, SQL editor, and more.
+- 🔍 **Search Visibility** — joins live Google rankings & AI Overview citations with your own traffic to explain *why* a page moved. [Jump to Search Visibility →](#-search-visibility--why-your-traffic-changed)
 - 🤖 **Pulse, your AI analyst** — ask your data anything in plain English and get real charts, tables, and CSVs. Also works from Claude Desktop & Cursor over MCP. [Jump to Pulse →](#-pulse--your-ai-analyst)
 - 🪶 **Single tag** — one `<script>` tag (~7.5 KB gzipped in the current build; exact size varies with build and transfer encoding), works with any site (WordPress, Next.js, Shopify, plain HTML…).
 - 👥 **Team-ready** — invite teammates, assign roles, build custom permission roles, and control which pages each member sees.
@@ -210,6 +211,30 @@ Click-density dots overlaid on a live preview of any tracked page — indigo (ra
 ![Pages](screenshots/15-pages-view.png)
 **Pages** — every tracked URL with views, unique visitors, and % of total. Sortable, filterable, CSV/JSON export.
 
+### 🔍 Search Visibility — *why* your traffic changed
+
+Web analytics tells you **what** happened to a page. A rank tracker tells you what
+happened in the **search results**. Neither explains the link. Search Visibility
+joins them:
+
+> *"Traffic to /guides/email-templates dropped 33% this week (616 → 413 views).
+> Likely cause: rank slipped #3 → #6 on 'free email templates' and a new AI
+> Overview now cites competitorx.com and competitory.com instead of you."*
+
+Per page, on one card: the weekly traffic trend, the current Google position and
+how far it moved, and whether Google's **AI Overview** cites you or your
+competitors. Powered by [SerpApi](https://serpapi.com), cached so repeat views
+cost no API credits.
+
+The same correlation is available to Pulse and any MCP client as
+`explain_traffic_change` — so you can just ask *"why did traffic to /page drop
+last week?"* and get the joined answer.
+
+**No SerpApi key? It still runs.** Leave `SERPAPI_KEY` blank and the feature
+serves bundled sample SERPs, clearly labelled as such in the UI — the full
+correlation works end to end for evaluation. See
+[`docs/search-visibility-connector.md`](docs/search-visibility-connector.md).
+
 ### Reporting Studio & SQL Editor
 
 | ![Reporting](screenshots/38-reporting.png) | ![SQL Editor](screenshots/39-sql-editor.png) |
@@ -330,6 +355,7 @@ InsightsTrack/
 | **Team** | `/api/team/:siteId/{members,invite,roles}` · `/api/demo/join` | PostgreSQL |
 | **Pulse (AI)** | `POST /api/assistant/chat` (SSE) · `GET /api/assistant/{status,threads}` · `PUT /api/assistant/settings` | DuckDB (read-only tools) |
 | **MCP** | `POST /api/mcp/http` (JSON-RPC 2.0) · `/api/mcp/connect` · `/api/mcp/run` | DuckDB (read-only tools) |
+| **Search** | `/api/search/:siteId/{overview,explain,rankings,ai-overview,related,keywords}` | DuckDB + SerpApi (cached) |
 
 All analytics endpoints accept `?dateRange=today|7d|30d|90d|custom:YYYY-MM-DD:YYYY-MM-DD`.
 Full reference: [docs/api-reference.md](docs/api-reference.md)

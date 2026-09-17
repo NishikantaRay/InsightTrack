@@ -16,6 +16,7 @@ import teamRoutes from './routes/team.js';
 import mcpRoutes from './routes/mcp.js';
 import assistantRoutes from './routes/assistant.js';
 import integrationsRoutes from './routes/integrations.js';
+import searchVisibilityRoutes from './routes/searchVisibility.js';
 import { safeMsg } from './utils/safeError.js';
 import { closeDuck, initDuckDB } from './db/duckdb.js';
 import { closeConnection } from './db/postgres.js';
@@ -110,6 +111,8 @@ app.use('/api/auth', privateCors, authRoutes);
 app.use('/api/goals', privateCors, goalsRoutes);
 app.use('/api/reporting', privateCors, reportingRoutes);
 app.use('/api/sql-editor', privateCors, sqlEditorRoutes);
+// Search visibility (SerpApi × first-party traffic) — authenticated, read-only.
+app.use('/api/search', privateCors, searchVisibilityRoutes);
 // Team management + invite acceptance
 app.use('/api/team', privateCors, teamRoutes);
 app.use('/api', privateCors, teamRoutes);   // mounts /api/invite/:token routes

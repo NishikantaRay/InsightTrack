@@ -22,9 +22,22 @@ export const useAssistantStore = create((set, get) => ({
     busy: false,
     threadId: (() => { const v = localStorage.getItem(THREAD_KEY); return v ? Number(v) : null; })(),
 
+    // A question handed to the panel from elsewhere in the dashboard (e.g. the
+    // "Ask Pulse" button on a Search Visibility card). The panel consumes it on
+    // open and clears it, so it fires exactly once.
+    pendingQuestion: null,
+
     toggle: () => set((s) => ({ open: !s.open })),
     openPanel: () => set({ open: true }),
     closePanel: () => set({ open: false }),
+
+    /** Open the panel and ask a question on the user's behalf. */
+    askQuestion: (question) => set({ open: true, pendingQuestion: String(question || '').trim() || null }),
+    consumePendingQuestion: () => {
+        const q = get().pendingQuestion;
+        if (q) set({ pendingQuestion: null });
+        return q;
+    },
 
     // Full-page mode — the drawer expands to cover the whole viewport.
     toggleMaximize: () =>

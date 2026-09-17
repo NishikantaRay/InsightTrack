@@ -108,3 +108,33 @@ export function useRealtimeEventStream() {
 
     return { data, loading };
 }
+
+
+// ── Search visibility (SerpApi × first-party traffic) ────────────────────────
+// Per project convention, components fetch through these hooks rather than
+// calling axios in a useEffect.
+
+/** Every tracked page with its traffic change, rank and AI Overview status. */
+export function useSearchVisibility(limit = 10) {
+    return useAnalytics('getSearchOverview', { params: { limit } });
+}
+
+/** The joined traffic×SERP explanation for ONE page. */
+export function useSearchExplanation(path) {
+    return useAnalytics('getSearchExplain', { params: { path }, enabled: !!path });
+}
+
+/** Current ranking detail for one keyword. */
+export function useRankings(keyword) {
+    return useAnalytics('getSearchRankings', { params: { keyword }, enabled: !!keyword });
+}
+
+/** Rank observations over time for one keyword. */
+export function useRankHistory(keyword) {
+    return useAnalytics('getSearchRankHistory', { params: { keyword }, enabled: !!keyword });
+}
+
+/** 'People also ask' + related searches for one keyword. */
+export function useRelatedQueries(keyword, limit = 10) {
+    return useAnalytics('getSearchRelated', { params: { keyword, limit }, enabled: !!keyword });
+}

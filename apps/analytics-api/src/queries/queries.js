@@ -314,6 +314,117 @@ export async function getTopPages(siteId, dateRange = '30d', limit = 10) {
     }));
 }
 
+/**
+ * Daily pageview series for ONE page path — the traffic half of the
+ * search-visibility correlation.
+ *
+ * Reads raw events rather than daily_stats because daily_stats is aggregated
+ * per site, not per path. Defaults to a 90-day window: page-level data is
+ * unreliable at short windows, and the correlation buckets these days into
+ * weeks anyway, so it needs the longer history to compare week over week.
+ *
+ * DuckDB read, parameterized with `?` (invariant 1/3).
+ */
+export async function getPageTrafficTrend(siteId, path, dateRange = '90d') {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT
+           CAST(timestamp AS DATE)  AS date,
+           COUNT(*)                 AS views,
+           COUNT(DISTINCT user_id)  AS visitors
+         FROM events
+         WHERE site_id = ? AND type = 'pageview' AND path = ?
+           AND timestamp >= ? AND timestamp <= ?
+         GROUP BY CAST(timestamp AS DATE)
+         ORDER BY date ASC`,
+        [siteId, path, start, end],
+    );
+    return rows.map(r => ({
+        date: toDateStr(r.date),
+        views: Number(r.views || 0),
+        visitors: Number(r.visitors || 0),
+    }));
+}
+
+/**
+ * Search terms visitors arrived on for ONE page (from utm_term).
+ *
+ * Used by keyword auto-discovery: a term someone actually searched before
+ * landing here is the strongest possible signal of what the page ranks for.
+ * Many sites never set utm_term, so callers treat an empty result as "no signal"
+ * rather than an error.
+ */
+export async function getPageSearchTerms(siteId, path, dateRange = '90d', limit = 5) {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `SELECT
+           utm_term                AS keyword,
+           COUNT(DISTINCT user_id) AS visitors
+         FROM events
+         WHERE site_id = ? AND path = ?
+           AND timestamp >= ? AND timestamp <= ?
+           AND utm_term IS NOT NULL AND utm_term != ''
+         GROUP BY utm_term
+         ORDER BY visitors DESC
+         LIMIT ?`,
+        [siteId, path, start, end, limit],
+    );
+    return rows.map(r => ({ keyword: r.keyword, visitors: Number(r.visitors || 0) }));
+}
+
+/**
+ * Pages with the largest week-over-week pageview swing — what the Search
+ * Visibility dashboard sorts by, so the biggest movers surface first.
+ *
+ * Compares the last two COMPLETE 7-day windows (ending yesterday), so a partial
+ * current day never manufactures a drop.
+ */
+export async function getPageTrafficWoW(siteId, dateRange = '90d', limit = 20) {
+    const { start, end } = getDateRange(dateRange);
+    const rows = await duckAll(
+        `WITH bounds AS (
+           SELECT CAST(? AS TIMESTAMP) AS win_end
+         ),
+         windows AS (
+           SELECT
+             path,
+             COUNT(*) FILTER (
+               WHERE timestamp >  (SELECT win_end FROM bounds) - INTERVAL 7 DAY
+             ) AS current_views,
+             COUNT(*) FILTER (
+               WHERE timestamp <= (SELECT win_end FROM bounds) - INTERVAL 7 DAY
+                 AND timestamp >  (SELECT win_end FROM bounds) - INTERVAL 14 DAY
+             ) AS previous_views
+           FROM events
+           WHERE site_id = ? AND type = 'pageview'
+             AND timestamp >= ? AND timestamp <= ?
+           GROUP BY path
+         )
+         SELECT path, current_views, previous_views
+         FROM windows
+         WHERE current_views > 0 OR previous_views > 0
+         ORDER BY ABS(current_views - previous_views) DESC
+         LIMIT ?`,
+        [end, siteId, start, end, limit],
+    );
+    return rows.map(r => {
+        const current = Number(r.current_views || 0);
+        const previous = Number(r.previous_views || 0);
+        const changeAbs = current - previous;
+        const changePct = previous === 0
+            ? (current > 0 ? 100 : 0)
+            : (changeAbs / previous) * 100;
+        return {
+            path: r.path,
+            currentViews: current,
+            previousViews: previous,
+            changeAbs,
+            changePct: Math.round(changePct * 10) / 10,
+            direction: changeAbs < 0 ? 'drop' : changeAbs > 0 ? 'spike' : 'flat',
+        };
+    });
+}
+
 /** GET /api/analytics/:siteId/sources */
 export async function getTrafficSources(siteId, dateRange = '30d') {
     const { start, end } = getDateRange(dateRange);

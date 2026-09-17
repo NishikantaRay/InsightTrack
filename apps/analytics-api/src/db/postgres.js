@@ -448,6 +448,67 @@ export async function initializeDatabase() {
     await query(`CREATE INDEX IF NOT EXISTS idx_sql_query_audits_user_created ON sql_query_audits(user_id, created_at DESC)`);
     console.log('  ✓ sql_query_audits');
 
+    // ── Search visibility (SerpApi connector) ────────────────────────────────
+    //
+    // Three tables power the traffic×SERP correlation:
+    //   page_keywords  — which keyword(s) a page targets. The JOIN KEY.
+    //   serp_snapshots — normalized SerpApi responses. The credit-conserving
+    //                    cache of record; deliberately NOT site-scoped so two
+    //                    sites tracking one keyword share one snapshot/credit.
+    //   rank_history   — per-site position over time. What makes "#3 → #6"
+    //                    expressible; site-scoped, since rank is a site property.
+
+    await query(`
+    CREATE TABLE IF NOT EXISTS page_keywords (
+      id          SERIAL PRIMARY KEY,
+      site_id     VARCHAR(64)  NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      path        TEXT         NOT NULL,
+      keyword     VARCHAR(200) NOT NULL,
+      location    VARCHAR(100) NOT NULL DEFAULT 'United States',
+      is_primary  BOOLEAN      NOT NULL DEFAULT false,
+      created_at  TIMESTAMPTZ  DEFAULT NOW(),
+      UNIQUE (site_id, path, keyword, location)
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_page_keywords_site_path ON page_keywords(site_id, path)`);
+    console.log('  ✓ page_keywords');
+
+    await query(`
+    CREATE TABLE IF NOT EXISTS serp_snapshots (
+      id          SERIAL PRIMARY KEY,
+      keyword     VARCHAR(200) NOT NULL,
+      location    VARCHAR(100) NOT NULL DEFAULT 'United States',
+      device      VARCHAR(20)  NOT NULL DEFAULT 'desktop',
+      engine      VARCHAR(40)  NOT NULL DEFAULT 'google',
+      organic     JSONB        NOT NULL DEFAULT '[]'::jsonb,
+      ai_overview JSONB,
+      related     JSONB,
+      features    TEXT[]       DEFAULT '{}',
+      source      VARCHAR(20)  NOT NULL DEFAULT 'serpapi',
+      fetched_at  TIMESTAMPTZ  DEFAULT NOW()
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_serp_snapshots_lookup ON serp_snapshots(keyword, location, device, fetched_at DESC)`);
+    console.log('  ✓ serp_snapshots');
+
+    await query(`
+    CREATE TABLE IF NOT EXISTS rank_history (
+      id          SERIAL PRIMARY KEY,
+      site_id     VARCHAR(64)  NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      keyword     VARCHAR(200) NOT NULL,
+      location    VARCHAR(100) NOT NULL DEFAULT 'United States',
+      device      VARCHAR(20)  NOT NULL DEFAULT 'desktop',
+      position    INTEGER,
+      url         TEXT,
+      ai_overview BOOLEAN      NOT NULL DEFAULT false,
+      is_cited    BOOLEAN      NOT NULL DEFAULT false,
+      checked_at  TIMESTAMPTZ  DEFAULT NOW(),
+      snapshot_id INTEGER      REFERENCES serp_snapshots(id) ON DELETE SET NULL
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_rank_history_lookup ON rank_history(site_id, keyword, location, checked_at DESC)`);
+    console.log('  ✓ rank_history');
+
     // ── Team / multi-user tables ─────────────────────────────────────────────
 
     // site_members: which users can access which site, and with what role

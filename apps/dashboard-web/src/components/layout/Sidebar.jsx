@@ -3,7 +3,7 @@ import {
     BarChart3, Globe, Layers, Activity, Settings, FileText,
     ChevronLeft, ChevronRight, GitBranch, BookOpen,
     MousePointerClick, Target, Users, Megaphone, Gauge,
-    LayoutDashboard, Shield, Terminal, Map, Sliders, X, Bug,
+    LayoutDashboard, Shield, Terminal, Map, Sliders, X, Bug, Search,
 } from 'lucide-react';
 import { useFeatureStore } from '../../store/useFeatureStore';
 
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
     { key: 'audience',     to: '/audience',     icon: Users,           label: 'Audience' },
     { key: 'content',      to: '/content',      icon: BookOpen,        label: 'Content' },
     { key: 'acquisition',  to: '/acquisition',  icon: Megaphone,       label: 'Acquisition' },
+    { key: 'search',       to: '/search',       icon: Search,          label: 'Search Visibility' },
     { key: 'performance',  to: '/performance',  icon: Gauge,           label: 'Performance' },
     { key: 'errors',       to: '/errors',       icon: Bug,             label: 'Errors' },
     { key: 'realtime',     to: '/realtime',     icon: Activity,        label: 'Realtime' },

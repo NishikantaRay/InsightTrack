@@ -13,6 +13,7 @@ export const ALL_NAV_FEATURES = [
     { key: 'engagement',  label: 'Engagement',    group: 'Content',     protected: false },
     { key: 'audience',    label: 'Audience',      group: 'Analytics',   protected: false },
     { key: 'acquisition', label: 'Acquisition',   group: 'Analytics',   protected: false },
+    { key: 'search',      label: 'Search Visibility', group: 'Analytics', protected: false },
     { key: 'performance', label: 'Performance',   group: 'Analytics',   protected: false },
     { key: 'errors',      label: 'Errors',        group: 'Analytics',   protected: false },
     { key: 'funnels',     label: 'Funnels',       group: 'Conversions', protected: false },

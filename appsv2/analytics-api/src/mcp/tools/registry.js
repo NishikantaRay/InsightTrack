@@ -32,6 +32,9 @@
 import * as queries from '../../queries/queries.js';
 import { getSitesForUser } from '../../services/teamService.js';
 import { analyticsCache, CACHE_TTL } from '../../services/cache.js';
+import sitesService from '../../services/sitesService.js';
+import searchVisibility from '../../services/searchVisibilityService.js';
+import { bucketByWeek, detectChange, explain } from '../../services/correlationService.js';
 
 // ── shared bits ───────────────────────────────────────────────────────────────
 
@@ -62,6 +65,43 @@ const dr = (a) => a?.dateRange || '30d';
 const fmt = (n) => Number(n ?? 0).toLocaleString();
 /** Map a dateRange to a dashboard querystring so deep-links carry the filter. */
 const linkTo = (path, a) => ({ label: `Open ${path.replace('/', '') || 'Dashboard'}`, to: `${path}?dateRange=${dr(a)}` });
+
+// ── search-visibility helpers ────────────────────────────────────────────────
+// SERP tools default `domain` to the current site's own domain, so the agent
+// never has to know it — and cannot accidentally probe an unrelated site.
+async function resolveDomain(ctx, explicit) {
+    if (explicit) return String(explicit).replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0];
+    const site = await sitesService.getSiteById(ctx.siteId);
+    return (site?.domain || '').replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0] || null;
+}
+
+/**
+ * Required-argument guard. A model can and will omit a required field; without
+ * this the tool dies with an opaque TypeError deep in a template literal
+ * instead of telling the model what it forgot.
+ */
+function requireArg(args, name, toolName) {
+    const v = args?.[name];
+    if (typeof v !== 'string' || !v.trim()) {
+        throw Object.assign(
+            new Error(`${toolName}: '${name}' is required and must be a non-empty string.`),
+            { status: 400 },
+        );
+    }
+    return v.trim();
+}
+
+const SERP_LOCATION_PROP = {
+    type: 'string',
+    maxLength: 100,
+    description: "Geographic location for the search, e.g. 'United States'. Defaults to 'United States'.",
+};
+const SERP_MAXAGE_PROP = (hours) => ({
+    type: 'integer',
+    minimum: 0,
+    maximum: 168,
+    description: `Accept a cached SERP snapshot up to this many hours old before spending a SerpApi credit. Defaults to ${hours}.`,
+});
 
 // ── Tool-result size guardrails (N7) ──────────────────────────────────────────────
 // What's shown/downloaded in the dashboard is the FULL envelope. But the copy fed
@@ -477,6 +517,194 @@ export const TOOLS = [
                 render: { type: 'table', columns: ['title', 'level', 'count', 'userCount'] },
                 download: { csv: true, filename: `sentry-issues-${dr(args)}.csv` },
                 deepLink: linkTo('/errors', args),
+            };
+        },
+    },
+    // ── Search visibility (SerpApi × first-party traffic) ────────────────────
+    {
+        name: 'get_rankings',
+        description:
+            "Get the current Google organic search position for a domain on a given keyword, plus the top ~10 competing URLs. Live SERP data from SerpApi, cached to conserve credits. Use for 'where do I rank for X', 'who outranks me', 'did my position change'. If `domain` is omitted it defaults to the current site's own domain.",
+        inputSchema: {
+            type: 'object',
+            properties: {
+                keyword: { type: 'string', minLength: 1, maxLength: 200, description: "The search query to check, e.g. 'free email templates'." },
+                domain: { type: 'string', maxLength: 253, description: "Domain to locate in the results, e.g. 'example.com'. Defaults to the current site's domain." },
+                location: SERP_LOCATION_PROP,
+                device: { type: 'string', enum: ['desktop', 'mobile'], description: "Which SERP to fetch. Defaults to 'desktop'." },
+                maxAgeHours: SERP_MAXAGE_PROP(24),
+            },
+            required: ['keyword'],
+            additionalProperties: false,
+        },
+        async run(args, ctx) {
+            const keyword = requireArg(args, 'keyword', 'get_rankings');
+            const domain = await resolveDomain(ctx, args?.domain);
+            const f = await searchVisibility.checkKeyword(ctx.siteId, domain, {
+                keyword,
+                location: args?.location || 'United States',
+                device: args?.device || 'desktop',
+                maxAgeHours: args?.maxAgeHours ?? 24,
+            });
+            const move = f.positionChange;
+            return {
+                summary: f.found
+                    ? `${domain} ranks #${f.position} for '${f.keyword}'` +
+                      (move ? ` (${move > 0 ? 'up' : 'down'} ${Math.abs(move)} from #${f.previousPosition})` : '') +
+                      `.${f.hasAiOverview ? ` An AI Overview is present and ${f.domainIsCited ? 'cites you' : 'does NOT cite you'}.` : ''}`
+                    : `${domain} does not rank in the top results for '${f.keyword}'.`,
+                data: {
+                    keyword: f.keyword, domain, position: f.position, previousPosition: f.previousPosition,
+                    positionChange: move, changeObservedAt: f.changeObservedAt, url: f.url, found: f.found,
+                    competitors: f.competitors, serpFeatures: f.features,
+                    fetchedAt: f.fetchedAt, cached: f.cached, source: f.source,
+                },
+                render: { type: 'table', columns: ['position', 'domain', 'title'] },
+                download: { csv: true, filename: `rankings-${keyword.replace(/\W+/g, '-')}.csv` },
+                deepLink: { label: 'Open Search Visibility', to: `/search?keyword=${encodeURIComponent(keyword)}` },
+            };
+        },
+    },
+    {
+        name: 'get_ai_overview_citations',
+        description:
+            "Check whether Google shows an AI Overview for a keyword and, if so, which domains and URLs it cites. Use for 'does an AI Overview appear for X', 'am I cited in the AI answer', 'who does Google's AI cite instead of me'. An AI Overview that cites competitors but not you is a common cause of clicks falling while rank holds steady.",
+        inputSchema: {
+            type: 'object',
+            properties: {
+                keyword: { type: 'string', minLength: 1, maxLength: 200, description: 'The search query to check.' },
+                domain: { type: 'string', maxLength: 253, description: "Domain to check for citation. Defaults to the current site's domain." },
+                location: SERP_LOCATION_PROP,
+                maxAgeHours: SERP_MAXAGE_PROP(24),
+            },
+            required: ['keyword'],
+            additionalProperties: false,
+        },
+        async run(args, ctx) {
+            const keyword = requireArg(args, 'keyword', 'get_ai_overview_citations');
+            const domain = await resolveDomain(ctx, args?.domain);
+            const f = await searchVisibility.checkKeyword(ctx.siteId, domain, {
+                keyword,
+                location: args?.location || 'United States',
+                maxAgeHours: args?.maxAgeHours ?? 24,
+            });
+            return {
+                summary: !f.hasAiOverview
+                    ? `No AI Overview appears for '${f.keyword}'.`
+                    : f.domainIsCited
+                        ? `An AI Overview appears for '${f.keyword}' and cites ${domain}.`
+                        : `An AI Overview appears for '${f.keyword}' but does NOT cite ${domain} — it cites ${f.newCitedDomains.slice(0, 3).join(', ') || 'other sources'}.`,
+                data: {
+                    keyword: f.keyword, hasAiOverview: f.hasAiOverview, domainIsCited: f.domainIsCited,
+                    previouslyCited: f.previouslyCited, citationChange: f.citationChange,
+                    citations: f.citations, fetchedAt: f.fetchedAt, cached: f.cached, source: f.source,
+                },
+                render: { type: 'table', columns: ['position', 'domain', 'title'] },
+                download: { csv: true, filename: `ai-overview-${keyword.replace(/\W+/g, '-')}.csv` },
+                deepLink: { label: 'Open Search Visibility', to: `/search?keyword=${encodeURIComponent(keyword)}` },
+            };
+        },
+    },
+    {
+        name: 'get_related_queries',
+        description:
+            "Get keyword-expansion ideas for a search term: Google's 'People also ask' questions and its related searches. Use for 'what else are people searching', 'keyword ideas for X', 'what questions should this page answer'. Useful after a traffic drop to find queries a competitor may now be capturing.",
+        inputSchema: {
+            type: 'object',
+            properties: {
+                keyword: { type: 'string', minLength: 1, maxLength: 200, description: 'The seed search query to expand.' },
+                location: SERP_LOCATION_PROP,
+                limit: { type: 'integer', minimum: 1, maximum: 50, description: 'Maximum items per group. Defaults to 10.' },
+                maxAgeHours: SERP_MAXAGE_PROP(72),
+            },
+            required: ['keyword'],
+            additionalProperties: false,
+        },
+        async run(args, ctx) {
+            // Longer default TTL than the ranking tools: PAA and related searches
+            // drift far more slowly than positions, so this rarely costs a credit.
+            const keyword = requireArg(args, 'keyword', 'get_related_queries');
+            const serp = await searchVisibility.getSerp({
+                keyword,
+                location: args?.location || 'United States',
+                maxAgeHours: args?.maxAgeHours ?? 72,
+                siteId: ctx.siteId,
+            });
+            const limit = args?.limit ?? 10;
+            const paa = (serp.related?.peopleAlsoAsk || []).slice(0, limit);
+            const rel = (serp.related?.relatedSearches || []).slice(0, limit);
+            return {
+                summary: `${paa.length} 'People also ask' question${paa.length === 1 ? '' : 's'} and ${rel.length} related search${rel.length === 1 ? '' : 'es'} for '${keyword}'.`,
+                data: { keyword, peopleAlsoAsk: paa, relatedSearches: rel, fetchedAt: serp.fetchedAt, cached: !!serp.cached, source: serp.source },
+                render: { type: 'table', columns: ['question', 'sourceDomain'] },
+                download: { csv: true, filename: `related-${keyword.replace(/\W+/g, '-')}.csv` },
+                deepLink: { label: 'Open Search Visibility', to: '/search' },
+            };
+        },
+    },
+    {
+        name: 'explain_traffic_change',
+        description:
+            "Explain WHY traffic to a specific page went up or down, by joining InsightTrack's first-party traffic trend with live Google SERP data. Detects the week-over-week change, then checks that page's target keywords for rank movement and AI Overview citation changes, and returns a plain-English explanation with supporting evidence. Use for 'why did traffic to /page drop', 'what happened to this page', 'explain the drop last week'. This is the tool to reach for whenever the user asks WHY traffic changed — get_top_pages alone cannot answer that.",
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', minLength: 1, maxLength: 2048, description: "The page path to explain, e.g. '/guides/email-templates'." },
+                keywords: {
+                    type: 'array',
+                    items: { type: 'string', minLength: 1, maxLength: 200 },
+                    maxItems: 5,
+                    description: 'Target keywords for this page. If omitted, uses the keywords mapped to this page in InsightTrack.',
+                },
+                dateRange: { type: 'string', description: "Traffic window to analyse. Defaults to '90d' — short windows give unreliable page-level data, so prefer the default." },
+                location: SERP_LOCATION_PROP,
+            },
+            required: ['path'],
+            additionalProperties: false,
+        },
+        async run(args, ctx) {
+            const path = requireArg(args, 'path', 'explain_traffic_change');
+            // 90d default: page-level data is unreliable at short windows, and we
+            // need the history to bucket into comparable weeks.
+            const range = args?.dateRange || '90d';
+            const location = args?.location || 'United States';
+
+            // ── traffic half (InsightTrack / DuckDB) ─────────────────────────
+            const daily = await cached(analyticsCache.key('page-trend', ctx.siteId, path, range), CACHE_TTL.PAGES,
+                () => queries.getPageTrafficTrend(ctx.siteId, path, range));
+            const traffic = detectChange(bucketByWeek(daily));
+
+            // ── SERP half (SerpApi) ──────────────────────────────────────────
+            const domain = await resolveDomain(ctx, null);
+            let keywords = args?.keywords?.length
+                ? args.keywords.map((k) => ({ keyword: k, location }))
+                : (await searchVisibility.getKeywordsForPage(ctx.siteId, path)).map((k) => ({ keyword: k.keyword, location: k.location }));
+            keywords = keywords.slice(0, 5);   // hard cap — credit guardrail
+
+            const caveats = [];
+            const findings = [];
+            for (const k of keywords) {
+                try {
+                    findings.push(await searchVisibility.checkKeyword(ctx.siteId, domain, { keyword: k.keyword, location: k.location || location }));
+                } catch (err) {
+                    // Degrade to a traffic-only explanation rather than inventing a cause.
+                    caveats.push(`SERP data unavailable for '${k.keyword}' — explanation is traffic-only.`);
+                    findings.push({ keyword: k.keyword, error: err.message });
+                }
+            }
+            if (keywords.length === 0) {
+                caveats.push(`No target keywords are mapped to ${path}. Map one in Search Visibility → Manage keywords to get a search-side explanation.`);
+            }
+
+            // ── the join ─────────────────────────────────────────────────────
+            const finding = explain({ path, traffic, keywordFindings: findings, windowUsed: range, caveats });
+
+            return {
+                summary: finding.explanation,
+                data: finding,
+                render: { type: 'chart', chart: 'line' },
+                download: { csv: true, filename: `explain-${path.replace(/\W+/g, '-')}.csv` },
+                deepLink: { label: 'Open Search Visibility', to: `/search?path=${encodeURIComponent(path)}` },
             };
         },
     },

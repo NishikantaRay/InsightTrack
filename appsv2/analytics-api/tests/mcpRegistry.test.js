@@ -20,8 +20,48 @@ vi.mock('../src/queries/queries.js', () => ({
     getWebVitalsOverview: vi.fn(async () => ({ LCP: { avg: 2100, p75: 2500, samples: 50 } })),
     getPageActions: vi.fn(async (_s, _p, _r, limit) => Array.from({ length: Math.min(limit, 2) }, (_, i) => ({ text: `Btn ${i}`, selector: `#b${i}`, tag: 'button', clicks: 20 - i, uniqueUsers: 10 - i }))),
     getSentrySummary: vi.fn(async () => ({ totalIssues: 3, unresolved: 2, regressions: 1, totalEvents: 40, usersAffected: 12, byLevel: { fatal: 0, error: 2, warning: 1 } })),
+    getPageTrafficTrend: vi.fn(async () => {
+        // 4 weeks. detectChange() discards the final (in-progress) week, so the
+        // compared pair is 616 → 413 — a -33% WoW drop. The trailing week is
+        // deliberate: it exercises the partial-week guard.
+        const days = [];
+        const mk = (start, total) => { for (let i = 0; i < 7; i++) { const d = new Date(start); d.setUTCDate(d.getUTCDate() + i); days.push({ date: d.toISOString().slice(0, 10), views: Math.round(total / 7) }); } };
+        mk('2026-08-31', 590); mk('2026-09-07', 616); mk('2026-09-14', 413); mk('2026-09-21', 120);
+        return days;
+    }),
+    getPageTrafficWoW: vi.fn(async () => [{ path: '/guides/email-templates', currentViews: 413, previousViews: 616, changeAbs: -203, changePct: -33, direction: 'drop' }]),
     getSentryIssues: vi.fn(async (_s, _r, limit = 25) => Array.from({ length: Math.min(limit, 2) }, (_, i) => ({ sentryId: String(i), title: `Error ${i}`, level: 'error', status: 'unresolved', count: 10 - i, userCount: 5 - i, isRegression: i === 0, lastRelease: '1.0.0' }))),
 }));
+
+// Search-visibility tools resolve the site's own domain and hit SerpApi/PG —
+// mocked so the registry contract tests stay DB- and network-free.
+vi.mock('../src/services/sitesService.js', () => ({
+    default: { getSiteById: vi.fn(async () => ({ id: 'site_test_mcp', name: 'Test', domain: 'example.com' })) },
+}));
+
+vi.mock('../src/services/searchVisibilityService.js', () => {
+    const finding = {
+        keyword: 'free email templates', location: 'United States', device: 'desktop',
+        found: true, position: 6, previousPosition: 3, positionChange: -3,
+        url: 'https://example.com/guides/email-templates',
+        hasAiOverview: true, domainIsCited: false, previouslyCited: true,
+        citationChange: 'new_overview', citations: [{ position: 1, domain: 'competitorx.com', url: 'https://competitorx.com/x', title: 'X' }],
+        newCitedDomains: ['competitorx.com'],
+        competitors: [{ position: 1, domain: 'competitorx.com', url: 'https://competitorx.com/x', title: 'X' }],
+        features: ['ai_overview'], changeObservedAt: new Date().toISOString(),
+        source: 'fixture', cached: true, fetchedAt: new Date().toISOString(),
+    };
+    const api = {
+        checkKeyword: vi.fn(async () => finding),
+        getKeywordsForPage: vi.fn(async () => [{ keyword: 'free email templates', location: 'United States', isPrimary: true }]),
+        getSerp: vi.fn(async () => ({
+            organic: [], aiOverview: { present: false, citations: [] },
+            related: { peopleAlsoAsk: [{ question: 'Q?', snippet: 's', sourceDomain: 'competitorx.com' }], relatedSearches: [{ query: 'r', link: 'https://x' }] },
+            features: [], source: 'fixture', cached: true, fetchedAt: new Date().toISOString(),
+        })),
+    };
+    return { ...api, default: api };
+});
 
 // Sites service is mocked too, since list_sites reads getSitesForUser.
 vi.mock('../src/services/teamService.js', () => ({
@@ -53,6 +93,9 @@ describe('MCP tool registry', () => {
                 'get_performance', 'get_page_detail',
                 // Sentry error tools (P3.2)
                 'get_error_summary', 'get_error_issues',
+                // Search visibility — SerpApi × first-party traffic
+                'get_rankings', 'get_ai_overview_citations', 'get_related_queries',
+                'explain_traffic_change',
             ]);
         });
 
@@ -182,10 +225,19 @@ describe('MCP tool registry', () => {
     });
 
     describe('result envelopes', () => {
+        // Tools with required arguments need them supplied; the loop otherwise
+        // only passes dateRange.
+        const REQUIRED_ARGS = {
+            get_rankings: { keyword: 'free email templates' },
+            get_ai_overview_citations: { keyword: 'free email templates' },
+            get_related_queries: { keyword: 'free email templates' },
+            explain_traffic_change: { path: '/guides/email-templates' },
+        };
+
         it('every tool returns the full envelope shape', async () => {
             for (const t of TOOLS) {
                 const ctx = { siteId: `site_env_${t.name}`, userId: 42 };
-                const env = await t.run({ dateRange: '7d' }, ctx);
+                const env = await t.run({ dateRange: '7d', ...(REQUIRED_ARGS[t.name] || {}) }, ctx);
                 expect(env, t.name).toHaveProperty('summary');
                 expect(typeof env.summary).toBe('string');
                 expect(env, t.name).toHaveProperty('data');
@@ -198,6 +250,65 @@ describe('MCP tool registry', () => {
         it('defaults dateRange to 30d', async () => {
             const env = await runTool('get_traffic', {}, { siteId: 'site_default_range' });
             expect(env.deepLink.to).toContain('dateRange=30d');
+        });
+    });
+
+    describe('search visibility (SerpApi × traffic)', () => {
+        const ctx = { siteId: 'site_sv', userId: 42 };
+
+        it('get_rankings reports position, movement and AI Overview status', async () => {
+            const env = await runTool('get_rankings', { keyword: 'free email templates' }, ctx);
+            expect(env.summary).toContain('#6');
+            expect(env.summary).toContain('does NOT cite you');
+            expect(env.data.positionChange).toBe(-3);
+            expect(env.data.competitors.length).toBeGreaterThan(0);
+        });
+
+        it('get_ai_overview_citations names the competitors cited instead of you', async () => {
+            const env = await runTool('get_ai_overview_citations', { keyword: 'free email templates' }, ctx);
+            expect(env.data.hasAiOverview).toBe(true);
+            expect(env.data.domainIsCited).toBe(false);
+            expect(env.summary).toContain('competitorx.com');
+        });
+
+        it('get_related_queries returns PAA + related searches', async () => {
+            const env = await runTool('get_related_queries', { keyword: 'free email templates' }, ctx);
+            expect(env.data.peopleAlsoAsk.length).toBeGreaterThan(0);
+            expect(env.data.relatedSearches.length).toBeGreaterThan(0);
+        });
+
+        // The whole point of the feature: one sentence joining both sources.
+        it('explain_traffic_change joins traffic with SERP into one explanation', async () => {
+            const env = await runTool('explain_traffic_change', { path: '/guides/email-templates' }, ctx);
+            expect(env.summary).toContain('/guides/email-templates');
+            expect(env.summary).toContain('dropped');
+            expect(env.summary).toContain('33%');
+            expect(env.summary).toContain('#3 → #6');
+            expect(env.summary).toContain('AI Overview');
+            expect(env.data.confidence).toBe('high');
+            expect(env.data.causes.map((c) => c.code)).toContain('rank_drop');
+            expect(env.data.causes.map((c) => c.code)).toContain('ai_overview_displacement');
+        });
+
+        // Comparing an in-progress week against a complete one manufactures a
+        // "drop" every Tuesday. The final week must be excluded.
+        it('excludes the in-progress week from the comparison', async () => {
+            const env = await runTool('explain_traffic_change', { path: '/guides/email-templates' }, ctx);
+            // 4 weeks in, the trailing 120-view week is dropped as in-progress,
+            // so the compared pair is the two complete weeks before it.
+            expect(env.data.traffic.currentWeek).toBe(413);
+            expect(env.data.traffic.previousWeek).toBe(616);
+            expect(env.data.traffic.weeks).toHaveLength(3);
+        });
+
+        it('defaults to a 90d window (short windows are unreliable per-page)', async () => {
+            const env = await runTool('explain_traffic_change', { path: '/guides/email-templates' }, ctx);
+            expect(env.data.traffic.windowUsed).toBe('90d');
+        });
+
+        it('rejects a missing required argument with a 400, not a crash', async () => {
+            await expect(runTool('get_rankings', {}, ctx)).rejects.toThrow(/keyword.*required/i);
+            await expect(runTool('explain_traffic_change', {}, ctx)).rejects.toThrow(/path.*required/i);
         });
     });
 

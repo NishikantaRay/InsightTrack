@@ -103,6 +103,10 @@ export const CACHE_TTL = {
     TRAFFIC:  parseInt(process.env.CACHE_TTL_TRAFFIC_MS)  || 60_000,
     PAGES:    parseInt(process.env.CACHE_TTL_PAGES_MS)    || 60_000,
     GENERAL:  parseInt(process.env.CACHE_TTL_GENERAL_MS)  || 120_000,
+    // SERP results move far slower than analytics, and each miss can cost a
+    // paid SerpApi credit — so this TTL is long. The PostgreSQL snapshot cache
+    // (serp_snapshots) is the durable layer behind it.
+    SERP:     parseInt(process.env.CACHE_TTL_SERP_MS)     || 15 * 60_000,
 };
 
 export default analyticsCache;

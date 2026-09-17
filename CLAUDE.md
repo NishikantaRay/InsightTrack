@@ -87,4 +87,5 @@ Implementation guides are in `docs/`:
 - `docs/pg-duckdb-sync.md` — PostgreSQL → DuckDB sync pipeline
 - `docs/ai-analyst.md` — Pulse (AI analyst) user guide (in-panel use, BYO key, Claude Desktop/MCP setup)
 - `docs/mcp-toolkit.md` — MCP toolkit architecture & build phases (registry, assistant service, MCP server)
+- `docs/search-visibility-connector.md` — Search Visibility (SerpApi × traffic correlation, MCP tools, fixture mode)
 

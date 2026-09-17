@@ -1,0 +1,32 @@
+{
+  "_comment": "SCRUBBED SerpApi fixture. search_metadata (id, json_endpoint) and search_parameters.api_key are intentionally absent — those fields identify a SerpApi account and must never enter a public repo. Demo scenario: example.com has slipped to #6 and is NOT cited in a newly-appeared AI Overview.",
+  "search_information": { "total_results": 48200000 },
+  "ai_overview": {
+    "references": [
+      { "index": 1, "title": "25 Free Email Templates for Every Campaign", "link": "https://competitorx.com/free-email-templates", "snippet": "A library of responsive, free email templates." },
+      { "index": 2, "title": "Free Email Template Builder", "link": "https://competitory.com/templates/email", "snippet": "Drag-and-drop builder with free starter templates." }
+    ]
+  },
+  "organic_results": [
+    { "position": 1, "title": "25 Free Email Templates for Every Campaign", "link": "https://competitorx.com/free-email-templates" },
+    { "position": 2, "title": "Free Email Template Builder", "link": "https://competitory.com/templates/email" },
+    { "position": 3, "title": "Free HTML Email Templates", "link": "https://mailchimpalike.com/resources/email-templates" },
+    { "position": 4, "title": "Email Templates — Free Download", "link": "https://templatehub.io/email" },
+    { "position": 5, "title": "The Best Free Email Templates in 2026", "link": "https://marketingblog.dev/best-free-email-templates" },
+    { "position": 6, "title": "Free Email Templates Guide", "link": "https://demo.example.com/guides/email-templates" },
+    { "position": 7, "title": "Responsive Email Templates", "link": "https://litmusalike.com/email-templates" },
+    { "position": 8, "title": "Email Design Templates", "link": "https://designtools.co/email-templates" },
+    { "position": 9, "title": "Free Newsletter Templates", "link": "https://newsletterpro.io/free-templates" },
+    { "position": 10, "title": "Open Source Email Templates", "link": "https://github.example.org/email-templates" }
+  ],
+  "related_questions": [
+    { "question": "Are there free email templates in Gmail?", "snippet": "Gmail offers a limited set of built-in templates.", "link": "https://competitorx.com/gmail-templates" },
+    { "question": "How do I create a free email template?", "snippet": "Start from a responsive HTML boilerplate.", "link": "https://competitory.com/create-template" },
+    { "question": "What is the best free email template builder?", "snippet": "Several builders offer free tiers.", "link": "https://marketingblog.dev/builders" }
+  ],
+  "related_searches": [
+    { "query": "free html email templates", "link": "https://www.google.com/search?q=free+html+email+templates" },
+    { "query": "responsive email templates free download", "link": "https://www.google.com/search?q=responsive+email+templates+free+download" },
+    { "query": "free email newsletter templates", "link": "https://www.google.com/search?q=free+email+newsletter+templates" }
+  ]
+}

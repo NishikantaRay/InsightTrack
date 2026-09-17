@@ -106,7 +106,8 @@ function sessionTime(iso) {
 
 export default function AssistantPanel() {
     const { open, width, setWidth, closePanel, messages, addMessage, updateMessage, busy, setBusy,
-        clear, newThread, threadId, setThreadId, loadThread, maximized, toggleMaximize } = useAssistantStore();
+        clear, newThread, threadId, setThreadId, loadThread, maximized, toggleMaximize,
+        pendingQuestion, consumePendingQuestion } = useAssistantStore();
     const siteId = useSiteStore((s) => s.siteId);
     const navigate = useNavigate();
     const [input, setInput] = useState('');
@@ -195,6 +196,15 @@ export default function AssistantPanel() {
             else if (event === 'done') { updateMessage(assistantId, { streaming: false }); setBusy(false); }
         });
     };
+
+    // A question handed in from elsewhere in the dashboard (Search Visibility's
+    // "Ask Pulse" button) is sent once the panel is open and a site is resolved.
+    // Consumed via the store so it cannot re-fire on a re-render.
+    useEffect(() => {
+        if (!open || !pendingQuestion || busy || !siteId) return;
+        const q = consumePendingQuestion();
+        if (q) send(q);
+    }, [open, pendingQuestion, busy, siteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Retry the last question: drop the failed empty assistant turn, then resend.
     const retry = () => {

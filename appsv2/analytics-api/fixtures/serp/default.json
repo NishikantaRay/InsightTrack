@@ -1,0 +1,17 @@
+{
+  "_comment": "SCRUBBED fallback fixture for any keyword without its own file. No AI Overview, domain ranks #4 — a neutral 'nothing dramatic happened' SERP so an un-fixtured keyword degrades to a working demo rather than a crash.",
+  "search_information": { "total_results": 1250000 },
+  "organic_results": [
+    { "position": 1, "title": "A Competing Result", "link": "https://competitorx.com/result" },
+    { "position": 2, "title": "Another Competing Result", "link": "https://competitory.com/result" },
+    { "position": 3, "title": "A Third Result", "link": "https://templatehub.io/result" },
+    { "position": 4, "title": "Your Page", "link": "https://demo.example.com/" },
+    { "position": 5, "title": "A Fifth Result", "link": "https://marketingblog.dev/result" }
+  ],
+  "related_questions": [
+    { "question": "What is this topic about?", "snippet": "A general overview.", "link": "https://competitorx.com/overview" }
+  ],
+  "related_searches": [
+    { "query": "related search one", "link": "https://www.google.com/search?q=related+search+one" }
+  ]
+}

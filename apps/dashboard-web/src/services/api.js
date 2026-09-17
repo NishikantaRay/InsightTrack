@@ -204,6 +204,39 @@ export const analyticsAPI = {
     // Live drill-down for one issue's newest event (not part of useAnalytics).
     getSentryLatestEvent: (siteId, sentryId) =>
         api.get(`/analytics/${siteId}/sentry/issues/${sentryId}/latest-event`),
+
+    // ── Search visibility (SerpApi × first-party traffic) ────────────────────
+    // Signature note: useAnalytics calls fetcher(siteId, dateRange, ...params),
+    // so dateRange stays second even where the endpoint ignores it.
+    getSearchOverview: (siteId, dateRange, limit = 10) =>
+        api.get(`/search/${siteId}/overview`, { params: { dateRange, limit } }),
+    getSearchExplain: (siteId, dateRange, path) =>
+        api.get(`/search/${siteId}/explain`, { params: { dateRange, path } }),
+    getSearchRankings: (siteId, dateRange, keyword) =>
+        api.get(`/search/${siteId}/rankings`, { params: { keyword } }),
+    getSearchAiOverview: (siteId, dateRange, keyword) =>
+        api.get(`/search/${siteId}/ai-overview`, { params: { keyword } }),
+    getSearchRelated: (siteId, dateRange, keyword, limit = 10) =>
+        api.get(`/search/${siteId}/related`, { params: { keyword, limit } }),
+    getSearchRankHistory: (siteId, dateRange, keyword) =>
+        api.get(`/search/${siteId}/rank-history`, { params: { keyword } }),
+};
+
+// Search-visibility keyword mapping (writes — not part of useAnalytics).
+export const searchKeywordsAPI = {
+    list: (siteId) => api.get(`/search/${siteId}/keywords`),
+    add: (siteId, body) => api.post(`/search/${siteId}/keywords`, body),
+    remove: (siteId, params) => api.delete(`/search/${siteId}/keywords`, { params }),
+    // Suggested keywords. `expand` opts into a SerpApi call for related searches.
+    suggest: (siteId, params = {}) => api.get(`/search/${siteId}/suggest`, { params }),
+};
+
+// SerpApi key management. The key is encrypted server-side and never returned —
+// getStatus yields only a masked hint and connection status.
+export const serpapiKeyAPI = {
+    getStatus: (siteId) => api.get(`/search/${siteId}/serpapi-key`),
+    save: (siteId, key) => api.put(`/search/${siteId}/serpapi-key`, { key }),
+    remove: (siteId) => api.delete(`/search/${siteId}/serpapi-key`),
 };
 
 // Sites endpoints

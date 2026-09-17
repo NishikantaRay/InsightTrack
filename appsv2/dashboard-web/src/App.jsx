@@ -21,6 +21,7 @@ const Audience = lazy(() => import('./pages/Audience'));
 const Content = lazy(() => import('./pages/Content'));
 const Acquisition = lazy(() => import('./pages/Acquisition'));
 const Performance = lazy(() => import('./pages/Performance'));
+const SearchVisibility = lazy(() => import('./pages/SearchVisibility'));
 const Errors = lazy(() => import('./pages/Errors'));
 const Reporting = lazy(() => import('./pages/Reporting'));
 const Privacy = lazy(() => import('./pages/Privacy'));
@@ -236,6 +237,7 @@ function AppContent() {
                                                         <Route path="/content" element={<Content />} />
                                                         <Route path="/acquisition" element={<Acquisition />} />
                                                         <Route path="/performance" element={<Performance />} />
+                                                        <Route path="/search" element={<SearchVisibility />} />
                                                         <Route path="/errors" element={<Errors />} />
                                                         <Route path="/reporting" element={<Reporting />} />
                                                         <Route path="/privacy" element={<Privacy />} />

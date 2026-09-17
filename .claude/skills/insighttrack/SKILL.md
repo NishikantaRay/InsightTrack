@@ -83,7 +83,17 @@ InsightTrack) — do not add features there.
 11. **The public site ships via `npm run build:seo`, not `npm run build`.**
     Plain `build` emits one empty-shell page and silently de-indexes the whole
     site. See section 6.
-12. **Public-facing claims must match measured evidence.** `README.md`,
+12. **SerpApi is reached ONLY through `services/serpapi/client.js`** — the one
+    module holding `SERPAPI_KEY` or doing outbound HTTP. Everything above it
+    (`normalize` → `searchVisibilityService` → `correlationService`) is pure or
+    DB-only, which is what keeps the correlation testable without spending
+    credits. With no key set the client serves `fixtures/serp/*.json` and stamps
+    `source: 'fixture'`; never present fixture data as live.
+13. **`correlationService.js` stays pure** — no DB, no network:
+    `(trafficWeeks, keywordFindings) → Finding`. Attribution is a deterministic
+    rule cascade, not an LLM, and rule 7 (`unexplained_by_serp`) must keep
+    existing: a correlation tool that always finds a SERP cause is guessing.
+14. **Public-facing claims must match measured evidence.** `README.md`,
     `public/llms.txt`, `public/index.md`, `index.html` JSON-LD, and
     `pages/Landing.jsx` all make privacy and performance claims. The audits in
     `docs/PERFORMANCE_BENCHMARK_AUDIT.md` and `docs/REPOSITORY_AUDIT.md` grade
@@ -142,8 +152,10 @@ Backend (`analytics-db/` or `apps*/analytics-api/`):
 ```
 src/index.js        Express app: CORS, helmet, rate limit, route mounts, sync loop
 src/db/             postgres.js (pool + idempotent schema/migrations), duckdb.js (conn pool, duckAll/duckRun/duckBulkInsert)
-src/routes/         One router per domain: analytics, sites, tracking, auth, goals, reporting, sqlEditor, team, mcp, assistant
+src/routes/         One router per domain: analytics, sites, tracking, auth, goals, reporting, sqlEditor, team, mcp, assistant, searchVisibility
 src/services/       PG-backed business logic (sitesService, teamService, trackingService, authService, …)
+                    searchVisibility: serpapi/{client,normalize}.js, searchVisibilityService.js, correlationService.js
+fixtures/serp/      Scrubbed sample SERPs — served when SERPAPI_KEY is unset (fixture mode)
 src/queries/        queries.js — ALL DuckDB analytics SQL lives here
 src/schema/         schema.js — DuckDB DDL (SCHEMA_SQL) + SYNCABLE_TABLES
 src/sync/           sync.js — PG→DuckDB incremental sync + rollups

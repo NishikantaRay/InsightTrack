@@ -40,6 +40,36 @@ const pathParam = {
     schema: { type: 'string', default: '/' },
 };
 
+// ── Search-visibility params (SerpApi connector) ─────────────────────────────
+const keywordParam = {
+    name: 'keyword',
+    in: 'query',
+    required: true,
+    description: "The search query to check, e.g. 'free email templates'.",
+    schema: { type: 'string', maxLength: 200 },
+};
+const domainParam = {
+    name: 'domain',
+    in: 'query',
+    required: false,
+    description: "Domain to locate in the results. Defaults to the site's own domain.",
+    schema: { type: 'string', maxLength: 253 },
+};
+const locationParam = {
+    name: 'location',
+    in: 'query',
+    required: false,
+    description: "Geographic location for the search. Default 'United States'.",
+    schema: { type: 'string', default: 'United States' },
+};
+const explainPathParam = {
+    name: 'path',
+    in: 'query',
+    required: true,
+    description: "The page path to explain, e.g. '/guides/email-templates'.",
+    schema: { type: 'string' },
+};
+
 const ok = {
     description: 'Success',
     content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, data: {} } } } },
@@ -99,6 +129,10 @@ export const OPENAPI_SPEC = {
         '/analytics/{siteId}/pages/detail': op('get_page_detail', 'Click detail for one page path (elements clicked most)', { params: [dateRangeParam, pathParam, limitParam] }),
         '/analytics/{siteId}/sentry/summary': op('get_error_summary', 'Sentry error summary (unresolved, regressions, events, users affected)', { params: [dateRangeParam] }),
         '/analytics/{siteId}/sentry/issues': op('get_error_issues', 'Sentry error issues (title, level, count, users, regression, release)', { params: [dateRangeParam, limitParam] }),
+        '/search/{siteId}/rankings': op('get_rankings', 'Current Google organic position for a domain on a keyword, plus top competitors', { params: [keywordParam, domainParam, locationParam] }),
+        '/search/{siteId}/ai-overview': op('get_ai_overview_citations', 'Whether an AI Overview appears for a keyword and which domains it cites', { params: [keywordParam, domainParam, locationParam] }),
+        '/search/{siteId}/related': op('get_related_queries', "'People also ask' questions and related searches for a keyword", { params: [keywordParam, locationParam, limitParam] }),
+        '/search/{siteId}/explain': op('explain_traffic_change', 'Explain a page traffic change by joining first-party traffic with live SERP data', { params: [explainPathParam, dateRangeParam, locationParam] }),
     },
 };
 

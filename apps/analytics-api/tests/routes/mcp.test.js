@@ -7,6 +7,11 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 const { default: mcpRoutes } = await import('../../src/routes/mcp.js');
 const { default: authService } = await import('../../src/services/authService.js');
 const { query } = await import('../../src/db/postgres.js');
+// Derive the expected tool count from the registry itself. Hardcoding it meant
+// every new tool broke three unrelated route tests with an opaque "expected 23
+// to be 19" — the registry is the single source of truth, so read it.
+const { TOOLS } = await import('../../src/mcp/tools/registry.js');
+const TOOL_COUNT = TOOLS.length;
 
 function createApp() {
     const app = express();
@@ -44,7 +49,7 @@ describe('MCP routes — tenant isolation & connect-token lifecycle', () => {
                 .get('/api/mcp/tools')
                 .set('Authorization', `Bearer ${userToken}`);
             expect(res.status).toBe(200);
-            expect(res.body.data.count).toBe(19); // 11 original + 6 P2.1 + 2 Sentry (P3.2) tools
+            expect(res.body.data.count).toBe(TOOL_COUNT);
             expect(res.body.data.tools[0]).toHaveProperty('inputSchema');
             // list_sites advertises the siteless flag so the MCP server can skip
             // injecting a required siteId into its schema.
@@ -213,7 +218,7 @@ describe('MCP routes — tenant isolation & connect-token lifecycle', () => {
             const res = await rpc(userToken, { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
             expect(res.status).toBe(200);
             const tools = res.body.result.tools;
-            expect(tools.length).toBe(19);
+            expect(tools.length).toBe(TOOL_COUNT);
             const kpi = tools.find((t) => t.name === 'get_kpi');
             expect(kpi.inputSchema.properties).toHaveProperty('siteId'); // injected
             const listSites = tools.find((t) => t.name === 'list_sites');
@@ -260,7 +265,7 @@ describe('MCP routes — tenant isolation & connect-token lifecycle', () => {
 
             const ok = await rpc(mcpToken, { jsonrpc: '2.0', id: 6, method: 'tools/list', params: {} });
             expect(ok.status).toBe(200);
-            expect(ok.body.result.tools.length).toBe(19);
+            expect(ok.body.result.tools.length).toBe(TOOL_COUNT);
 
             await request(app).delete(`/api/mcp/connect/${jti}`).set('Authorization', `Bearer ${userToken}`);
             const dead = await rpc(mcpToken, { jsonrpc: '2.0', id: 7, method: 'tools/list', params: {} });

@@ -1,0 +1,19 @@
+{
+  "_comment": "SCRUBBED SerpApi fixture. A SECOND keyword for the demo page that did NOT move — demo.example.com holds #4, no AI Overview. Its purpose is to prove the correlation attributes the drop to the keyword that actually slipped, rather than blaming every mapped keyword.",
+  "search_information": { "total_results": 18400000 },
+  "organic_results": [
+    { "position": 1, "title": "Best Email Marketing Software 2026", "link": "https://competitorx.com/email-marketing-software" },
+    { "position": 2, "title": "Email Marketing Platforms Compared", "link": "https://marketingblog.dev/platforms" },
+    { "position": 3, "title": "Top Email Marketing Tools", "link": "https://templatehub.io/tools" },
+    { "position": 4, "title": "Free Email Templates Guide", "link": "https://demo.example.com/guides/email-templates" },
+    { "position": 5, "title": "Email Software Reviews", "link": "https://newsletterpro.io/reviews" },
+    { "position": 6, "title": "Choosing Email Marketing Software", "link": "https://designtools.co/choosing-email-software" }
+  ],
+  "related_questions": [
+    { "question": "What is the best email marketing software?", "snippet": "It depends on list size and budget.", "link": "https://competitorx.com/best" }
+  ],
+  "related_searches": [
+    { "query": "email marketing software free", "link": "https://www.google.com/search?q=email+marketing+software+free" },
+    { "query": "email marketing tools comparison", "link": "https://www.google.com/search?q=email+marketing+tools+comparison" }
+  ]
+}
