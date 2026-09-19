@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "benchmark:engine": "node scripts/benchmarking/run-engine-benchmark.js",
-    "seed:search": "node scripts/seedSearchVisibility.js"
+    "seed:search": "node scripts/seedSearchVisibility.js",
+    "setup:studytub": "node scripts/setupStudytub.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

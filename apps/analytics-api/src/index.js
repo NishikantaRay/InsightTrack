@@ -266,6 +266,25 @@ async function start() {
         pollAllProviders({ silent: false }).catch(() => {});
         setInterval(() => { pollAllProviders({ silent: true }).catch(() => {}); }, SENTRY_POLL_INTERVAL);
 
+        // Scheduled rank tracking. The traffic×SERP correlation needs a PREVIOUS
+        // observation to compare against, so positions have to be recorded on a
+        // schedule rather than only when someone opens the page — otherwise the
+        // first visit of every week has nothing to diff and reports "first
+        // snapshot". Sites without a SerpApi key are skipped, so this is a no-op
+        // until one is configured. Set RANK_CHECK_INTERVAL_MS=0 to disable.
+        const RANK_CHECK_INTERVAL = process.env.RANK_CHECK_INTERVAL_MS === '0'
+            ? 0
+            : parseInt(process.env.RANK_CHECK_INTERVAL_MS) || 6 * 3600_000;
+        if (RANK_CHECK_INTERVAL > 0) {
+            const { sweepRanks } = await import('./services/rankTrackerService.js');
+            const runSweep = (silent) => sweepRanks({ silent }).catch((err) => {
+                console.warn('⚠  rank sweep failed:', err.message);
+            });
+            // Delayed first run so startup is not competing with the PG→DuckDB sync.
+            setTimeout(() => runSweep(false), 60_000);
+            setInterval(() => runSweep(true), RANK_CHECK_INTERVAL);
+        }
+
         app.listen(PORT, () => {
             console.log(`\n🚀 InsightsTrack server running on http://localhost:${PORT}`);
             console.log(`   Analytics queries powered by DuckDB`);
