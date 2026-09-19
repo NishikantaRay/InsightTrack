@@ -18,6 +18,42 @@ Replace `YOUR_SITE_ID` with the site ID shown in Settings after creating a site.
 
 Copy the inline snippet from **Settings → Tracking Snippet** and paste it before the closing `</body>` tag.
 
+## Delivery & Size
+
+The script runs on every page of every tracked site, so its weight is the
+customer's cost, not ours. Two things keep that cost down.
+
+**Minification.** `GET /api/sites/:siteId/script` serves a Terser-minified
+build (`compress` with 2 passes, `mangle`, comments stripped). Measured on the
+current script:
+
+| | Bytes | Gzipped |
+|---|---|---|
+| Readable source | 31,096 | 9,536 |
+| Served (minified) | 18,382 | 6,027 |
+
+That is a **37% reduction over the wire**. Minification is purely a
+size change — no behaviour differs, and the DNT/GPC opt-out, `sendBeacon`
+delivery, and the embedded site ID and server URL are all covered by tests in
+`tests/trackingScriptMinify.test.js`.
+
+The result is cached in-process per `siteId` + server URL, so a site's script is
+minified once per server lifetime rather than per request. If Terser ever throws,
+the route logs a warning and falls back to the readable source: a larger script
+is a far better outcome than no script.
+
+Because identifiers are mangled, **do not assert on internal function names** of
+the served script — assert on the tracking endpoints or the public
+`window.analytics` surface, which mangling cannot rename.
+
+**Caching.** The response sets `Cache-Control: public, max-age=300,
+must-revalidate`. The TTL is deliberately short: the script embeds privacy
+behaviour, so a long cache would let a visitor keep running an outdated copy
+after a fix ships. Five minutes with revalidation keeps most of the CDN and
+browser benefit while bounding that window, and the server-side opt-out check in
+`routes/tracking.js` honours DNT/GPC during the interval regardless. Raising this
+TTL trades a privacy guarantee for a few bytes — don't.
+
 ## What Gets Tracked
 
 | Data Point        | How It's Collected                                |

@@ -2,7 +2,7 @@
   "name": "insightstrack-server",
   "version": "1.1.0",
   "license": "MIT",
-  "description": "InsightsTrack unified backend \u2014 Express + PostgreSQL (writes) + DuckDB (analytics reads)",
+  "description": "InsightsTrack unified backend — Express + PostgreSQL (writes) + DuckDB (analytics reads)",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -33,6 +33,7 @@
     "jsonwebtoken": "^9.0.3",
     "node-sql-parser": "^5.4.0",
     "pg": "^8.18.0",
+    "terser": "^5.51.2",
     "uuid": "^14.0.2"
   },
   "devDependencies": {

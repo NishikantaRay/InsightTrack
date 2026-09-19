@@ -147,7 +147,10 @@ describe('Sites Routes', () => {
             expect(res.status).toBe(200);
             expect(res.headers['content-type']).toContain('javascript');
             expect(res.text).toContain(TEST_SITE_ID);
-            expect(res.text).toContain('trackPageview');
+            // The script is minified, so internal function names are mangled.
+            // Assert on the tracking endpoint instead: that is the contract
+            // between script and server, and mangling cannot rename a string.
+            expect(res.text).toContain('/api/track/event');
         });
 
         it('should return 404 for nonexistent site', async () => {
