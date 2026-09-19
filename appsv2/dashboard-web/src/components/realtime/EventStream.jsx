@@ -118,7 +118,7 @@ export default function EventStream() {
         };
 
         fetchEvents();
-        const interval = setInterval(fetchEvents, 10000);
+        const interval = setInterval(fetchEvents, 60000);
         return () => clearInterval(interval);
     }, [siteId, paused]);
 

@@ -79,7 +79,7 @@ export default function Dashboard() {
                         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
                         <p className="text-sm text-text-secondary dark:text-text-secondary-dark mt-1">
                             Overview of your website analytics &mdash;
-                            <span className="ml-1 text-xs opacity-60">auto-refreshes every 30s · last updated {lastUpdated.toLocaleTimeString()}</span>
+                            <span className="ml-1 text-xs opacity-60">auto-refreshes every 60s · last updated {lastUpdated.toLocaleTimeString()}</span>
                         </p>
                     </div>
                 )}

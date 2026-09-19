@@ -81,7 +81,10 @@ export function useRealtime() {
         };
 
         fetch();
-        const interval = setInterval(fetch, 15000);
+        // 60s, matching every other panel on the page. The realtime widget used
+        // to poll at 15s, which cost 4x the requests to show numbers the
+        // server only recomputes every 10s anyway.
+        const interval = setInterval(fetch, 60000);
         return () => clearInterval(interval);
     }, [siteId]);
 
@@ -107,7 +110,7 @@ export function useRealtimeEventStream() {
         };
 
         fetchEvents();
-        const interval = setInterval(fetchEvents, 10000);
+        const interval = setInterval(fetchEvents, 60000);
         return () => clearInterval(interval);
     }, [siteId]);
 
