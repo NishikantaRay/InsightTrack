@@ -85,6 +85,32 @@ function MapUpdater({ countries }) {
     return null;
 }
 
+
+/**
+ * Basemap tiles.
+ *
+ * Configurable because tile providers change their terms: CARTO used to serve
+ * these unauthenticated and now watermarks "API KEY REQUIRED" into the image
+ * for unrecognised origins. A self-hosted deployment should be able to point at
+ * whatever it is entitled to use without patching the source.
+ *
+ *   VITE_MAP_TILE_URL          tile template, e.g. https://…/{z}/{x}/{y}.png
+ *   VITE_MAP_TILE_ATTRIBUTION  required by most providers' licences
+ *   VITE_MAP_TILE_MAXZOOM
+ *
+ * Default is Esri's World Light Gray Canvas: a muted basemap designed to sit
+ * under data, so the visitor circles stay the focus. Note the {z}/{y}/{x}
+ * ordering — Esri's REST convention is row before column, and getting it the
+ * usual way round silently returns the wrong part of the world.
+ */
+const TILES = {
+    url: import.meta.env.VITE_MAP_TILE_URL
+        || 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: import.meta.env.VITE_MAP_TILE_ATTRIBUTION
+        || '&copy; <a href="https://www.esri.com/">Esri</a>',
+    maxZoom: Number(import.meta.env.VITE_MAP_TILE_MAXZOOM) || 16,
+};
+
 function VisitorMap({ countries = [], className = '' }) {
     const knownCountries = useMemo(
         () => countries.filter(c => c.country !== 'Unknown' && COUNTRY_COORDINATES[c.country]),
@@ -112,17 +138,10 @@ function VisitorMap({ countries = [], className = '' }) {
                     style={{ height: '100%', width: '100%' }}
                     worldCopyJump={true}
                 >
-                    {/* OpenStreetMap rather than CARTO: CARTO now watermarks
-                        tiles served to unregistered origins with "API KEY
-                        REQUIRED" printed into the image itself. OSM needs no
-                        key, which matters for a self-hosted tool — a user
-                        should not have to register with a third party to see
-                        their own visitor map. Dark mode inverts the tiles (see
-                        the style block below), which works for either source. */}
                     <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        maxZoom={19}
+                        attribution={TILES.attribution}
+                        url={TILES.url}
+                        maxZoom={TILES.maxZoom}
                     />
                     <MapUpdater countries={knownCountries} />
 
