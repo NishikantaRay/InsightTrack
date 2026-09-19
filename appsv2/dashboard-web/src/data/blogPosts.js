@@ -4365,6 +4365,1436 @@ Yes — every tool here has a live demo or a Docker image that runs in minutes. 
 All of these install as a single script tag and can run in parallel. Two weeks of overlap tells you more than any comparison table, this one included — including how each tool's numbers differ, which they will ([metrics explained](/blog/website-analytics-metrics-explained)).
 `,
     },
+    {
+        slug: "mcp-server-analytics-claude-desktop",
+        title: "Connecting Your Analytics to Claude Desktop with MCP",
+        seoTitle: "MCP Server for Web Analytics \u2014 Claude Desktop Setup",
+        description:
+            "How the Model Context Protocol lets an AI assistant query your own analytics. The tool registry pattern, per-user site scoping, and why the MCP server is a thin proxy rather than a second database client.",
+        keyword: "mcp server analytics",
+        date: "2026-09-02",
+        readingMinutes: 8,
+        tags: ["MCP", "AI", "Architecture"],
+        body: `
+## What MCP actually is
+
+The **Model Context Protocol** is an open standard for exposing tools — callable actions — to AI clients. Claude Desktop, Cursor and others speak it. Publish an MCP server and any of them can use your data without a custom integration each time.
+
+For analytics that matters, because the natural interface to a dataset is a question, not a dashboard. *"What were my top pages last week and how did conversions trend?"* is faster to ask than to click.
+
+## One registry, two surfaces
+
+The mistake is building the AI integration twice: once for an in-app assistant, once for MCP. InsightsTrack defines tools once, in a shared registry:
+
+\`\`\`js
+{
+  name: 'get_top_pages',
+  description: 'Most-visited pages for a time range…',
+  inputSchema: { /* JSON Schema */ },
+  async run(args, ctx) { /* returns a result envelope */ }
+}
+\`\`\`
+
+The in-dashboard assistant and the external MCP server both read that registry. A tool written once appears in both. The \`description\` field is not documentation — it is the instruction manual the model reads to decide whether to call the tool, so it is worth writing carefully.
+
+## The MCP server is deliberately thin
+
+It would be tempting to have the MCP server open the analytics database directly. That is a mistake for two reasons.
+
+First, **DuckDB is single-writer**. A second process holding the file conflicts with the API that owns it.
+
+Second, **authorization lives in the API**. Site scoping, per-user roles and the site-members check are all enforced there. A direct database client would have to reimplement every one of them, and would drift.
+
+So the MCP server proxies over HTTP with the user's connect token. It holds no credentials of its own and can only reach sites that user can already see.
+
+## Result envelopes, not raw rows
+
+Each tool returns a structured envelope rather than a blob:
+
+\`\`\`js
+{
+  summary: 'Top page was /pricing with 1,240 views (30d).',
+  data: [ /* rows */ ],
+  render: { type: 'table', columns: ['page','views'] },
+  download: { csv: true, filename: 'top-pages-30d.csv' },
+  deepLink: { label: 'Open Pages', to: '/pages?dateRange=30d' }
+}
+\`\`\`
+
+The \`summary\` is what the model speaks aloud. The \`data\` is what it reasons over. The \`render\` and \`deepLink\` let the in-app panel draw a chart and offer a one-click jump to the matching dashboard page. One shape serves a terminal, a chat panel and an API.
+
+## Bounding what the model sees
+
+A wide date range can return tens of thousands of rows. Sent to a model, that is an expensive context window and a slow reply.
+
+Every envelope passes through a cap before it reaches the model: a row limit and a hard character budget, with a note appended so the model knows it is looking at a sample rather than the whole set. The dashboard still renders the full result and the CSV still downloads everything — only the copy the model reads is bounded.
+
+## Connecting it
+
+Generate a connect token in the dashboard, then point your client at the server:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "insightstrack": {
+      "command": "npx",
+      "args": ["-y", "@insightstrack/mcp-server"],
+      "env": {
+        "INSIGHTTRACK_API_URL": "https://analytics.example.com",
+        "INSIGHTTRACK_TOKEN": "your-connect-token"
+      }
+    }
+  }
+}
+\`\`\`
+
+The token is scoped to one user and can be revoked without touching anything else.
+
+## What this is good for, and what it is not
+
+It is good at exploratory questions, follow-ups that would each be a separate dashboard visit, and pulling numbers into something you are already writing.
+
+It is not a replacement for a dashboard you check daily. A chart you read at a glance beats a sentence you have to request. The tools are read-only and analytics-scoped by design — no writes, no cross-site access.
+`,
+    },
+    {
+        slug: "building-ai-analyst-tool-registry",
+        title: "Building an AI Analyst: The Tool Registry Pattern",
+        seoTitle: "AI Analyst Tool Registry Pattern for Analytics",
+        description:
+            "How to give an LLM access to your analytics without letting it near your database. Tool schemas, result envelopes, site scoping, and the size guardrails that keep a wide query from blowing the context budget.",
+        keyword: "llm tool calling analytics",
+        date: "2026-09-01",
+        readingMinutes: 9,
+        tags: ["AI", "Architecture", "MCP"],
+        body: `
+## The wrong way first
+
+The obvious approach to "let an AI answer questions about my data" is to hand the model SQL access. It is also the approach that ends badly: no scoping, no cost control, and a model that will cheerfully write a query scanning every row you own.
+
+The better pattern is a **tool registry** — a fixed set of callable functions, each with a typed schema, each enforcing its own authorization.
+
+## What a tool looks like
+
+\`\`\`js
+{
+  name: 'get_funnel',
+  description:
+    'Conversion funnel with per-step drop-off for a time range. Use for ' +
+    '"conversion rate", "where are users dropping off", funnel questions.',
+  inputSchema: {
+    type: 'object',
+    properties: { dateRange: { type: 'string', description: '…' } },
+    additionalProperties: false
+  },
+  async run(args, ctx) { /* … */ }
+}
+\`\`\`
+
+Three things matter here.
+
+**The description is a prompt.** The model reads it to decide whether this tool answers the user's question. Listing the phrasings people actually use — "where are users dropping off" — matters more than describing the return type.
+
+**\`additionalProperties: false\`** stops the model inventing arguments. Without it, a hallucinated \`groupBy\` silently does nothing and the answer is wrong in a way nobody notices.
+
+**\`ctx\` carries authorization**, not the arguments. The caller sets \`ctx.siteId\` to a site the user can actually access. Tools never widen that scope, and the model cannot pass a different site id because it is not an input.
+
+## Result envelopes
+
+Returning raw rows wastes the opportunity. An envelope carries the answer in several forms at once:
+
+\`\`\`js
+{
+  summary: '412 visitors, 1,180 pageviews, 38% bounce (30d).',
+  data: { /* the numbers */ },
+  render: { type: 'kpi' },
+  download: null,
+  deepLink: { label: 'Open Dashboard', to: '/?dateRange=30d' }
+}
+\`\`\`
+
+The chat panel renders a stat card and a deep link. A terminal MCP client prints the summary. The model reasons over \`data\`. None of them need a separate code path.
+
+## The guardrail nobody thinks about until it bites
+
+A 90-day query on a busy site returns a lot of rows. Sent to a model, that is slow and expensive, and the reply is often worse — models reason poorly over thousands of rows of noise.
+
+Every envelope is capped before it reaches the model:
+
+\`\`\`js
+const MAX_ROWS = 100;
+const MAX_DATA_CHARS = 20_000;
+\`\`\`
+
+Arrays are truncated, and a note is appended to the summary so the model knows it is seeing a sample: *"Showing the first 100 of 4,210 rows."* Without that note, the model will confidently describe the sample as the whole dataset.
+
+Non-array objects get a size backstop too, since a single wide object can be as large as a thousand rows.
+
+## Caching is shared with the dashboard
+
+Tool calls hit the same coalescing cache the REST routes use, with the same keys. A question the dashboard already answered is a cache hit, and asking the same thing twice in one conversation never re-runs the query.
+
+That detail matters more than it sounds: conversations are repetitive. "Show me top pages" followed by "now break that down by country" often re-reads the same underlying range.
+
+## Site scoping, concretely
+
+Most tools require \`ctx.siteId\`. A few — listing the sites a user can see — operate on \`ctx.userId\` instead and are flagged \`siteless\`. The executor enforces which is which:
+
+\`\`\`js
+if (tool.siteless) {
+  if (!ctx.userId) throw new Error('ctx.userId is required');
+} else if (!ctx.siteId) {
+  throw new Error('ctx.siteId is required');
+}
+\`\`\`
+
+It is a small check, but it is the difference between a tool layer and a security incident.
+
+## What to write first
+
+Start with the five questions people actually ask: how is traffic, what are my top pages, where does traffic come from, how are conversions doing, and what is happening right now. Those five cover most of what a dashboard gets opened for.
+`,
+    },
+    {
+        slug: "ab-testing-statistical-significance",
+        title: "A/B Testing in Web Analytics: Getting Significance Right",
+        seoTitle: "A/B Test Statistical Significance Explained",
+        description:
+            "Why 'variant B is winning' usually means nothing, how to compute significance for conversion tests, and the two mistakes \u2014 peeking and tiny samples \u2014 that make most A/B results fiction.",
+        keyword: "ab test statistical significance",
+        date: "2026-08-30",
+        readingMinutes: 8,
+        tags: ["Metrics", "A/B Testing", "SQL"],
+        body: `
+## The problem with "B is winning"
+
+Run an A/B test for a day, and one variant will be ahead. That is guaranteed — two random samples almost never tie. The question is whether the difference is real or noise, and eyeballing the numbers cannot answer it.
+
+A conversion test is a comparison of two proportions. The tool for that is a **two-proportion z-test**.
+
+## The maths, briefly
+
+With \`cA\` conversions from \`nA\` visitors in control and \`cB\` from \`nB\` in variant:
+
+\`\`\`
+pA = cA / nA
+pB = cB / nB
+pPooled = (cA + cB) / (nA + nB)
+
+SE = sqrt( pPooled * (1 - pPooled) * (1/nA + 1/nB) )
+z  = (pB - pA) / SE
+\`\`\`
+
+A \`|z|\` above 1.96 corresponds to roughly 95% confidence — the conventional threshold for calling a result. Below that, you have not learned anything yet.
+
+The thing to internalise: \`SE\` shrinks as sample size grows. Small samples produce large standard errors, which is why early results swing wildly and mean nothing.
+
+## In SQL
+
+\`\`\`sql
+WITH v AS (
+  SELECT variant,
+         COUNT(DISTINCT user_id)                         AS visitors,
+         COUNT(DISTINCT CASE WHEN converted THEN user_id END) AS conversions
+  FROM ab_assignments
+  WHERE test_id = ? AND assigned_at >= ?
+  GROUP BY variant
+)
+SELECT variant, visitors, conversions,
+       conversions::DOUBLE / NULLIF(visitors, 0) AS rate
+FROM v;
+\`\`\`
+
+Compute \`z\` from those four numbers in application code rather than SQL — it is clearer, and easier to test.
+
+## Mistake one: peeking
+
+Checking a test repeatedly and stopping when it looks significant inflates the false positive rate badly. Check twenty times and you have roughly a one-in-three chance of a spurious "win" even when both variants are identical.
+
+The fix is to decide the sample size before starting and not look until you reach it. If you must monitor, treat interim results as directional only.
+
+## Mistake two: samples too small to matter
+
+To detect a change from 3% to 3.6% conversion — a 20% relative lift, which would be a good result — you need roughly **17,000 visitors per variant** at 95% confidence and 80% power.
+
+Most tests on most sites never reach that. This is not a reason to skip testing; it is a reason to test changes big enough to move a number that far, and to be honest when a test is underpowered.
+
+## Reporting honestly
+
+A result should carry the sample size, the observed rates, and whether it cleared the threshold. "Variant B: 3.4% vs 3.1%, not yet significant (n=2,100 per variant)" is a useful sentence. "Variant B winning!" is not.
+
+The most valuable thing an analytics tool can do here is refuse to declare a winner that the data does not support.
+`,
+    },
+    {
+        slug: "serp-data-traffic-correlation",
+        title: "Why Did Traffic Drop? Joining SERP Data with Your Analytics",
+        seoTitle: "Correlate Search Rankings with Traffic Changes",
+        description:
+            "Web analytics knows what happened to a page; a SERP API knows what happened in search. Neither explains the link. How to join them into a plain-English cause, and why an honest 'not search' answer matters.",
+        keyword: "why did organic traffic drop",
+        date: "2026-08-28",
+        readingMinutes: 8,
+        tags: ["SEO", "Architecture", "Metrics"],
+        body: `
+## Two halves of one question
+
+Open any analytics tool and you can see a page lost traffic. What you cannot see is why. Open a rank tracker and you can see a position changed. What you cannot see is whether anyone noticed.
+
+The answer needs both, joined.
+
+## The join
+
+For a page, over a 90-day window:
+
+1. Bucket daily pageviews into ISO weeks.
+2. Compare the last **complete** week to the one before it.
+3. For that page's target keywords, fetch the current position and AI Overview status.
+4. Compare against the previous recorded observation.
+5. Attribute a cause.
+
+The output is a sentence:
+
+> Traffic to /guides/email-templates dropped 33% this week (616 → 413 views). Likely cause: rank slipped #3 → #6 on 'free email templates', and a new AI Overview now quotes competitorx.com and competitory.com instead of you.
+
+## The newer failure mode
+
+Google's AI Overview sits above the organic results. When it answers the question well, people read it and never scroll. If it cites your competitors and not you, **clicks fall while your rank does not move at all**.
+
+A rank tracker reports "still #3, nothing wrong." The traffic disagrees. That gap is unexplainable without checking citation status, and it is becoming one of the more common causes of an unexplained drop.
+
+## Rules, not a language model
+
+It is tempting to hand both datasets to an LLM and ask for an explanation. Resist it. Attribution should be a deterministic rule cascade:
+
+| Condition | Cause |
+|---|---|
+| Rank worsened ≥ 3 positions | \`rank_drop\` |
+| New AI Overview, you not cited | \`ai_overview_displacement\` |
+| You were cited, now are not | \`ai_citation_lost\` |
+| Fell out of the top 10 | \`page_one_exit\` |
+| Rank improved (on a spike) | \`rank_gain\` |
+| **Search unchanged** | \`unexplained_by_serp\` |
+
+That last row carries the most weight. A tool that always finds a search cause is guessing. When rank and citation status are unchanged, the honest output is *"the cause is probably not search — check referrers, campaigns, or a recent deploy."*
+
+## Two thresholds, not one
+
+A change is significant only if it clears **both** a relative and an absolute floor — say 15% and 20 views.
+
+A relative-only threshold reports "3 views → 6 views, traffic doubled!" That is the fastest way for a correlation feature to embarrass itself on a low-traffic page.
+
+## Exclude the current week
+
+Comparing an in-progress week against a complete one manufactures a drop every single Tuesday. Always compare the last two **complete** weeks.
+
+## Conserving API calls
+
+SERP APIs bill per search. Three cache layers keep that manageable: an in-memory coalescing cache so concurrent requests share one fetch, a durable snapshot table so restarts do not re-fetch, and a per-keyword minimum age before a re-check.
+
+Positions do not change minute to minute. A 24-hour snapshot is almost always as good as a live one, at a fraction of the cost.
+`,
+    },
+    {
+        slug: "sql-editor-security-allowlist",
+        title: "Safely Letting Users Run SQL Against Your Analytics",
+        seoTitle: "SQL Editor Security: Allowlist Parsing and Query Guards",
+        description:
+            "Exposing a SQL editor to users means accepting arbitrary queries. Parse-and-allowlist beats regex blocklists, plus row caps, statement timeouts and per-site scoping that cannot be escaped.",
+        keyword: "sql editor security",
+        date: "2026-08-26",
+        readingMinutes: 8,
+        tags: ["SQL", "Security", "Architecture"],
+        body: `
+## The feature and its problem
+
+A SQL editor is the most powerful thing you can give an analyst: no ticket, no waiting, just the question they actually have. It is also arbitrary code execution against your data, which is why most tools do not offer it.
+
+The problem is tractable, but not with the obvious approach.
+
+## Why blocklists fail
+
+The first instinct is a regex that rejects dangerous words:
+
+\`\`\`js
+if (/\\b(DROP|DELETE|UPDATE|INSERT)\\b/i.test(sql)) reject();
+\`\`\`
+
+This does not work. \`DROP/**/TABLE\` passes. So does a \`WITH\` clause hiding a write, or a nested statement, or any of a dozen encodings. Blocklists enumerate badness, and badness is not enumerable.
+
+## Parse and allowlist instead
+
+Parse the SQL into an AST and accept only what you recognise:
+
+- Statement type must be \`SELECT\`. Anything else is rejected before execution.
+- One statement only — no semicolon-separated batches.
+- Every referenced table must be on an allowlist.
+- No \`ATTACH\`, no file functions, no system tables.
+
+The difference is decisive: a blocklist fails open on anything you did not anticipate. An allowlist fails closed.
+
+## Scoping to one site
+
+Allowlisting tables is not enough on a multi-tenant deployment — a valid \`SELECT\` against a permitted table can still read another customer's rows.
+
+The strongest approach is to never expose the raw tables. Give each session views already filtered to their site, and allowlist the views rather than the tables underneath.
+
+If you must expose tables, inject the site predicate into the parsed AST rather than appending text to the query string. String concatenation is defeated by a trailing comment.
+
+## Resource limits
+
+A syntactically valid query can still take down the instance:
+
+- **Statement timeout** — kill anything past a few seconds, with a clamped maximum a client cannot raise.
+- **Row cap** — \`LIMIT\` applied by the server, not trusted from the query.
+- **Result size cap** — bytes, not just rows; a hundred wide rows can exceed a thousand narrow ones.
+
+## Auditing
+
+Log every query with the user, the site, the duration, the row count, and the outcome. Two reasons: you will need it after an incident, and the slow queries tell you which reports people actually want as first-class features.
+
+## The read-only property
+
+The single most valuable guarantee is that this path **cannot write**. In an architecture where writes go to PostgreSQL and reads go to an analytics store, the editor only ever touches the read side. Even a hypothetical bypass reaches a replica, not the source of truth.
+`,
+    },
+    {
+        slug: "hot-cold-storage-analytics",
+        title: "Hot and Cold Storage for Analytics Without a Data Warehouse",
+        seoTitle: "Hot/Cold Analytics Storage with DuckDB and Parquet",
+        description:
+            "Recent data should be fast; old data should be cheap. How to tier analytics storage between a local DuckDB file and Parquet on S3, and query across both in one SQL statement.",
+        keyword: "hot cold storage analytics",
+        date: "2026-08-24",
+        readingMinutes: 9,
+        tags: ["DuckDB", "Architecture", "Performance"],
+        body: `
+## Two access patterns, one dataset
+
+Analytics queries are not uniform. Most hit the last thirty days: dashboards, real-time views, week-over-week comparisons. A small minority reach back a year for a trend or an annual report.
+
+Storing both the same way means paying for the fast path across the whole dataset, forever. Tiering fixes that.
+
+## The split
+
+**Hot** — the last 30 days in a local DuckDB file. Milliseconds, sits on the instance's disk.
+
+**Cold** — older data as Parquet on S3, R2 or MinIO. Slower to reach, an order of magnitude cheaper, and effectively unbounded.
+
+## Archiving
+
+Run periodically:
+
+1. Select rows older than the retention window.
+2. Write them as Parquet, partitioned by month — \`events/year=2026/month=03/\`.
+3. Verify the file is readable and the row count matches.
+4. Only then delete from the hot store.
+
+That order matters. Deleting before verifying the archive is how data disappears.
+
+\`\`\`sql
+COPY (
+  SELECT * FROM events
+  WHERE timestamp < now() - INTERVAL 30 DAY
+) TO 's3://bucket/events/year=2026/month=03/data.parquet'
+  (FORMAT PARQUET, COMPRESSION ZSTD);
+\`\`\`
+
+ZSTD over Snappy: roughly 20% smaller for a small CPU cost, and storage is the thing being optimised.
+
+## Querying across the boundary
+
+DuckDB's \`httpfs\` extension reads Parquet over S3 directly, so a single query can span both tiers:
+
+\`\`\`sql
+SELECT date_trunc('month', timestamp) AS month, COUNT(*) AS events
+FROM (
+  SELECT timestamp FROM events                          -- hot
+  UNION ALL
+  SELECT timestamp FROM read_parquet('s3://bucket/events/**/*.parquet')  -- cold
+)
+WHERE timestamp >= ? AND timestamp < ?
+GROUP BY 1 ORDER BY 1;
+\`\`\`
+
+Partition pruning is what makes this viable — a query for March 2026 reads one directory, not the archive.
+
+## Partitioning is the whole game
+
+Get this wrong and cold queries scan everything. Partition by the column you filter on, which for events is almost always time. Month is usually right: day creates too many small files, year creates files too large to prune usefully.
+
+## Honest expectations
+
+Hot queries stay in the milliseconds. Cold queries are seconds, dominated by network round-trips to object storage.
+
+That is the correct trade. Someone running an annual report will wait three seconds. Someone loading a dashboard will not. Tiering matches the cost to the expectation.
+`,
+    },
+    {
+        slug: "request-coalescing-cache",
+        title: "Request Coalescing: Fixing the Thundering Herd in Analytics",
+        seoTitle: "Request Coalescing Cache Pattern Explained",
+        description:
+            "When a cache key expires, every concurrent request misses at once and fires the same expensive query. Coalescing makes one of them do the work and the rest wait on its promise.",
+        keyword: "request coalescing cache",
+        date: "2026-08-22",
+        readingMinutes: 6,
+        tags: ["Performance", "Architecture", "Caching"],
+        body: `
+## The failure mode
+
+A dashboard query is cached for sixty seconds. Twenty people have it open. At the moment the key expires, all twenty requests miss simultaneously — and all twenty fire the same expensive aggregate.
+
+The cache did not fail. It worked exactly as written. The gap is that a naive cache has no concept of *in-flight*.
+
+## The fix
+
+Track promises, not just values:
+
+\`\`\`js
+async getOrFetch(key, ttl, fetchFn) {
+  const cached = this.get(key);
+  if (cached !== null) return cached;
+
+  // Someone is already fetching this — join them.
+  if (this.inFlight.has(key)) return this.inFlight.get(key);
+
+  const promise = fetchFn()
+    .then((data) => { this.set(key, data, ttl); this.inFlight.delete(key); return data; })
+    .catch((err) => { this.inFlight.delete(key); throw err; });
+
+  this.inFlight.set(key, promise);
+  return promise;
+}
+\`\`\`
+
+The first caller starts the work. Everyone else awaits the same promise. Twenty requests, one query.
+
+## The two details that matter
+
+**Delete on failure.** If the fetch rejects and the promise stays in the map, every subsequent caller gets the same rejection forever. The \`.catch\` that removes the key before rethrowing is not optional.
+
+**Return the promise, not a copy.** Awaiting the same promise is what makes this work. Cloning defeats the purpose.
+
+## Where it pays off
+
+Anywhere a cache miss is expensive and concurrent: dashboard aggregates, a report several people open on Monday morning, an API endpoint behind a load balancer.
+
+It costs a Map and about fifteen lines. On a busy analytics instance it is the difference between one query and fifty at every TTL boundary.
+
+## Sharing keys across surfaces
+
+A further win: if your REST routes and your AI tool layer use the *same* cache keys, a question asked in chat that the dashboard already answered is a cache hit rather than a fresh scan. That only works if the key format is shared deliberately rather than by coincidence.
+`,
+    },
+    {
+        slug: "encrypting-third-party-api-keys",
+        title: "Storing Third-Party API Keys Safely in a Self-Hosted App",
+        seoTitle: "Encrypt API Keys at Rest \u2014 AES-256-GCM in Node",
+        description:
+            "Users paste credentials into your app. How to encrypt them at rest with AES-256-GCM, why the key must never come back to the browser, and what a masked hint is for.",
+        keyword: "encrypt api keys at rest nodejs",
+        date: "2026-08-20",
+        readingMinutes: 7,
+        tags: ["Security", "Architecture"],
+        body: `
+## The situation
+
+Any app that integrates with something else ends up holding other people's credentials — a Sentry token, an AI provider key, a SERP API key. Store them in plaintext and a database backup becomes a credential dump.
+
+## AES-256-GCM, dependency-free
+
+Node's \`crypto\` module is enough:
+
+\`\`\`js
+export function encrypt(plaintext) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key(), iv);
+  const ct = Buffer.concat([cipher.update(String(plaintext), 'utf8'), cipher.final()]);
+  return [b64u(iv), b64u(cipher.getAuthTag()), b64u(ct)].join('.');
+}
+\`\`\`
+
+GCM rather than CBC because it is authenticated: tampering is detected on decrypt rather than silently producing garbage. A fresh 12-byte IV per secret means identical plaintexts produce different ciphertexts.
+
+## Decrypt must not throw
+
+\`\`\`js
+export function decrypt(blob) {
+  try {
+    /* … */
+  } catch {
+    return null;  // wrong key, tampered, or rotated secret
+  }
+}
+\`\`\`
+
+Returning \`null\` lets the app treat an undecryptable value as "no credential on file" — which is the safe interpretation. A thrown exception in a background poll takes down the loop instead.
+
+## Key derivation, and the rotation trap
+
+Derive the encryption key with scrypt from an explicit \`ENCRYPTION_KEY\`, falling back to the app's \`JWT_SECRET\` so self-hosters need no extra configuration.
+
+That fallback has a sharp edge worth documenting: **rotating \`JWT_SECRET\` then makes every stored secret undecryptable.** Anyone storing integration credentials should set \`ENCRYPTION_KEY\` explicitly so the two rotate independently.
+
+## Never return the secret
+
+The API returns a masked hint and a status, never the value:
+
+\`\`\`js
+{ connected: true, keyHint: 'sk-…a1b2', source: 'site' }
+\`\`\`
+
+The hint is enough for a user to recognise which key is stored. It is not enough for anyone else to use it. There is no endpoint that returns the plaintext — not for the owner, not for an admin.
+
+## Validate the shape on save
+
+If you know what the credential looks like, check it:
+
+\`\`\`js
+if (!/^[a-f0-9]{40,80}$/i.test(key)) {
+  throw new Error('That does not look like a SerpApi key');
+}
+\`\`\`
+
+This catches a pasted placeholder at the point of entry rather than as a mysterious failure three days later in a background job.
+
+## What this is not
+
+Encryption at rest protects backups and database access. It does not protect against an attacker with code execution on the app server — that process can decrypt by definition.
+
+For most self-hosted deployments that is the right trade. Be clear about it rather than implying more.
+`,
+    },
+    {
+        slug: "geoip-tracking-without-storing-ips",
+        title: "Geographic Analytics Without Storing IP Addresses",
+        seoTitle: "GeoIP Lookup Without Storing IPs \u2014 Privacy-First",
+        description:
+            "You can report country and city without ever persisting an IP address. Resolve at ingest, keep the result, discard the input \u2014 and why that one ordering decision changes your compliance position.",
+        keyword: "geoip without storing ip",
+        date: "2026-08-18",
+        readingMinutes: 6,
+        tags: ["Privacy", "Architecture"],
+        body: `
+## An IP address is personal data
+
+Under GDPR an IP address is personal data, because it can identify an individual when combined with other information. Storing one puts you in scope for obligations most analytics deployments would rather avoid.
+
+But country-level reporting is genuinely useful. The two are reconcilable.
+
+## Resolve at ingest, then discard
+
+The ordering is the whole trick:
+
+1. A request arrives carrying an IP.
+2. Look it up in a local database — country, region, city.
+3. Write **those fields** to the event row.
+4. Let the IP fall out of scope. Never write it.
+
+\`\`\`js
+const geo = geoip.lookup(req.ip);
+await insertEvent({
+  siteId, path, timestamp,
+  country: geo?.country ?? null,
+  city: geo?.city ?? null,
+  // no ip column exists
+});
+\`\`\`
+
+The strongest version of this is structural: **there is no IP column in the schema**. A field that does not exist cannot be populated by a future change that forgets why.
+
+## Local database, not an API
+
+Use an embedded lookup database rather than a geolocation API. Two reasons.
+
+Latency: a network call on the tracking path adds tens of milliseconds to every event.
+
+Privacy: calling a third-party API sends your visitors' IPs to that third party, which reintroduces exactly the problem you were solving.
+
+## City-level precision and honesty
+
+City-level GeoIP is roughly 50-80% accurate depending on country, and worse on mobile networks where the address often resolves to a carrier gateway hundreds of kilometres away.
+
+Report country confidently. Treat city as indicative and say so in the interface. An analytics tool that presents an uncertain number as precise teaches people to distrust the ones that are accurate.
+
+## What you give up
+
+You cannot do per-visitor IP investigation, block a specific address after the fact, or do fine-grained fraud analysis. Those are real losses for some use cases.
+
+For web analytics they are almost never needed, and the trade buys a materially simpler compliance position: no IP retention policy, no IP in your backups, nothing to disclose in a subject access request.
+`,
+    },
+    {
+        slug: "heatmap-data-collection-at-scale",
+        title: "Collecting Heatmap Data Without Drowning Your Database",
+        seoTitle: "Heatmap Data Collection and Storage at Scale",
+        description:
+            "Click heatmaps generate far more events than pageviews. Coordinate normalisation, scroll-depth milestones instead of continuous tracking, and aggregating early so the raw stream stays affordable.",
+        keyword: "heatmap data collection",
+        date: "2026-08-16",
+        readingMinutes: 7,
+        tags: ["Architecture", "Performance", "Metrics"],
+        body: `
+## The volume problem
+
+A pageview is one event. A session with heatmaps enabled produces dozens: every click, scroll milestone and rage-click burst. Naive collection turns a manageable event stream into an unmanageable one.
+
+Three decisions keep it affordable.
+
+## Normalise coordinates at capture
+
+Raw pixel coordinates are meaningless across devices — \`x: 840\` is the right edge on a phone and the centre on a desktop.
+
+Store a percentage of the viewport instead:
+
+\`\`\`js
+const x = +(event.clientX / window.innerWidth * 100).toFixed(2);
+const y = +(event.pageY / document.body.scrollHeight * 100).toFixed(2);
+\`\`\`
+
+Two benefits: one heatmap works across every screen size, and two decimal places is enough precision while keeping the values small.
+
+## Scroll depth as milestones, not a stream
+
+Tracking scroll position continuously produces an event per frame. Nobody needs that resolution.
+
+Fire once per milestone — 25%, 50%, 75%, 100% — and only the first time each is reached in a session. A long article produces four events instead of several hundred, and the reports are identical, because "how far down did people get" is a milestone question.
+
+## Capture the element, not just the point
+
+A click at 34% across and 71% down tells you where people clicked. It does not tell you *what* they clicked, which is the actually useful question.
+
+Record a stable selector and the visible text alongside the coordinates. Then "which button gets clicked most" becomes a \`GROUP BY\` rather than a visual estimate from a blob.
+
+\`\`\`sql
+SELECT text, selector, COUNT(*) AS clicks, COUNT(DISTINCT user_id) AS users
+FROM events
+WHERE site_id = ? AND type = 'click' AND path = ?
+GROUP BY text, selector
+ORDER BY clicks DESC
+LIMIT 30;
+\`\`\`
+
+## Sample on high-traffic pages
+
+A page with a million views a month does not need every click to produce an accurate heatmap. Sampling at 10% gives a visually identical result for a tenth of the storage.
+
+Sample by **session**, not by event — sampling individual events breaks funnel and sequence analysis, because you end up with partial journeys.
+
+## Rage clicks are worth isolating
+
+Three or more clicks on the same element within about a second usually means something looks interactive and is not. That is a specific, actionable signal, and it is worth detecting at capture time rather than reconstructing later.
+
+It is often the single most useful thing heatmap data produces.
+`,
+    },
+    {
+        slug: "error-tracking-integration-patterns",
+        title: "Integrating Error Tracking With Your Analytics",
+        seoTitle: "Error Tracking Integration \u2014 Polling, Webhooks, Adapters",
+        description:
+            "Connecting Sentry or similar to analytics means credentials, polling and reconciliation. The adapter pattern, HMAC-verified webhooks, and adaptive backoff that does not hammer a quiet project.",
+        keyword: "sentry integration analytics",
+        date: "2026-08-14",
+        readingMinutes: 8,
+        tags: ["Architecture", "Integrations"],
+        body: `
+## Why errors belong next to traffic
+
+A deploy goes out. Conversions drop 8%. Your analytics shows the drop; your error tracker shows a spike in a checkout exception. Separately, each is a shrug. Together, it is a cause.
+
+Getting them into one place is mostly an integration problem, and it has a few well-worn edges.
+
+## The adapter pattern
+
+Do not write "the Sentry integration". Write an adapter interface and make Sentry the first implementation:
+
+\`\`\`js
+{
+  provider: 'sentry',
+  label: 'Sentry',
+  pollAll: ({ silent }) => /* … */,
+  handleWebhook: (payload, rawBody, signature) => /* … */,
+}
+\`\`\`
+
+Everything provider-agnostic — encrypted credential storage, upsert and dedup, poll orchestration, webhook routing — lives outside the adapter. Adding Rollbar or Bugsnag then becomes one file rather than a second subsystem.
+
+The routing follows: \`POST /api/integrations/:provider/webhook\` dispatches through a registry instead of hardcoding a path per vendor.
+
+## Poll and webhook, not one or the other
+
+**Webhooks** are near-instant but unreliable: they get missed, retried out of order, or silently dropped when an endpoint has an outage.
+
+**Polling** is reliable but delayed.
+
+Use both. Webhooks for latency, a periodic poll as the reconciling backstop. The poll is what makes the system self-healing — a missed webhook is corrected within one cycle rather than lost forever.
+
+## Verify webhook signatures
+
+An unauthenticated webhook endpoint accepts anything anyone posts:
+
+\`\`\`js
+const expected = crypto.createHmac('sha256', secret)
+  .update(rawBody).digest('hex');
+if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) {
+  return res.status(401).end();
+}
+\`\`\`
+
+Two details. Verify against the **raw body**, not the parsed object — JSON re-serialisation changes bytes and breaks the HMAC. And use \`timingSafeEqual\`, because a plain \`===\` leaks the signature through timing.
+
+That means the webhook route needs its own body parser with a \`verify\` hook to capture the raw bytes, mounted before any global JSON parser.
+
+## Adaptive polling
+
+Polling every project every five minutes wastes calls on projects that produce one error a week.
+
+Back off when nothing changes: start at the base interval, double it after each idle poll up to a ceiling, and reset to the floor the moment something arrives. A busy project stays current; a quiet one drops to hourly on its own.
+
+Back off hard on auth failures — hours, not minutes. A revoked token will not fix itself, and retrying every five minutes just fills the logs.
+
+## Store what you will report on
+
+Do not mirror the provider's full payload. Store the fields your reports use — title, level, status, count, users affected, regression flag, release, first and last seen — and link out for the rest. Mirroring everything means tracking their schema changes forever.
+`,
+    },
+    {
+        slug: "scheduled-reports-architecture",
+        title: "Building Scheduled Reports That Do Not Melt Your Server",
+        seoTitle: "Scheduled Analytics Reports \u2014 Architecture and Pitfalls",
+        description:
+            "Everyone wants a Monday morning email. The generation queue, idempotency so a retry does not double-send, and why scheduled reports are the query pattern most likely to take down an instance.",
+        keyword: "scheduled analytics reports",
+        date: "2026-08-12",
+        readingMinutes: 7,
+        tags: ["Architecture", "Performance"],
+        body: `
+## The spike nobody plans for
+
+Scheduled reports have a property that ad-hoc dashboards do not: **everyone wants the same time**. Monday 9am. Every weekly report for every site, firing at once, each running the heaviest aggregate you have.
+
+An instance that comfortably serves interactive traffic all week can fall over on that one minute.
+
+## Jitter the schedule
+
+The cheapest fix is to not run them simultaneously:
+
+\`\`\`js
+// Deterministic per-schedule offset — same report, same slot, every week.
+const jitterMs = hash(scheduleId) % (15 * 60_000);
+\`\`\`
+
+Spreading a hundred reports over fifteen minutes turns a spike into a plateau. Deriving the offset from the schedule id rather than randomly means a given report always lands at the same time, which matters to the person expecting it.
+
+## Queue, do not fan out
+
+Generating reports inline in a timer callback means a hundred concurrent queries and no backpressure.
+
+Put them in a queue with a small worker pool — two or three concurrent generations. Total throughput barely changes, because the database is the bottleneck either way, and the instance stays responsive to interactive traffic the whole time.
+
+## Idempotency, or people get two emails
+
+Any delivery can fail after the work succeeded. Retry naively and you send twice.
+
+Key each run on \`(scheduleId, periodStart)\` and record completion before sending:
+
+\`\`\`sql
+INSERT INTO report_runs (schedule_id, period_start, status)
+VALUES (?, ?, 'running')
+ON CONFLICT (schedule_id, period_start) DO NOTHING
+RETURNING id;
+\`\`\`
+
+No row returned means another worker has it. That single constraint removes an entire class of duplicate-delivery bugs.
+
+## Generate once, deliver many
+
+A report going to eight recipients is one generation and eight deliveries. Splitting those stages means a bounced address retries the send without regenerating anything.
+
+## Reuse the dashboard's queries
+
+The strongest structural decision is to have reports call the **same query functions** the dashboard calls, at the same cache keys.
+
+Two payoffs: numbers cannot drift between the email and the screen, and a report generated shortly after someone viewed that dashboard is served from cache. A common pattern — someone opens the dashboard, then the weekly report runs — costs one query rather than two.
+
+## Timezones
+
+A "weekly report" needs a timezone to be meaningful. Store the schedule's timezone explicitly and compute period boundaries in it. Defaulting to UTC silently gives a Sydney user a report covering Sunday to Saturday.
+`,
+    },
+    {
+        slug: "tracking-script-performance-budget",
+        title: "Writing a Tracking Script That Does Not Slow Down the Site",
+        seoTitle: "Lightweight Analytics Tracking Script Design",
+        description:
+            "Your tracking script runs on every page of every customer. Size budgets, sendBeacon over fetch, why it must never block rendering, and failing silently when the collector is down.",
+        keyword: "lightweight analytics tracking script",
+        date: "2026-08-10",
+        readingMinutes: 7,
+        tags: ["Performance", "Architecture"],
+        body: `
+## The obligation
+
+A tracking script is the one piece of your product that runs on someone else's site, on every page, for every visitor. If it is slow, their Core Web Vitals suffer — and Core Web Vitals affect their search ranking.
+
+That makes performance a correctness requirement, not a nice-to-have.
+
+## Never block rendering
+
+\`\`\`html
+<script defer src="https://analytics.example.com/script.js"></script>
+\`\`\`
+
+\`defer\` is the right default: the parser continues, and the script runs after the document is parsed. \`async\` would also work, but \`defer\` preserves execution order if a site loads more than one.
+
+The failure mode to avoid is a bare \`<script src>\` in \`<head>\`. The parser stops, waits for a network round trip to your server, and the customer's LCP now includes your latency.
+
+## Budget the size
+
+Under 5 KB gzipped is achievable for full pageview, event and Web Vitals collection. Getting there means writing plain DOM code — no framework, no polyfills for browsers you do not support, no date library for one \`toISOString()\` call.
+
+For comparison: a heavy tag manager can exceed 100 KB, and the difference is measurable in field data.
+
+## \`sendBeacon\` for the exit path
+
+The hard case is sending an event as the page unloads. \`fetch\` gets cancelled; the browser is tearing the page down.
+
+\`\`\`js
+function send(payload) {
+  const body = JSON.stringify(payload);
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));
+  } else {
+    fetch(endpoint, { method: 'POST', body, keepalive: true }).catch(() => {});
+  }
+}
+\`\`\`
+
+\`sendBeacon\` is queued by the browser and delivered regardless of what happens to the page. It is the only reliable way to capture session-end events.
+
+## Fail silently, always
+
+If the collector is down, the customer's site must not notice:
+
+\`\`\`js
+try { send(payload); } catch { /* analytics must never break a page */ }
+\`\`\`
+
+Every network call ends in \`.catch(() => {})\`. An analytics outage that throws console errors on customer sites is a worse incident than the outage itself.
+
+## Collect Web Vitals from the field
+
+Lab tools measure one run on one machine. Field data measures what your visitors actually experienced.
+
+The \`web-vitals\` library is small and handles the subtleties — LCP can change until the page is interactive, CLS accumulates over the session lifetime. Report on \`visibilitychange\` rather than \`unload\`, which is unreliable on mobile.
+
+## Respect Do Not Track and opt-out
+
+Check \`navigator.doNotTrack\` and a local opt-out flag before sending anything. It costs two lines and it is the difference between a privacy-first claim being true and being marketing.
+`,
+    },
+    {
+        slug: "multi-tenant-site-isolation",
+        title: "Multi-Tenant Analytics: Isolating Sites Properly",
+        seoTitle: "Multi-Tenant Analytics Site Isolation Patterns",
+        description:
+            "One instance, many sites, many users. Membership tables over ownership columns, enforcing scope in middleware rather than per-route, and why the AI and SQL layers need the same check.",
+        keyword: "multi tenant analytics isolation",
+        date: "2026-08-08",
+        readingMinutes: 8,
+        tags: ["Architecture", "Security"],
+        body: `
+## Ownership columns do not survive contact
+
+The first version of multi-tenancy is usually a \`user_id\` on the sites table. It works until the first person asks to share a site with a colleague, and then every query needs rewriting.
+
+Start with a membership table instead:
+
+\`\`\`sql
+CREATE TABLE site_members (
+  id         SERIAL PRIMARY KEY,
+  site_id    VARCHAR(64) NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role       VARCHAR(20) NOT NULL DEFAULT 'viewer'
+                         CHECK (role IN ('owner','admin','viewer')),
+  UNIQUE (site_id, user_id)
+);
+\`\`\`
+
+A single ownership column is just this table with a cardinality restriction you will later regret.
+
+## Enforce in middleware
+
+Scattering the check across route handlers guarantees one gets missed. Enforce it once:
+
+\`\`\`js
+router.use(authMiddleware);
+router.use('/:siteId', validateSiteId, authorizeSiteAccess);
+\`\`\`
+
+\`authorizeSiteAccess\` resolves the site, checks membership, attaches the role, and rejects otherwise. Every route below inherits it. A new endpoint is protected by default rather than by remembering.
+
+## The layers people forget
+
+Two paths routinely bypass the middleware because they do not look like routes.
+
+**The AI/tool layer.** Tools receive a \`ctx\` with a site id. That id must be set by the caller from an authorised session — never taken from model input. A model that can pass an arbitrary site id is a model that can read another tenant's data.
+
+**The SQL editor.** A valid \`SELECT\` against a permitted table still reads every tenant's rows unless the predicate is enforced. Filtered views per session, or predicate injection into the parsed AST — never string concatenation.
+
+## Roles worth having
+
+Three cover almost everything: \`owner\` (billing, deletion), \`admin\` (settings, integrations, invites), \`viewer\` (read). Resist adding more until a real request forces it; permission systems grow faster than the need for them.
+
+Compare with an ordering helper rather than equality checks:
+
+\`\`\`js
+roleAtLeast(req.userRole, 'admin')
+\`\`\`
+
+\`role === 'admin'\` quietly excludes owners, which is a bug that surfaces as a confused support ticket.
+
+## Deletion has to cascade
+
+\`ON DELETE CASCADE\` on every table carrying a \`site_id\`. When someone deletes a site, the events, sessions, goals, keywords, integrations and memberships must all go.
+
+Orphaned rows in an analytics store are not just untidy — they show up in aggregates that no longer have a site to belong to, and produce totals nobody can explain.
+`,
+    },
+    {
+        slug: "data-retention-policies-analytics",
+        title: "Implementing Data Retention Without Breaking Your Reports",
+        seoTitle: "Analytics Data Retention Policy Implementation",
+        description:
+            "GDPR wants a retention limit; your year-over-year chart wants history. Pre-aggregating before deletion, per-site policies, and the sweep that enforces them without locking the table.",
+        keyword: "analytics data retention policy",
+        date: "2026-08-06",
+        readingMinutes: 7,
+        tags: ["Privacy", "Architecture", "Data Modeling"],
+        body: `
+## The tension
+
+GDPR's storage limitation principle says personal data should not be kept longer than necessary. Meanwhile, the most-requested analytics feature is year-over-year comparison.
+
+These are reconcilable, because they want different things. Compliance is about **row-level** data that could identify someone. Reporting mostly wants **aggregates**, which do not.
+
+## Aggregate before you delete
+
+Roll up first, then delete the detail:
+
+\`\`\`sql
+INSERT INTO daily_stats (site_id, date, visitors, pageviews, sessions)
+SELECT site_id, CAST(timestamp AS DATE),
+       COUNT(DISTINCT user_id), COUNT(*), COUNT(DISTINCT session_id)
+FROM events
+WHERE timestamp < ? AND timestamp >= ?
+GROUP BY site_id, CAST(timestamp AS DATE)
+ON CONFLICT (site_id, date) DO NOTHING;
+\`\`\`
+
+Now a raw event can be deleted after ninety days while the daily trend survives for years. The identifiers are gone; the counts remain. That is exactly the shape the regulation is aiming for.
+
+Verify the rollup landed before deleting. Deleting first and discovering the aggregate failed is unrecoverable.
+
+## Per-site policies
+
+Retention is not one number. A customer in a regulated industry may want thirty days; another may want two years. Store it per site:
+
+\`\`\`sql
+CREATE TABLE data_retention_policies (
+  site_id      VARCHAR(64) PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+  enabled      BOOLEAN NOT NULL DEFAULT false,
+  retain_days  INTEGER NOT NULL DEFAULT 365
+);
+\`\`\`
+
+Default to disabled. Silently deleting data because a default was set is the kind of surprise that ends a customer relationship.
+
+## Delete in batches
+
+A \`DELETE\` covering millions of rows holds locks and bloats the WAL:
+
+\`\`\`sql
+DELETE FROM events
+WHERE ctid IN (
+  SELECT ctid FROM events
+  WHERE site_id = ? AND timestamp < ?
+  LIMIT 10000
+);
+\`\`\`
+
+Loop until no rows are affected. Slower in wall-clock terms, invisible to everyone using the system meanwhile.
+
+## The sweep
+
+A scheduler that walks sites with an enabled policy every few hours is enough — retention is not urgent to the hour. Sites without a policy are untouched, so the loop is a no-op on most deployments.
+
+One failing site must not stop the sweep. Catch per site, log, continue.
+
+## Visitor ID rotation
+
+Retention alone is not the whole privacy story. Rotating the visitor identifier after a period of inactivity bounds how far back any single visitor can be correlated, even within the retention window.
+
+A sliding window is the right shape: it resets on each visit, so a regular visitor is never re-counted mid-stream, and it only elapses after genuine absence.
+`,
+    },
+    {
+        slug: "realtime-visitor-counting",
+        title: "Counting Live Visitors Accurately",
+        seoTitle: "Real-Time Visitor Counting \u2014 Window Choice and Pitfalls",
+        description:
+            "'Active now' sounds trivial and is not. Choosing the activity window, why heartbeats beat pageviews, deduplicating across tabs, and keeping the query cheap enough to run every ten seconds.",
+        keyword: "realtime visitor counting analytics",
+        date: "2026-08-04",
+        readingMinutes: 6,
+        tags: ["Metrics", "Performance", "Architecture"],
+        body: `
+## "Active now" is a definition, not a fact
+
+There is no objective count of people on your site right now. There is only a definition, and every tool picks a different one.
+
+The common choice is **a visitor who generated activity in the last five minutes**. Shorter windows undercount people reading a long article; longer ones count people who left.
+
+Whatever you choose, state it in the interface. An unexplained number that disagrees with another tool's unexplained number just erodes trust in both.
+
+## Pageviews alone undercount
+
+If the only signal is a pageview, someone reading for ten minutes disappears after five. That is wrong in the most visible way possible — the number drops while the person is still there.
+
+A lightweight heartbeat fixes it:
+
+\`\`\`js
+setInterval(() => {
+  if (document.visibilityState === 'visible') send({ type: 'heartbeat' });
+}, 60_000);
+\`\`\`
+
+One small event per minute per open tab, and only while the tab is actually visible. Backgrounded tabs stop contributing, which is correct — nobody is reading them.
+
+## Deduplicate across tabs
+
+Three tabs open is one person. Count distinct visitor ids, not events:
+
+\`\`\`sql
+SELECT COUNT(DISTINCT user_id) AS active_visitors
+FROM events
+WHERE site_id = ? AND timestamp > now() - INTERVAL 5 MINUTE;
+\`\`\`
+
+## Keep the query cheap
+
+This runs every ten seconds, for every open dashboard. It must stay trivial.
+
+Two things make it so: an index on \`(site_id, timestamp)\`, and a short cache TTL. Ten seconds of staleness is imperceptible on a live counter and removes almost all of the load — twenty open dashboards become one query instead of twenty.
+
+## Active pages, same window
+
+The obvious follow-up is *which* pages:
+
+\`\`\`sql
+SELECT path, COUNT(DISTINCT user_id) AS visitors
+FROM events
+WHERE site_id = ? AND timestamp > now() - INTERVAL 5 MINUTE
+GROUP BY path ORDER BY visitors DESC LIMIT 10;
+\`\`\`
+
+Use the same window as the headline count. Two different windows produce a page list whose total does not match the number above it, and someone will notice.
+
+## Sync lag matters here
+
+In an architecture where events are written to one store and read from another, real-time is where the lag becomes visible. A sixty-second sync interval means "active now" is up to a minute behind.
+
+Either read real-time from the write store directly, or debounce the sync so a burst of events triggers a quick catch-up. The second is usually simpler and keeps one read path.
+`,
+    },
+    {
+        slug: "custom-dashboard-widget-architecture",
+        title: "Designing a Custom Dashboard Builder",
+        seoTitle: "Custom Dashboard Builder Architecture for Analytics",
+        description:
+            "Letting users arrange their own widgets means a layout model, a widget registry and a migration story. What to store, what to compute, and why saved layouts need versioning from day one.",
+        keyword: "custom dashboard builder architecture",
+        date: "2026-08-02",
+        readingMinutes: 7,
+        tags: ["Architecture", "Data Modeling"],
+        body: `
+## Store intent, not rendered output
+
+The first decision is what a saved dashboard actually is. The answer is a small declarative document:
+
+\`\`\`json
+{
+  "version": 1,
+  "widgets": [
+    { "id": "w1", "type": "kpi",   "metric": "visitors", "x": 0, "y": 0, "w": 3, "h": 2 },
+    { "id": "w2", "type": "chart", "metric": "traffic", "chart": "area", "x": 3, "y": 0, "w": 9, "h": 4 }
+  ]
+}
+\`\`\`
+
+Store the *intent* — which widget, which metric, where. Never store rendered data. A dashboard saved in March must show March's numbers when opened in March and today's numbers today.
+
+## The widget registry
+
+Mirror the tool-registry pattern: one definition per widget type, declaring what it needs and how to fetch it.
+
+\`\`\`js
+{
+  type: 'kpi',
+  label: 'Single metric',
+  options: { metric: { type: 'string', enum: ['visitors','pageviews','bounceRate'] } },
+  fetch: (opts, ctx) => queries.getKPISummary(ctx.siteId, opts.dateRange),
+}
+\`\`\`
+
+Adding a widget becomes a registry entry rather than changes in the renderer, the saver and the loader.
+
+## Version from day one
+
+Layouts are user data that outlives your schema. The \`version\` field costs nothing now and is the difference between a clean migration and breaking every saved dashboard later:
+
+\`\`\`js
+function migrate(doc) {
+  if (doc.version === 1) doc = v1ToV2(doc);
+  return doc;
+}
+\`\`\`
+
+Adding this retroactively means guessing which shape each stored document is in.
+
+## Batch the fetches
+
+A dashboard with eight widgets should not fire eight sequential requests. Collect the data requirements, deduplicate them — three widgets often want the same traffic series at the same range — and fetch once.
+
+The coalescing cache handles most of this if every widget goes through the same query layer with the same keys.
+
+## Grid geometry
+
+Use a fixed column count (12 is conventional) with integer positions. Pixel coordinates do not survive a window resize or a different screen.
+
+Validate on save: widgets within bounds, no negative sizes, no overlap if your grid does not support it. A corrupt layout that renders a blank page is much harder to debug than a rejected save.
+
+## Sensible defaults
+
+Most people never build a dashboard from scratch. Ship two or three templates — an overview, a content view, an acquisition view — and let customisation start from one of those. The blank canvas is where dashboard builders go to die.
+`,
+    },
+    {
+        slug: "sessionization-without-cookies",
+        title: "Sessionization Without Cookies",
+        seoTitle: "Cookieless Session Tracking for Web Analytics",
+        description:
+            "Defining a session when you cannot set a cookie. Daily-rotating identifiers, the 30-minute inactivity rule in SQL, and honest limits on cross-device and cross-day continuity.",
+        keyword: "cookieless session tracking",
+        date: "2026-07-31",
+        readingMinutes: 7,
+        tags: ["Privacy", "SQL", "Metrics"],
+        body: `
+## What a cookie was doing
+
+A cookie gave you a stable identifier across visits. Remove it and two things break: knowing a visitor is the same person tomorrow, and grouping today's events into sessions.
+
+The second is solvable cleanly. The first is solvable partially, and it is worth being honest about which is which.
+
+## A rotating identifier
+
+The common cookieless approach derives a daily identifier from request properties:
+
+\`\`\`
+visitor_id = hash(site_id + ip + user_agent + daily_salt)
+\`\`\`
+
+The salt rotates every day, which means yesterday's identifiers cannot be correlated with today's even by you. That is the property that makes it privacy-preserving rather than a cookie by another name.
+
+Never store the inputs. Hash at ingest, write the hash, discard the IP.
+
+## Sessionizing with SQL
+
+With a per-day identifier, a session is a run of activity with no gap longer than thirty minutes:
+
+\`\`\`sql
+WITH gaps AS (
+  SELECT user_id, timestamp,
+         CASE WHEN timestamp - LAG(timestamp) OVER (
+                PARTITION BY user_id ORDER BY timestamp
+              ) > INTERVAL 30 MINUTE
+              OR LAG(timestamp) OVER (
+                PARTITION BY user_id ORDER BY timestamp
+              ) IS NULL
+         THEN 1 ELSE 0 END AS is_new_session
+  FROM events
+  WHERE site_id = ? AND timestamp >= ?
+)
+SELECT user_id,
+       SUM(is_new_session) OVER (
+         PARTITION BY user_id ORDER BY timestamp
+       ) AS session_number,
+       timestamp
+FROM gaps;
+\`\`\`
+
+The running sum over the new-session flag assigns a session number. It is the standard shape, and it is worth understanding rather than copying — every variation on session definition is a change to that \`CASE\`.
+
+Thirty minutes is convention, inherited from early web analytics. Pick deliberately: a news site might use fifteen, a documentation site an hour.
+
+## What you genuinely lose
+
+Be straightforward about this:
+
+- **Cross-day visitors.** A daily-rotating id cannot tell you someone returned tomorrow. "Returning visitors" becomes "returning within the day".
+- **Cross-device.** Never worked well with cookies either, but it does not work at all here.
+- **Long attribution windows.** A 30-day conversion window needs identity that survives 30 days.
+
+## What you keep
+
+Nearly everything most teams actually use: traffic trends, top pages, sources, funnels within a session, bounce rate, time on page, geography, devices, Web Vitals.
+
+The honest framing is that cookieless analytics answers "how is my site doing" completely and "who is this specific person" not at all. For most teams that is the right trade, and it removes the consent banner.
+
+## Say what you measure
+
+If "returning visitors" means "within the same day", label it that way. Analytics tools lose credibility by presenting a degraded metric under a name that implies more.
+`,
+    },
+    {
+        slug: "benchmarking-analytics-queries-honestly",
+        title: "Benchmarking Analytics Queries Honestly",
+        seoTitle: "How to Benchmark Analytics Database Queries Properly",
+        description:
+            "Most published analytics benchmarks are marketing. Cold vs warm cache, realistic data distributions, measuring percentiles not averages, and publishing the harness so people can check.",
+        keyword: "analytics query benchmark methodology",
+        date: "2026-07-29",
+        readingMinutes: 8,
+        tags: ["Performance", "DuckDB", "Architecture"],
+        body: `
+## Why most benchmarks are worthless
+
+A benchmark showing one tool 100× faster than another is usually comparing a warm cache to a cold one, or a well-indexed query to an unindexed one, or uniform synthetic data to something resembling reality.
+
+The result is technically true and practically meaningless. If you are going to publish numbers, publish ones that survive scrutiny.
+
+## Generate realistic data
+
+Real analytics data is not uniform:
+
+- **Traffic is skewed.** A handful of pages take most views; a long tail takes one each.
+- **Time is not flat.** Weekday peaks, weekend troughs, daily cycles.
+- **Cardinality varies wildly.** Two dozen countries, thousands of paths, millions of visitor ids.
+
+Uniform random data makes every engine look good, because it makes every index look good. Zipf-distributed paths and a realistic time curve produce the query plans you will actually hit.
+
+## Separate cold and warm
+
+Report both, labelled:
+
+- **Cold** — first execution after a restart. Cache empty, files unread.
+- **Warm** — repeat execution. What a busy dashboard actually experiences.
+
+Cold is the honest worst case. Warm is the common case. Quoting only one is where most published comparisons go wrong.
+
+## Percentiles, not averages
+
+An average hides the experience that annoys people. Report p50, p95 and p99.
+
+A query averaging 40 ms with a p99 of 4 seconds is a bad query that looks fine. One in a hundred dashboard loads feels broken, and the average never shows it.
+
+## Run enough iterations
+
+A single timing measures scheduler noise. Twenty or more iterations, discard the first few as warm-up, report the distribution.
+
+If the spread across runs is wider than the difference you are claiming, you have not measured a difference.
+
+## Publish the harness
+
+The most useful thing a benchmark can include is the code that produced it. Seed script, queries, hardware, versions, methodology.
+
+Without that, a reader has to take the numbers on faith — and given how often benchmarks are wrong, they should not.
+
+## Benchmark what people do
+
+The queries worth measuring are the ones your product actually runs: the dashboard's KPI summary, the top-pages aggregate, a funnel, a 90-day traffic series.
+
+A synthetic \`SELECT COUNT(*)\` measures nothing anyone experiences. If a query is not on a page someone opens, its timing is trivia.
+`,
+    },
+    {
+        slug: "analytics-api-design-rest-patterns",
+        title: "Designing an Analytics REST API",
+        seoTitle: "Analytics REST API Design \u2014 Envelopes, Ranges, Errors",
+        description:
+            "Date range parsing, a consistent response envelope, cache headers that match your TTLs, and error responses that help a developer without leaking internals.",
+        keyword: "analytics rest api design",
+        date: "2026-07-27",
+        readingMinutes: 7,
+        tags: ["Architecture", "API"],
+        body: `
+## One envelope everywhere
+
+Pick a response shape and never deviate:
+
+\`\`\`json
+{ "success": true,  "data": { } }
+{ "success": false, "error": "Site not found" }
+\`\`\`
+
+The value is not elegance, it is that every client writes one handler. Endpoints that return a bare array on success and an object on failure force per-endpoint branching in every consumer.
+
+## Date ranges: named and explicit
+
+Accept both:
+
+\`\`\`
+?dateRange=30d
+?dateRange=custom:2026-01-01:2026-03-31
+\`\`\`
+
+Named ranges cover most calls and are readable in logs and cache keys. The custom form covers the rest. Parse once, in one place, and return a \`{ start, end }\` — date arithmetic scattered across route handlers is where off-by-one-day bugs breed.
+
+Reject unparseable ranges with a 400 rather than silently defaulting. A typo that quietly returns 30 days of data is worse than an error.
+
+## Cache headers should match reality
+
+If an endpoint is cached server-side for sixty seconds, say so:
+
+\`\`\`
+Cache-Control: public, max-age=60
+\`\`\`
+
+Real-time endpoints get ten seconds. Historical aggregates that can no longer change get much longer. The common mistake is uniform \`no-cache\`, which throws away the work the server-side cache just did.
+
+## Errors that help without leaking
+
+A developer needs enough to fix the call. An attacker must not learn your internals.
+
+\`\`\`js
+res.status(status).json({ success: false, error: safeMsg(error, status) });
+\`\`\`
+
+Return the real message for 4xx — those are the caller's fault and they need it. Return a generic message for 5xx, and log the detail server-side. A stack trace in a 500 response is an information disclosure.
+
+## Validate scope before work
+
+Check site access before running the query, not after:
+
+\`\`\`js
+router.use('/:siteId', validateSiteId, authorizeSiteAccess);
+\`\`\`
+
+Doing it afterwards means an unauthorised request still costs a full table scan, which is a denial-of-service vector as well as a leak of timing information.
+
+## Version when you break
+
+Additive changes need no version. Removing a field or changing a type does.
+
+\`/api/v2/analytics/...\` is unglamorous and it works. The alternative — changing a response shape in place — breaks every integration silently, and you find out through support tickets.
+
+## Document with OpenAPI, and test the drift
+
+Generate an OpenAPI spec and keep it in lock-step with the implementation. A test asserting that the spec's operation ids match the actual route set catches drift the moment it appears, rather than months later when someone trusts the docs.
+`,
+    },
 ];
 
 export function getPost(slug) {
