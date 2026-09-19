@@ -112,9 +112,17 @@ function VisitorMap({ countries = [], className = '' }) {
                     style={{ height: '100%', width: '100%' }}
                     worldCopyJump={true}
                 >
+                    {/* OpenStreetMap rather than CARTO: CARTO now watermarks
+                        tiles served to unregistered origins with "API KEY
+                        REQUIRED" printed into the image itself. OSM needs no
+                        key, which matters for a self-hosted tool — a user
+                        should not have to register with a third party to see
+                        their own visitor map. Dark mode inverts the tiles (see
+                        the style block below), which works for either source. */}
                     <TileLayer
-                        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        maxZoom={19}
                     />
                     <MapUpdater countries={knownCountries} />
 
