@@ -126,8 +126,13 @@ function VisitorMap({ countries = [], className = '' }) {
         <div className={`relative ${className}`}>
             <div className="rounded-lg overflow-hidden" style={{ height: '380px' }}>
                 <MapContainer
-                    center={[20, 0]}
-                    zoom={2}
+                    /* Zoom 3 rather than 2: at 2 the whole globe fits with a
+                       lot of empty ocean, and markers for neighbouring
+                       countries overlap. 3 fills the panel and separates them
+                       while still showing every populated continent. minZoom
+                       stays 2 so the full world is still reachable. */
+                    center={[25, 10]}
+                    zoom={3}
                     minZoom={2}
                     maxZoom={10}
                     scrollWheelZoom={true}
