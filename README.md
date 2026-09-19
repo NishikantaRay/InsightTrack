@@ -33,7 +33,7 @@ InsightsTrack is a complete, production-grade web analytics platform you run you
 - 🧩 **Everything in one place** — 17 analytics pages: dashboard, pages, realtime, funnels, heatmaps, engagement, performance, audience, acquisition, conversions, user flow, reporting studio, SQL editor, and more.
 - 🔍 **Search Visibility** — joins live Google rankings & AI Overview citations with your own traffic to explain *why* a page moved. [Jump to Search Visibility →](#-search-visibility--why-your-traffic-changed)
 - 🤖 **Pulse, your AI analyst** — ask your data anything in plain English and get real charts, tables, and CSVs. Also works from Claude Desktop & Cursor over MCP. [Jump to Pulse →](#-pulse--your-ai-analyst)
-- 🪶 **Single tag** — one `<script>` tag (~7.5 KB gzipped in the current build; exact size varies with build and transfer encoding), works with any site (WordPress, Next.js, Shopify, plain HTML…).
+- 🪶 **Single tag** — one `<script>` tag (~5.9 KB gzipped — minified; exact size varies with transfer encoding), works with any site (WordPress, Next.js, Shopify, plain HTML…).
 - 👥 **Team-ready** — invite teammates, assign roles, build custom permission roles, and control which pages each member sees.
 - 💸 **Free forever** — MIT licensed, self-hosted, no seat limits.
 

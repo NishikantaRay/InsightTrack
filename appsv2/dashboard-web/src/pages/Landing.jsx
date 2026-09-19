@@ -376,7 +376,7 @@ const FEATURES = [
         border: 'border-indigo-200 dark:border-indigo-500/20',
         label: 'Realtime',
         title: 'See who\'s on your site right now',
-        desc: 'Live visitor count, active pages, device breakdown, and a world map — updating every 5 seconds. Know the moment a campaign lands.',
+        desc: 'Live visitor count, active pages, device breakdown, and a world map — updating every 60 seconds over a rolling 5-minute window. Know the moment a campaign lands.',
         metric: { value: '24', label: 'live now', up: true },
     },
     {
@@ -448,7 +448,7 @@ const WHY_TABLE = [
 
 const HOW_STEPS = [
     { n: '01', icon: Users, title: 'Create an account', desc: 'Sign up, add your website domain. 30 seconds.' },
-    { n: '02', icon: Code, title: 'Add one script tag', desc: 'Paste a single <script> into your site\'s <head>. Under 2 KB.' },
+    { n: '02', icon: Code, title: 'Add one script tag', desc: 'Paste a single <script> into your site\'s <head>. Under 6 KB gzipped.' },
     { n: '03', icon: BarChart3, title: 'See everything live', desc: '17 analytics pages ready instantly — no configuration.' },
 ];
 
@@ -539,7 +539,7 @@ const FAQS = [
     },
     {
         q: 'How fast is InsightsTrack?',
-        a: 'The tracking script is ~7.5 KB gzipped and loads asynchronously, so it does not slow your site. On the backend, analytics reads are served by DuckDB, an embedded columnar engine suited to the wide aggregations a dashboard issues. Latency depends on your dataset, hardware, and query shape.',
+        a: 'The tracking script is ~5.9 KB gzipped and loads asynchronously, so it does not slow your site. On the backend, analytics reads are served by DuckDB, an embedded columnar engine suited to the wide aggregations a dashboard issues. Latency depends on your dataset, hardware, and query shape.',
     },
     {
         q: 'How does real-time tracking work?',
@@ -1076,7 +1076,7 @@ export default function Landing() {
             <section className="py-14 px-4 sm:px-6 border-y border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40">
                 <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8">
                     <StatCounter value={17} suffix="+" label="Analytics pages" color="text-indigo-600 dark:text-indigo-400" />
-                    <StatCounter value={2} suffix=" KB" label="Tracking script" color="text-emerald-600 dark:text-emerald-400" />
+                    <StatCounter value={5.9} suffix=" KB" label="Tracking script" color="text-emerald-600 dark:text-emerald-400" />
                     <StatCounter value={100} suffix="×" label="Faster than GA4" color="text-amber-600 dark:text-amber-400" />
                     <StatCounter value={0} suffix="" label="Cookies, ever" color="text-rose-600 dark:text-rose-400" />
                 </div>

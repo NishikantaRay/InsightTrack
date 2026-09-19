@@ -30,8 +30,16 @@ InsightTrack uses a dual-database architecture and a combination of polling, in-
 
 ---
 
-## 4. Tracking Script (demo sites)
-- No caching; events are sent directly to the backend using `fetch`.
+## 4. Tracking Script
+- **Events** are sent directly to the backend via `sendBeacon`/`fetch` — no
+  client-side caching or batching of outbound events.
+- **The script itself** is served minified and cached two ways: an in-process
+  cache in `sitesService` keyed by `(siteId, serverUrl)` so each site is
+  minified once per server lifetime, and `Cache-Control: public, max-age=300,
+  must-revalidate` for browsers and CDNs. The 5-minute TTL is deliberately
+  short — the script embeds the DNT/GPC opt-out, so a longer cache would let a
+  visitor keep running a stale copy after a privacy fix ships. See
+  `docs/tracking-script.md` § Delivery & Size.
 
 ---
 
@@ -43,7 +51,7 @@ InsightTrack uses a dual-database architecture and a combination of polling, in-
 ---
 
 ## Configuration
-- **Polling interval:** Set in `apps/dashboard-web/src/hooks/useAnalytics.js` (default: 60s).
+- **Polling interval:** Set in `apps/dashboard-web/src/hooks/useAnalytics.js` (60s for every hook, realtime widgets included).
 - **Sync interval:** Set in the unified backend sync scripts (see `apps/analytics-api/src/sync/`).
 - **Cache libraries:** If used, they live under `apps/analytics-api/src/services/`.
 

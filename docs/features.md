@@ -72,7 +72,7 @@ Sortable table of the most visited pages with:
 
 ### Live Dashboard
 
-The Realtime page provides a live view of site activity, auto-refreshing every 5 seconds:
+The Realtime page provides a live view of site activity, auto-refreshing every 60 seconds over a rolling 5-minute window:
 
 - **Active Visitor Count** — Users active in the last 5 minutes, displayed with a pulsing indicator
 - **Live Visitor Map** — Interactive world map pinpointing active visitor locations by country and city
@@ -414,7 +414,7 @@ InsightTrack respects user privacy by default:
 | **No cookies** | Uses `localStorage` for a pseudonymous visitor identifier only |
 | **No IP storage** | IP addresses are used transiently for country lookup, never persisted |
 | **Self-hosted** | Tracking data goes only to your own server; optional integrations you enable may send data externally |
-| **Single tag** | ~7.5 KB gzipped in the current build (varies by build) |
+| **Single tag** | ~5.9 KB gzipped (minified; varies with transfer encoding) |
 
 ### Data Retention Policies
 
@@ -667,7 +667,7 @@ InsightTrack is designed as a **privacy-first** analytics platform:
 | **DNT / GPC respect** | Honoured in the tracking script and as a server-side backstop on the tracking API |
 | **Data retention policies** | Configurable per-site periods with a manually triggered cleanup that clears both PostgreSQL and DuckDB |
 | **No IP storage** | IP addresses are never persisted |
-| **Single tag** | ~7.5 KB gzipped in the current build |
+| **Single tag** | ~5.9 KB gzipped (minified) |
 | **Zero-config** | Single `<script>` tag, works on any website |
 
 ---

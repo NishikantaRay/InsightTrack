@@ -134,6 +134,11 @@ A single Node process hosts the HTTP API, the embedded DuckDB instance, the PG�
 
 **VERIFIED** — The tracking script is **generated server-side per site**, not shipped as a static file. Route `GET /api/sites/:siteId/script` (`apps/analytics-api/src/routes/sites.js:110`) calls `sitesService.getRawTrackingScript(siteId, serverUrl)` and returns it as `application/javascript` with `Cache-Control: public, max-age=3600`.
 
+> **Superseded.** The route now calls `getMinifiedTrackingScript()` and serves
+> `Cache-Control: public, max-age=300, must-revalidate` — the TTL was shortened
+> deliberately so a visitor cannot keep running a stale copy of the DNT/GPC
+> opt-out after a privacy fix ships. See `docs/tracking-script.md` § Delivery & Size.
+
 **VERIFIED** — Demo sites embed it as: `<script src="http://localhost:3001/api/sites/site_230afff7/script"></script>` (`examples/demo-website/index.html:11`).
 
 **VERIFIED** — Script behaviour, read from `getRawTrackingScript` in `apps/analytics-api/src/services/sitesService.js`:
@@ -882,6 +887,11 @@ Ordered by how badly the paper needs it.
 
 **E7. Tracking script weight.** Measure the generated script's actual bytes, raw and gzipped, and compare against `gtag.js`, Plausible, Umami, and Fathom. The "~2 KB" and "~50× smaller than gtag.js" claims are currently unverified and, given the two large embedded lookup maps, likely wrong.
 
+> **Partly addressed.** Measured and minified: 31 096 → 18 382 bytes raw,
+> 9 536 → 6 027 gzipped. All product copy now states ~5.9 KB gzipped instead of
+> "~2 KB". The competitor comparison against gtag.js/Plausible/Umami/Fathom has
+> **not** been run, so any "× smaller than" claim remains unverified.
+
 **E8. Concurrency scaling.** Dashboard latency vs. concurrent users (1 → 500), with and without request coalescing, to substantiate the "P99 drops ~4×" claim.
 
 **E9. LLM cost/accuracy evaluation (C2).** Tokens and dollars per query with and without `capToolData`; answer accuracy against a labelled question set; tool-selection precision across the three providers.
@@ -1003,7 +1013,7 @@ Either add `navigator.doNotTrack === '1'` / `navigator.globalPrivacyControl === 
 **P2-4.** Docker hardening: `USER node`, drop the host PG/pgAdmin port publishing, pin image digests, add resource limits and backend/ui healthchecks (§12).
 **P2-5.** Introduce versioned migrations with a recorded schema version (§3.4).
 **P2-6.** Switch visitor IDs to `crypto.randomUUID()` (§9.4).
-**P2-7.** Measure the tracking script's real size, gzipped, against competitors (E7) (§17).
+**P2-7.** Measure the tracking script's real size, gzipped, against competitors (E7) (§17). — *Own size measured and minified (6 027 bytes gzipped); competitor comparison still outstanding.*
 **P2-8.** Extend E2E coverage to the dashboard, SQL Editor, and Pulse (§10.1).
 **P2-9.** Add throughput (E6) and concurrency-scaling (E8) benchmarks (§17).
 **P2-10.** Adopt "pseudonymous" rather than "anonymous" throughout, and qualify the GDPR claims (§9.4).

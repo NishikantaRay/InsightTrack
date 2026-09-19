@@ -1381,7 +1381,7 @@ window.trackPurchase(29.99);`}</CodeBlock>
             <Collapsible title="Tracking Script — Auto-Captured Events" icon={MousePointerClick} color="text-blue-500">
                 <div className="space-y-4">
                     <p className="text-sm text-text-secondary dark:text-text-secondary-dark">
-                        A single tag (~7.5 KB gzipped in the current build) — no cookies, no fingerprinting, no IP storage. Respects DNT and GPC signals.
+                        A single tag (~5.9 KB gzipped, minified) — no cookies, no fingerprinting, no IP storage. Respects DNT and GPC signals.
                     </p>
                     <div className="rounded-lg border border-border dark:border-border-dark overflow-hidden">
                         <table className="w-full text-xs">

@@ -124,5 +124,5 @@ These sparklines are visual helpers only; the headline KPI values come from `get
 ## Notes
 
 - The page has a manual Refresh button that refetches the core KPI/traffic datasets.
-- The header also describes the dashboard as auto-refreshing, but the shared analytics hook actually refreshes most datasets every **60 seconds**.
+- The header states the dashboard auto-refreshes every 60s, which matches the shared analytics hook's **60-second** interval. (The header previously claimed 30s; no 30s timer ever existed.)
 - This page is the best place to validate whether ingestion, sessions, and top-level traffic are working end-to-end.

@@ -158,7 +158,7 @@ apps/analytics-api/
 | GET | `/:siteId` | `sitesService.getSiteById()` | Get site details |
 | PUT | `/:siteId` | `sitesService.updateSite()` | Update site config |
 | DELETE | `/:siteId` | `sitesService.deleteSite()` | Delete a site |
-| GET | `/:siteId/script` | `sitesService.getTrackingScript()` | Raw JS tracking script |
+| GET | `/:siteId/script` | `sitesService.getMinifiedTrackingScript()` | Minified JS tracking script (falls back to source on minifier failure) |
 | GET | `/:siteId/snippet` | `sitesService.getRawTrackingScript()` | HTML snippet |
 
 ### Analytics Routes (`/api/analytics/*`) → DuckDB

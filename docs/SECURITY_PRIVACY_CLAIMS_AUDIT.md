@@ -216,6 +216,14 @@ The generator embeds a ~250-entry IANA-timezone→country map and a ~100-entry I
 **Recommended action:** re-measure per deployment and state the real figure (~7 KB gzipped), or reduce the script by moving the lookup maps server-side.
 **Severity: P2** — not a security claim, but it is a measurable, currently-incorrect factual assertion used in comparison marketing.
 
+> **Resolved.** The served script is now Terser-minified (9 536 → 6 027 bytes
+> gzipped, a 37% reduction), and every claim listed above states the measured
+> figure: README, `docs/features.md`, `Documentation.jsx`, `Landing.jsx` and
+> `Settings.jsx` now all say ~5.9 KB gzipped. The "under 2 KB" and "< 5 KB"
+> assertions are gone. The lookup maps were left in the script — moving them
+> server-side would add a network round trip on every page load to save ~2 KB.
+> Re-measure with `sitesService.getMinifiedTrackingScript()` if the script grows.
+
 ### UV-02 — "Rate limiting on API endpoints" · UNVERIFIED · **P2**
 
 **File:** `docs/security.md:15`
