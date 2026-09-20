@@ -16,15 +16,20 @@ It shows:
 
 ## Refresh behavior
 
-This page uses dedicated hooks (`useRealtime()`, `useRealtimeEventStream()`)
-because it reads different endpoints, but both refresh on the same **60-second**
-cadence as the generic analytics hook.
+This page uses dedicated hooks instead of the generic 60-second analytics hook.
 
-They previously polled at 15s and 10s. The realtime backend caches its results
-with a 10s TTL, so the faster polling mostly re-fetched figures the server had
-not recomputed — it cost several times the requests without making the page
-any fresher. Note the rolling window below: this page summarises the last 5
-minutes, so a 60s refresh still shows genuinely live activity.
+- realtime summary → refreshes every **15 seconds**
+- realtime event stream → refreshes every **10 seconds**
+
+**Why faster than everywhere else, and what still bounds freshness.** Tracking
+writes land in PostgreSQL; realtime reads come from DuckDB. Nothing bridges them
+synchronously — a background job copies PG → DuckDB every `SYNC_INTERVAL_MS`
+(default **60s**), so a visit is invisible to this page until a sync has run.
+That sync, not the poll interval, is the real floor on freshness: expect up to
+~60–75s before a new visitor appears. Polling at 10–15s does not beat the sync,
+but it surfaces events promptly once they land, which matters because the window
+below is only 5 minutes — at a 60s poll a lone visit can age out unseen on a
+low-traffic site. Lower `SYNC_INTERVAL_MS` if you need it tighter.
 
 ## Backend sources
 

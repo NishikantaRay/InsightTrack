@@ -81,10 +81,15 @@ export function useRealtime() {
         };
 
         fetch();
-        // 60s, matching every other panel on the page. The realtime widget used
-        // to poll at 15s, which cost 4x the requests to show numbers the
-        // server only recomputes every 10s anyway.
-        const interval = setInterval(fetch, 60000);
+        // 15s, deliberately faster than the 60s used elsewhere. An earlier
+        // change raised this to 60s on the grounds that the route caches for
+        // 10s, but the real floor is the PG -> DuckDB sync (SYNC_INTERVAL_MS,
+        // default 60s): tracking writes land in Postgres and realtime reads
+        // come from DuckDB, so a visit is invisible until a sync copies it.
+        // Against a 5-minute realtime window, a 60s poll made a single visit
+        // easy to miss entirely on a low-traffic site. Polling faster does not
+        // beat the sync, but it picks events up promptly once they land.
+        const interval = setInterval(fetch, 15000);
         return () => clearInterval(interval);
     }, [siteId]);
 
@@ -110,7 +115,8 @@ export function useRealtimeEventStream() {
         };
 
         fetchEvents();
-        const interval = setInterval(fetchEvents, 60000);
+        // 10s — same reasoning as useRealtime above.
+        const interval = setInterval(fetchEvents, 10000);
         return () => clearInterval(interval);
     }, [siteId]);
 

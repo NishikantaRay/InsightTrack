@@ -118,7 +118,8 @@ export default function EventStream() {
         };
 
         fetchEvents();
-        const interval = setInterval(fetchEvents, 60000);
+        // 10s: the live feed is the one panel where latency is the feature.
+        const interval = setInterval(fetchEvents, 10000);
         return () => clearInterval(interval);
     }, [siteId, paused]);
 

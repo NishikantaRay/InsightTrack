@@ -15,11 +15,13 @@ Before reading individual pages, keep these global rules in mind:
 - The hook automatically sends the current `siteId` from `useSiteStore`.
 - The selected date range comes from `useDateFilterStore`.
 - If the dashboard date filter is `custom`, the frontend sends a `custom:start:end` range string.
-- Every polling hook refreshes every **60 seconds** — `useAnalytics()`,
-  `useRealtime()` and `useRealtimeEventStream()` alike. The realtime widgets
-  used to poll at 15s and 10s; that cost several times the requests to display
-  figures the server's realtime cache only recomputes every 10s, so the extra
-  polling bought freshness that did not exist.
+- Standard analytics pages refresh every **60 seconds**.
+- Realtime widgets refresh faster:
+  - `useRealtime()` every **15 seconds**
+  - `useRealtimeEventStream()` every **10 seconds**
+- Polling is not the limit on realtime freshness: tracking writes go to
+  PostgreSQL and realtime reads come from DuckDB, so nothing appears until the
+  PG → DuckDB sync runs (`SYNC_INTERVAL_MS`, default 60s).
 - All analytics requests go through `apps/dashboard-web/src/services/api.js` and call the secured backend under `/api/analytics/:siteId/*`.
 
 ## Calculation conventions used throughout the product

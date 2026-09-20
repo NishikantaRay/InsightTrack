@@ -376,7 +376,7 @@ const FEATURES = [
         border: 'border-indigo-200 dark:border-indigo-500/20',
         label: 'Realtime',
         title: 'See who\'s on your site right now',
-        desc: 'Live visitor count, active pages, device breakdown, and a world map — updating every 60 seconds over a rolling 5-minute window. Know the moment a campaign lands.',
+        desc: 'Live visitor count, active pages, device breakdown, and a world map — refreshing every 15 seconds over a rolling 5-minute window. Know the moment a campaign lands.',
         metric: { value: '24', label: 'live now', up: true },
     },
     {

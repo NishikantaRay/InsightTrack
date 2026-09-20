@@ -72,7 +72,7 @@ Sortable table of the most visited pages with:
 
 ### Live Dashboard
 
-The Realtime page provides a live view of site activity, auto-refreshing every 60 seconds over a rolling 5-minute window:
+The Realtime page provides a live view of site activity over a rolling 5-minute window, refreshing every 10–15 seconds (new visitors appear after the PG → DuckDB sync, default 60s):
 
 - **Active Visitor Count** — Users active in the last 5 minutes, displayed with a pulsing indicator
 - **Live Visitor Map** — Interactive world map pinpointing active visitor locations by country and city

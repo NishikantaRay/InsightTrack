@@ -38,7 +38,7 @@ export default function Realtime() {
                     title="What is Realtime?"
                     summary="Realtime shows you who is on your website right now. It updates every few seconds and is useful for monitoring the immediate impact of a marketing campaign, product launch, or viral post."
                     details={[
-                        { label: 'Active Visitors', text: 'People who have loaded a page in the last 5 minutes. This updates automatically every 60 seconds.' },
+                        { label: 'Active Visitors', text: 'People who have loaded a page in the last 5 minutes. This refreshes every 15 seconds; a new visitor can take up to a minute to appear.' },
                         { label: 'Live Visitor Map', text: 'Geographic distribution of current visitors. Location is detected from timezone, not IP address — so no personal data is stored.' },
                         { label: 'Live Event Stream', text: 'A feed of page loads and events happening right now. Each row shows the page, the country, and the event type.' },
                         { label: 'Top Pages (Live)', text: 'Which pages are being viewed most right now. Useful during campaigns to see what content is resonating.' },

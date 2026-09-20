@@ -51,7 +51,7 @@ InsightTrack uses a dual-database architecture and a combination of polling, in-
 ---
 
 ## Configuration
-- **Polling interval:** Set in `apps/dashboard-web/src/hooks/useAnalytics.js` (60s for every hook, realtime widgets included).
+- **Polling interval:** Set in `apps/dashboard-web/src/hooks/useAnalytics.js` — 60s for standard analytics, 15s for the realtime summary, 10s for the event stream. Realtime freshness is bounded by `SYNC_INTERVAL_MS` (PG → DuckDB, default 60s), not by these intervals.
 - **Sync interval:** Set in the unified backend sync scripts (see `apps/analytics-api/src/sync/`).
 - **Cache libraries:** If used, they live under `apps/analytics-api/src/services/`.
 
