@@ -1,6 +1,7 @@
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Menu, Monitor, X } from 'lucide-react';
 import { useFocusModeStore } from '../../store/useFocusModeStore';
 import { useAssistantStore } from '../../store/useAssistantStore';
@@ -44,7 +45,59 @@ function MobileWarning() {
     );
 }
 
+/**
+ * Tab titles for the dashboard routes.
+ *
+ * Labels match the sidebar so the tab, the nav and the page heading agree.
+ * Routes reachable but absent from the sidebar (profile, shared) are included;
+ * an unlisted path falls through to the app name, and NotFound sets its own
+ * title via useSeo.
+ */
+const ROUTE_TITLES = {
+    '/': 'Dashboard',
+    '/pages': 'Pages',
+    '/heatmap': 'Heatmap',
+    '/funnels': 'Funnels',
+    '/conversions': 'Conversions',
+    '/audience': 'Audience',
+    '/content': 'Content',
+    '/acquisition': 'Acquisition',
+    '/search': 'Search Visibility',
+    '/performance': 'Performance',
+    '/errors': 'Errors',
+    '/realtime': 'Realtime',
+    '/user-flow': 'User Flow',
+    '/engagement': 'Engagement',
+    '/reporting': 'Reporting',
+    '/sql-editor': 'SQL Editor',
+    '/privacy': 'Privacy',
+    '/settings': 'Settings',
+    '/profile': 'Profile',
+    '/docs': 'Docs',
+};
+
+/**
+ * Keep the tab title in step with the route.
+ *
+ * Dashboard pages did not set a title at all, so whatever ran last stayed put:
+ * visiting an unknown URL left "Page not found" in the tab across every
+ * subsequent page. Titles also make a pinned dashboard legible when several
+ * tabs are open.
+ */
+function useRouteTitle() {
+    const { pathname } = useLocation();
+    useEffect(() => {
+        // Only title routes we know. An unlisted path inside the layout is the
+        // 404, and NotFound sets its own title through useSeo — claiming it here
+        // would clobber that, because a parent's effect runs after its child's.
+        const name = ROUTE_TITLES[pathname];
+        if (!name) return;
+        document.title = `${name} — InsightsTrack`;
+    }, [pathname]);
+}
+
 export default function DashboardLayout({ children }) {
+    useRouteTitle();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const { focusMode } = useFocusModeStore();

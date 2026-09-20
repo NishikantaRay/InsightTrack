@@ -83,6 +83,7 @@ export function useSeo({
         const fullTitle = title && branded.length > 60 ? title : branded;
         const url = canonicalUrl(path || (typeof window !== 'undefined' ? window.location.pathname : ''));
 
+        const previousTitle = document.title;
         document.title = fullTitle;
         setMeta('name', 'description', description);
         setMeta('name', 'robots', noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large');
@@ -103,7 +104,14 @@ export function useSeo({
         // Optional structured data for this page (breadcrumbs, article, etc.)
         setJsonLd('page-jsonld', jsonLd);
 
-        return () => setJsonLd('page-jsonld', null);
+        // Restore the title on unmount. Without this the last page to call
+        // useSeo leaves its title in the tab forever: navigating from a 404 to
+        // the dashboard used to leave "Page not found" sitting above a working
+        // dashboard, which reads as an error the page is not reporting.
+        return () => {
+            document.title = previousTitle;
+            setJsonLd('page-jsonld', null);
+        };
     }, [title, description, path, image, noindex, JSON.stringify(jsonLd)]);
 }
 
