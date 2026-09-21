@@ -19,7 +19,7 @@ import { serpapiKeyAPI } from '../../services/api';
 /** Plan sizes offered as a quick reference, not an exhaustive price list. */
 const PLANS = [100, 250, 5000];
 
-export default function RankBudgetSettings({ siteId, canEdit = true, onChanged }) {
+export default function RankBudgetSettings({ siteId, canEdit = true, connected = true, onChanged }) {
     const [budget, setBudget] = useState(null);
     const [minHours, setMinHours] = useState(24);
     const [maxPerRun, setMaxPerRun] = useState(10);
@@ -81,6 +81,10 @@ export default function RankBudgetSettings({ siteId, canEdit = true, onChanged }
     if (!budget) return null;
 
     const dirty = minHours !== budget.minHours || maxPerRun !== budget.maxPerRun;
+    // Without a key the sweep skips this site, so there is nothing to persist —
+    // but the projection is still worth showing, since it is what tells someone
+    // which plan to buy.
+    const canSave = canEdit && connected;
 
     return (
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-4">
@@ -89,11 +93,9 @@ export default function RankBudgetSettings({ siteId, canEdit = true, onChanged }
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Rank-check budget
                 </h3>
-                {budget.source === 'default' && (
-                    <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
-                        using server defaults
-                    </span>
-                )}
+                <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+                    {!connected ? 'preview' : budget.source === 'default' ? 'using server defaults' : null}
+                </span>
             </div>
 
             {/* The arithmetic, stated plainly. */}
@@ -141,7 +143,7 @@ export default function RankBudgetSettings({ siteId, canEdit = true, onChanged }
                         type="range"
                         min="6" max="168" step="6"
                         value={Math.min(168, minHours)}
-                        disabled={!canEdit}
+                        disabled={!canEdit && connected}
                         onChange={(e) => { setMinHours(parseInt(e.target.value)); setSaved(false); }}
                         className="w-full mt-2 accent-indigo-600 disabled:opacity-50"
                     />
@@ -159,7 +161,7 @@ export default function RankBudgetSettings({ siteId, canEdit = true, onChanged }
                             id="rank-max"
                             type="number" min="1" max="100"
                             value={maxPerRun}
-                            disabled={!canEdit}
+                            disabled={!canEdit && connected}
                             onChange={(e) => { setMaxPerRun(parseInt(e.target.value) || 1); setSaved(false); }}
                             className="w-full mt-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                         />
@@ -206,7 +208,7 @@ export default function RankBudgetSettings({ siteId, canEdit = true, onChanged }
                 )}
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button type="submit" disabled={!canEdit || busy || !dirty}
+                    <button type="submit" disabled={!canSave || busy || !dirty}
                         className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
                         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gauge className="w-4 h-4" />}
                         Save budget
@@ -218,7 +220,13 @@ export default function RankBudgetSettings({ siteId, canEdit = true, onChanged }
                         </span>
                     )}
                 </div>
-                {!canEdit && (
+                {!connected && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Save a SerpApi key above to keep these settings. Until then this is a
+                        cost preview — nothing is scheduled and no credits are spent.
+                    </p>
+                )}
+                {connected && !canEdit && (
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                         Admin role required to change the budget.
                     </p>

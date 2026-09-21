@@ -56,6 +56,51 @@ describe('deriving a keyword from a URL path', () => {
         expect(phraseFromPath(null)).toBeNull();
         expect(phraseFromPath('/blog/')).toBeNull();     // taxonomy word only
     });
+
+    // Real StudyTub paths. These previously suggested "7th%20sem", which would
+    // have gone to Google as a literal query and spent a credit on a string no
+    // human types.
+    it('percent-decodes before deriving words', () => {
+        expect(phraseFromPath('/0:/7th%20Sem/')).toBe('7th sem');
+        expect(phraseFromPath('/0:/First%20Year/')).toBe('first year');
+        expect(phraseFromPath('/notes/machine+learning')).toBe('machine learning');
+    });
+
+    // A storage-driver mount prefix is plumbing, not taxonomy.
+    it('drops a drive-mount prefix like "0:"', () => {
+        expect(phraseFromPath('/0:/5th%20sem/')).toBe('5th sem');
+        expect(phraseFromPath('/0:/')).toBeNull();
+    });
+
+    // "… pdf" is a statement about the file, not what anyone searches for.
+    it('drops file-type words and bracketed asides', () => {
+        expect(phraseFromPath('/0:/7th%20Sem/Module%202%20(Derivation).pdf'))
+            .toBe('module derivation');
+        expect(phraseFromPath('/notes/circuit-theory.pdf')).toBe('circuit theory');
+    });
+
+    // Nobody arrives at /login from a Google search for "login".
+    it('returns null for application routes rather than content', () => {
+        expect(phraseFromPath('/login')).toBeNull();
+        expect(phraseFromPath('/account/settings')).toBeNull();
+        expect(phraseFromPath('/checkout')).toBeNull();
+    });
+
+    // A lone % is not a valid escape; decodeURIComponent throws on it.
+    it('survives a malformed percent-escape instead of throwing', () => {
+        expect(() => phraseFromPath('/bad%ZZescape')).not.toThrow();
+        expect(phraseFromPath('/bad%ZZescape')).toBe('bad%zzescape');
+    });
+
+    // phraseFromPath lives in pathKeyword.js so setup scripts can import it
+    // WITHOUT pulling in the DuckDB query layer — DuckDB is single-writer, so
+    // that import blocks forever against a running API server. The re-export
+    // keeps existing importers working.
+    it('is importable without the DuckDB-backed query layer', async () => {
+        const pure = await import('../src/services/pathKeyword.js');
+        expect(pure.phraseFromPath('/0:/7th%20Sem/')).toBe('7th sem');
+        expect(pure.phraseFromPath).toBe(phraseFromPath);
+    });
 });
 
 describe('suggestions for one page', () => {

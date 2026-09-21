@@ -897,6 +897,39 @@ Worked example — 14 keywords on a 250-credit plan:
 | `GET /api/search/:siteId/rank-budget` | member | Effective settings, keyword count, projected spend, pending count |
 | `PUT /api/search/:siteId/rank-budget` | **admin** | `{ minHours, maxPerRun }`; clamped, and refuses a site with no key |
 
+### Scripted setup from a budget
+
+`npm run setup:keywords -- --site <id> --budget 250` plans the whole thing from
+the credit allowance instead of a hardcoded path list.
+
+`setupStudytub.js` maps 10 paths written against the site's page *files*. But
+visitors arrive on quite different URLs — a Drive mount, generated pages — so
+that list can track pages with no search traffic at all. A keyword whose page
+nobody lands on can never explain a traffic change, and still costs a credit
+every sweep.
+
+So this script starts from the other end:
+
+1. Busiest pages from first-party analytics (read from **PostgreSQL**, not
+   DuckDB — DuckDB is single-writer, so a running API server holds the lock and
+   a DuckDB-backed script cannot run on a live instance)
+2. One keyword per page via `phraseFromPath` — percent-decoded, app routes and
+   file-type words dropped
+3. The cadence that fits the budget, preferring speed: 20 keywords every 2 days
+   explains more than 10 every day, so it slows down before it drops pages
+4. Maps them and stores the matching cadence
+
+`--dry-run` prints the plan and writes nothing. It spends **zero** SerpApi
+credits — every signal is first-party.
+
+Worked example — 15 candidate pages on a 250-credit plan → 15 keywords at 48h
+= 225 credits/month, 25 spare.
+
+**`pathKeyword.js`** exists for this: `keywordDiscoveryService` imports the
+DuckDB query layer at module load, so a script importing it blocks forever
+against a live server. The pure path→phrase half lives on its own and is
+re-exported, so existing importers are unaffected.
+
 ### Operator flow — all from the dashboard
 
 1. `/search` → key dialog → paste the SerpApi key

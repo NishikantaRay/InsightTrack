@@ -11,8 +11,8 @@
  * site stands — including "not ranking", which is a real and useful datapoint
  * for a new page that has not been indexed yet.
  *
- * CREDIT DISCIPLINE. A SerpApi free tier is 100 searches/month, so an unbounded
- * loop would exhaust it in a day:
+ * CREDIT DISCIPLINE. A SerpApi plan is a fixed monthly search allowance, so an
+ * unbounded loop would exhaust it in a day:
  *   - one check per keyword per the site's minHours (default RANK_CHECK_MIN_HOURS,
  *     or 24) — set per site in the UI, since the cadence IS the budget
  *   - a hard ceiling per sweep (the site's maxPerRun, default

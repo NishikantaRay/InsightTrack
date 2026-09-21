@@ -21,46 +21,11 @@
  * a wrong keyword silently produces a confident wrong explanation later.
  */
 import { query } from '../db/postgres.js';
+import { phraseFromPath } from './pathKeyword.js';
 import * as queries from '../queries/queries.js';
 import searchVisibility from './searchVisibilityService.js';
 
-/** Words that carry no topical meaning in a URL path. */
-const STOPWORDS = new Set([
-    'a', 'an', 'the', 'and', 'or', 'for', 'to', 'of', 'in', 'on', 'at', 'by', 'with',
-    'blog', 'post', 'posts', 'article', 'articles', 'page', 'pages', 'guide', 'guides',
-    'docs', 'doc', 'tutorial', 'tutorials', 'how', 'what', 'why', 'index', 'html', 'php',
-    'en', 'us', 'www', 'v1', 'v2', 'amp',
-]);
-
-/**
- * Derive a human search phrase from a URL path.
- *   /guides/email-templates        → "email templates"
- *   /blog/2026/03/best-crm-tools   → "best crm tools"
- *   /                              → null  (a homepage has no topic)
- */
-export function phraseFromPath(path) {
-    if (!path || path === '/') return null;
-
-    const segments = String(path)
-        .split('?')[0]
-        .split('#')[0]
-        .split('/')
-        .filter(Boolean)
-        // Drop date-like and purely numeric segments (/2026/03/, /p/1234).
-        .filter((s) => !/^\d+$/.test(s));
-
-    if (segments.length === 0) return null;
-
-    // The last meaningful segment is usually the topic; earlier ones are taxonomy.
-    const words = segments[segments.length - 1]
-        .replace(/\.(html?|php|aspx?)$/i, '')
-        .split(/[-_+.]+/)
-        .map((w) => w.toLowerCase().trim())
-        .filter((w) => w && !STOPWORDS.has(w) && !/^\d+$/.test(w));
-
-    if (words.length === 0) return null;
-    return words.join(' ');
-}
+export { phraseFromPath, STOPWORDS, NON_CONTENT } from './pathKeyword.js';
 
 /** Search terms visitors actually arrived on for this page (utm_term). */
 async function termsFromTraffic(siteId, path, dateRange = '90d') {

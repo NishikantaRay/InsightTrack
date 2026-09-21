@@ -155,11 +155,12 @@ export default function SerpApiKeyDialog({ siteId, open, onClose, onChanged }) {
                     </form>
 
                     {/* The cadence is the spend, so it belongs next to the key rather
-                        than in a server env file. Only shown once connected: the sweep
-                        skips sites without a key, so a budget would mean nothing. */}
-                    {connected && (
-                        <RankBudgetSettings siteId={siteId} onChanged={onChanged} />
-                    )}
+                        than in a server env file. Shown BEFORE connecting too: what a
+                        key will cost per month is exactly what someone needs to know
+                        while deciding which plan to buy, and hiding it until after the
+                        key is saved answers the question too late. */}
+                    <RankBudgetSettings siteId={siteId} connected={connected}
+                        onChanged={onChanged} />
 
                     {/* Where the key goes — said before it is asked for, not after */}
                     <div className="flex items-start gap-2 rounded-lg border border-gray-200 dark:border-gray-800 p-3">
@@ -178,7 +179,7 @@ export default function SerpApiKeyDialog({ siteId, open, onClose, onChanged }) {
                                 className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-0.5">
                                 serpapi.com <ExternalLink className="w-3 h-3" />
                             </a>{' '}
-                            — the free tier includes 100 searches a month.
+                            — free accounts include a monthly search allowance.
                         </li>
                         <li>
                             Copy your key from{' '}
