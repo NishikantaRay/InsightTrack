@@ -237,6 +237,8 @@ export const serpapiKeyAPI = {
     getStatus: (siteId) => api.get(`/search/${siteId}/serpapi-key`),
     save: (siteId, key) => api.put(`/search/${siteId}/serpapi-key`, { key }),
     remove: (siteId) => api.delete(`/search/${siteId}/serpapi-key`),
+    getBudget: (siteId) => api.get(`/search/${siteId}/rank-budget`),
+    saveBudget: (siteId, body) => api.put(`/search/${siteId}/rank-budget`, body),
 };
 
 // Sites endpoints

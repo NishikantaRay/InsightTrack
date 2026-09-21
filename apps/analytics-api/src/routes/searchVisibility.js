@@ -19,6 +19,8 @@ import sitesService from '../services/sitesService.js';
 import { getMemberRole, roleAtLeast } from '../services/teamService.js';
 import searchVisibility from '../services/searchVisibilityService.js';
 import serpapiKeys from '../services/serpapiKeyService.js';
+import rankTracker from '../services/rankTrackerService.js';
+import { query } from '../db/postgres.js';
 import keywordDiscovery from '../services/keywordDiscoveryService.js';
 import { bucketByWeek, detectChange, explain } from '../services/correlationService.js';
 import { safeMsg } from '../utils/safeError.js';
@@ -176,6 +178,54 @@ router.delete('/:siteId/serpapi-key', async (req, res) => {
     } catch (error) {
         console.error('Error removing SerpApi key:', error);
         res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// ── Rank-check budget ────────────────────────────────────────────────────────
+//
+// The cadence is the spend: a SerpApi plan is a monthly credit allowance, and
+// keywords × checks-per-month is what consumes it. These were env-only, which
+// meant the one number that governs cost was the one you could not reach from
+// the dashboard.
+
+// GET /api/search/:siteId/rank-budget — effective settings + what they cost
+router.get('/:siteId/rank-budget', async (req, res) => {
+    try {
+        const budget = await serpapiKeys.getBudget(req.siteId);
+        const { rows } = await query(
+            `SELECT COUNT(DISTINCT (keyword, location))::int AS n
+               FROM page_keywords WHERE site_id = $1`,
+            [req.siteId],
+        );
+        const keywords = rows[0]?.n || 0;
+        // Checks per keyword per month, at this cadence.
+        const perMonth = Math.round(keywords * (24 / budget.minHours) * 30);
+        res.json({
+            success: true,
+            data: { ...budget, keywords, estimatedCreditsPerMonth: perMonth,
+                    pending: await rankTracker.pendingCount() },
+        });
+    } catch (error) {
+        console.error('Error fetching rank budget:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// PUT /api/search/:siteId/rank-budget — change the cadence (admin+)
+router.put('/:siteId/rank-budget', async (req, res) => {
+    try {
+        if (!roleAtLeast(req.userRole, 'admin')) {
+            return res.status(403).json({ success: false, error: 'Admin role required to change the rank-check budget' });
+        }
+        const data = await serpapiKeys.saveBudget(req.siteId, {
+            minHours: req.body?.minHours,
+            maxPerRun: req.body?.maxPerRun,
+        });
+        res.json({ success: true, data });
+    } catch (error) {
+        const status = error.status || 500;
+        if (status >= 500) console.error('Error saving rank budget:', error);
+        res.status(status).json({ success: false, error: safeMsg(error, status) });
     }
 });
 

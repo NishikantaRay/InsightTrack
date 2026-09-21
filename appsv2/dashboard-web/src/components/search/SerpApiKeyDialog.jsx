@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { KeyRound, X, Loader2, ExternalLink, ShieldCheck, Trash2, Check, AlertCircle } from 'lucide-react';
 import { serpapiKeyAPI } from '../../services/api';
+import RankBudgetSettings from './RankBudgetSettings';
 
 /**
  * Connect a SerpApi key.
@@ -152,6 +153,13 @@ export default function SerpApiKeyDialog({ siteId, open, onClose, onChanged }) {
                             )}
                         </div>
                     </form>
+
+                    {/* The cadence is the spend, so it belongs next to the key rather
+                        than in a server env file. Only shown once connected: the sweep
+                        skips sites without a key, so a budget would mean nothing. */}
+                    {connected && (
+                        <RankBudgetSettings siteId={siteId} onChanged={onChanged} />
+                    )}
 
                     {/* Where the key goes — said before it is asked for, not after */}
                     <div className="flex items-start gap-2 rounded-lg border border-gray-200 dark:border-gray-800 p-3">

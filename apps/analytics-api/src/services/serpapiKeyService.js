@@ -105,6 +105,73 @@ export async function saveKey(siteId, rawKey) {
     return toPublic(rows[0]);
 }
 
+/**
+ * Rank-check budget, per site.
+ *
+ * These were env-only (RANK_CHECK_MIN_HOURS / RANK_CHECK_MAX_PER_RUN), which
+ * made the one setting that governs spend the one setting you could not reach
+ * from the UI — a SerpApi plan is a monthly credit budget, and the cadence is
+ * how you spend it. They live in the integration's config JSONB (non-secret,
+ * same row as the key), with the env vars as the fallback default so an
+ * existing deployment keeps behaving exactly as it did.
+ */
+const BUDGET_DEFAULTS = {
+    minHours: parseInt(process.env.RANK_CHECK_MIN_HOURS) || 24,
+    maxPerRun: parseInt(process.env.RANK_CHECK_MAX_PER_RUN) || 10,
+};
+
+/** Bounds, so a typo cannot drain a month of credits in one sweep. */
+const BUDGET_LIMITS = {
+    minHours: { min: 1, max: 720 },     // 1 hour … 30 days
+    maxPerRun: { min: 1, max: 100 },
+};
+
+function clampInt(value, { min, max }, fallback) {
+    const n = parseInt(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+}
+
+/** A site's effective budget: stored settings over env defaults. */
+export async function getBudget(siteId) {
+    const row = await getRow(siteId);
+    const cfg = row?.config?.rankBudget || {};
+    return {
+        minHours: clampInt(cfg.minHours, BUDGET_LIMITS.minHours, BUDGET_DEFAULTS.minHours),
+        maxPerRun: clampInt(cfg.maxPerRun, BUDGET_LIMITS.maxPerRun, BUDGET_DEFAULTS.maxPerRun),
+        // Tells the UI whether it is showing a stored value or the env default.
+        source: cfg.minHours || cfg.maxPerRun ? 'site' : 'default',
+        defaults: { ...BUDGET_DEFAULTS },
+    };
+}
+
+/**
+ * Save a site's budget. Requires an existing integration row — there is no
+ * point storing a cadence for a site that has no key, since the sweep skips it.
+ */
+export async function saveBudget(siteId, { minHours, maxPerRun } = {}) {
+    const existing = await getRow(siteId);
+    if (!existing) {
+        throw Object.assign(
+            new Error('Connect a SerpApi key before setting a rank-check budget'),
+            { status: 400 },
+        );
+    }
+    const current = existing.config?.rankBudget || {};
+    const rankBudget = {
+        minHours: clampInt(
+            minHours ?? current.minHours, BUDGET_LIMITS.minHours, BUDGET_DEFAULTS.minHours),
+        maxPerRun: clampInt(
+            maxPerRun ?? current.maxPerRun, BUDGET_LIMITS.maxPerRun, BUDGET_DEFAULTS.maxPerRun),
+    };
+    const config = { ...(existing.config || {}), rankBudget };
+    await query(
+        `UPDATE site_integrations SET config = $1, updated_at = NOW() WHERE id = $2`,
+        [JSON.stringify(config), existing.id],
+    );
+    return { ...rankBudget, source: 'site', defaults: { ...BUDGET_DEFAULTS } };
+}
+
 /** Forget a site's key. Falls back to the env key (or fixture mode) afterwards. */
 export async function removeKey(siteId) {
     const { rowCount } = await query(
@@ -144,4 +211,4 @@ export async function resolveKey(siteId) {
     return { key: null, source: null };
 }
 
-export default { getStatus, saveKey, removeKey, recordResult, resolveKey };
+export default { getStatus, saveKey, removeKey, recordResult, resolveKey, getBudget, saveBudget };

@@ -27,6 +27,7 @@
 9. [Known-quirk handling](#9-known-quirk-handling)
 10. [Security](#10-security)
 11. [Build phases](#11-build-phases)
+12. [Credit budget](#14-credit-budget-per-site-from-the-ui)
 12. [Open questions for you](#12-open-questions-for-you)
 
 ---
@@ -754,19 +755,21 @@ judge-facing clone only ever needs `apps/`.
    public repo, low risk) and P6b (`traffic/`, private + live, **after the
    demo**). See §0.1.
 
+~~1. **Demo domain**~~ — **CLOSED.** StudyTub (`site_9ad371c3`), which already
+   reports first-party traffic to this instance, so the traffic half of the
+   correlation is real rather than seeded. `scripts/setupStudytub.js` maps its
+   pages to 14 keywords. The seed script still uses `demo.example.com` for the
+   no-account path.
+
+~~2. **Scheduled rank checks**~~ — **CLOSED**, and the recommendation to skip
+   was **not** taken: `rankTrackerService.js` sweeps on a schedule, because
+   without a second observation every correlation reports "first snapshot" and
+   the feature cannot do the one thing it exists for. Credit discipline is what
+   makes it affordable — see §14.
+
 Still open:
 
-1. **Demo domain** — which domain should the demo track? Two sub-questions now
-   that I know `traffic` is the live one:
-   - Is the live site behind `traffic` the one that actually has Google
-     rankings? If so it's the most convincing demo — but its hostname would
-     then appear in the public repo's seed data. Fine if the site is public
-     anyway; confirm that's OK.
-   - Otherwise I'll seed a neutral public domain and lean on fixtures.
-2. **Scheduled rank checks** — a daily cron to populate `rank_history`? Not
-   needed for the demo (the seed backfills it) and it burns credits
-   continuously. Recommendation: **skip for the hackathon**, note as roadmap.
-3. **Does `traffic` need this feature at all?** Rule 9 says keep three copies
+1. **Does `traffic` need this feature at all?** Rule 9 says keep three copies
    identical, so P6b ports it. But it's a hackathon feature that makes outbound
    paid API calls, and production may not want it enabled. Options: port the
    code but leave it dark behind an unset `SERPAPI_KEY` (my recommendation — the
@@ -794,9 +797,12 @@ same files exist in `appsv2/` and in `traffic/` under its directory names):
 | MCP tools | `analytics-api/src/mcp/tools/registry.js` | 4 tools; auto-exposed over MCP |
 | OpenAPI | `analytics-api/src/mcp/openapi/insighttrack-spec.js` | 4 operations (drift test enforces parity) |
 | REST | `analytics-api/src/routes/searchVisibility.js` | Mounted at `/api/search` |
+| Keys | `analytics-api/src/services/serpapiKeyService.js` | Per-site BYO key, AES-256-GCM; also stores the rank budget |
+| Scheduler | `analytics-api/src/services/rankTrackerService.js` | Sweeps due keywords; per-site cadence and per-run caps |
 | Seed | `analytics-api/scripts/seedSearchVisibility.js` | `npm run seed:search` |
+| Setup | `analytics-api/scripts/setupStudytub.js` | `npm run setup:studytub` — maps 14 real StudyTub keywords |
 | Dashboard | `dashboard-web/src/pages/SearchVisibility.jsx` | Route `/search` |
-| Components | `dashboard-web/src/components/search/*.jsx` | Panel, explanation, badge, keyword manager |
+| Components | `dashboard-web/src/components/search/*.jsx` | Panel, explanation, badge, keyword manager, key dialog, budget settings |
 | Hooks | `dashboard-web/src/hooks/useAnalytics.js` | `useSearchVisibility`, `useSearchExplanation`, … |
 
 ### Tests
@@ -806,6 +812,7 @@ same files exist in `appsv2/` and in `traffic/` under its directory names):
 | `tests/correlationService.test.js` | 22 | All 7 attribution rules, 3 confidence levels, both significance floors, the partial-week guard |
 | `tests/serpapi.test.js` | 14 | Fixture mode, normalizer, domain matching, no-sentinel contract |
 | `tests/mcpRegistry.test.js` | +7 | The 4 new tools, the joined sentence, required-arg rejection |
+| `tests/rankBudget.test.js` | 10 | Per-site budget storage, env fallback, clamping, cross-site cap isolation |
 
 All run with no PostgreSQL, no network and no SerpApi key.
 
@@ -835,3 +842,66 @@ Then ask, in the Pulse panel or Claude Desktop:
 
 No SerpApi key required — fixture mode serves sample SERPs and labels them as
 such in the UI.
+
+---
+
+## 14. Credit budget (per site, from the UI)
+
+A SerpApi plan is a monthly credit allowance, and what spends it is
+**keywords × how often each is checked**. That cadence was originally env-only
+(`RANK_CHECK_MIN_HOURS`), which put the single setting that governs cost out of
+reach of the person holding the bill — everything else about the connector was
+configurable from the dashboard.
+
+It is now stored per site in `site_integrations.config.rankBudget` (JSONB, the
+same row as the encrypted key — no migration needed), with the env vars as the
+fallback default so existing deployments behave exactly as before.
+
+| Setting | Meaning | Default | Bounds |
+|---|---|---|---|
+| `minHours` | Minimum age before a keyword is re-checked. **The real rate limiter.** | `RANK_CHECK_MIN_HOURS` or 24 | 1 … 720 |
+| `maxPerRun` | Ceiling on checks in one sweep, so a long keyword list cannot spend the month in one pass. | `RANK_CHECK_MAX_PER_RUN` or 10 | 1 … 100 |
+
+Both are clamped on save: a `minHours` of 0 would re-check everything on every
+sweep, which is the exact runaway the caps exist to prevent.
+
+### Per-site isolation
+
+`sweepRanks` resolves the budget for each site it touches and tracks spend
+separately, so a site on a large plan cannot consume a frugal site's credits
+when one sweep covers both. The overall per-sweep ceiling is the largest cap any
+participating site allows; each site's own cap is then enforced during the loop.
+
+### The arithmetic, shown
+
+`RankBudgetSettings.jsx` (inside the key dialog, shown only once a key is
+connected — the sweep skips keyless sites) projects monthly spend as the cadence
+slider moves, against a plan size the operator enters. When the projection
+exceeds the plan it offers the slowest cadence that fits, as one click.
+
+The plan size is a local convenience only: it is kept in `localStorage`, never
+sent to the server, since SerpApi does not expose the allowance over the API.
+
+Worked example — 14 keywords on a 250-credit plan:
+
+| Cadence | Credits/month | Fits 250? |
+|---|---|---|
+| every 24h | 420 | no |
+| **every 48h** | **210** | **yes, 40 spare** |
+| every 72h | 140 | yes, but sparse |
+
+### REST
+
+| Route | Role | Notes |
+|---|---|---|
+| `GET /api/search/:siteId/rank-budget` | member | Effective settings, keyword count, projected spend, pending count |
+| `PUT /api/search/:siteId/rank-budget` | **admin** | `{ minHours, maxPerRun }`; clamped, and refuses a site with no key |
+
+### Operator flow — all from the dashboard
+
+1. `/search` → key dialog → paste the SerpApi key
+2. Same dialog → set the cadence against your plan
+3. Keyword manager → add pages and keywords (or accept suggestions)
+
+No server restart and no env file. The scheduler resolves keys and budgets at
+sweep time rather than at boot, so changes apply from the next sweep.
