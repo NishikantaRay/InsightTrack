@@ -92,6 +92,41 @@ describe('deriving a keyword from a URL path', () => {
         expect(phraseFromPath('/bad%ZZescape')).toBe('bad%zzescape');
     });
 
+    // Real paths from a live run that produced keywords worth no credits.
+    it('drops contact and about pages in any language', () => {
+        expect(phraseFromPath('/contact')).toBeNull();
+        expect(phraseFromPath('/contact-me')).toBeNull();
+        expect(phraseFromPath('/nous-contacter')).toBeNull();
+        expect(phraseFromPath('/contactez-nous')).toBeNull();
+        expect(phraseFromPath('/about-us')).toBeNull();
+    });
+
+    // "…/notes/" names a folder. Ranking data for "notes" says nothing about
+    // this site, and the check costs the same as a useful one.
+    it('drops a single generic word, but keeps it inside a specific phrase', () => {
+        expect(phraseFromPath('/0:/5th%20sem/Ece/notes/')).toBeNull();
+        expect(phraseFromPath('/notes/subjects/')).toBeNull();
+        expect(phraseFromPath('/0:/7th%20Sem/Mobile%20Communication/Module%201.pdf')).toBeNull();
+        // Specific phrases containing a generic word survive.
+        expect(phraseFromPath('/notes/first-year-engineering-notes.html'))
+            .toBe('first year engineering notes');
+        expect(phraseFromPath('/notes/7th-semester-btech-notes')).toBe('7th semester btech notes');
+    });
+
+    // Strings someone typed when SAVING a file, not when searching.
+    it('drops filename-shaped phrases', () => {
+        expect(phraseFromPath('/0:/7th%20Sem/Project%20Management/PM%20M-1.pdf')).toBeNull();
+        expect(phraseFromPath('/0:/7th%20Sem/MCN%20Notes%20by%20Annapurna%20ma_am.pdf')).toBeNull();
+    });
+
+    // The filter must not take real subject pages with it.
+    it('keeps genuine topic pages', () => {
+        expect(phraseFromPath('/notes/subjects/discrete-mathematics.html')).toBe('discrete mathematics');
+        expect(phraseFromPath('/0:/7th%20Sem/Soft%20Computing/')).toBe('soft computing');
+        expect(phraseFromPath('/0:/6th%20sem/Eee/Power%20System%20Operation%20and%20Control/'))
+            .toBe('power system operation control');
+    });
+
     // phraseFromPath lives in pathKeyword.js so setup scripts can import it
     // WITHOUT pulling in the DuckDB query layer — DuckDB is single-writer, so
     // that import blocks forever against a running API server. The re-export

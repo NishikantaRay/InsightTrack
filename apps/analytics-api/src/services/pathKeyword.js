@@ -27,7 +27,54 @@ export const NON_CONTENT = new Set([
     'login', 'logout', 'signin', 'sign-in', 'signup', 'sign-up', 'register',
     'dashboard', 'account', 'settings', 'profile', 'admin', 'search', 'cart',
     'checkout', 'privacy', 'terms', 'reset-password', 'forgot-password', '404',
+    // Contact and about pages. People reach these from your own nav, not from
+    // Google — and a real site carries several localised spellings, each of
+    // which would otherwise take a slot and spend a credit every sweep.
+    'contact', 'contact-me', 'contactus', 'contact-us', 'about', 'about-us',
+    'nous-contacter', 'contactez-nous', 'kontakt', 'contacto', 'contatti',
+    'impressum', 'sitemap', 'rss', 'feed', 'thanks', 'thank-you',
 ]);
+
+/**
+ * Single words too generic to be worth a credit.
+ *
+ * A path's last segment is often a container ("…/notes/", "…/module/"), which
+ * yields a one-word phrase that describes a folder rather than anything a
+ * person searches. Ranking data for "notes" says nothing about your site, and
+ * the check costs the same as a useful one.
+ *
+ * Only applied to SINGLE-word results: "discrete mathematics" is specific even
+ * though "mathematics" alone would not be.
+ */
+export const TOO_GENERIC = new Set([
+    'notes', 'note', 'module', 'modules', 'subject', 'subjects', 'sem',
+    'semester', 'year', 'unit', 'units', 'chapter', 'chapters', 'part',
+    'papers', 'paper', 'question', 'questions', 'file', 'files', 'folder',
+    'download', 'downloads', 'material', 'materials', 'book', 'books',
+    'lab', 'labs', 'assignment', 'assignments', 'syllabus', 'merged',
+    'new', 'old', 'final', 'misc', 'other', 'others', 'temp', 'test',
+]);
+
+/**
+ * Does this phrase look like a filename rather than a search term?
+ *
+ * Real paths produce things like "pm m" (from "PM M-1.pdf") and
+ * "mcn notes annapurna ma am" (from "MCN Notes by Annapurna ma_am.pdf"). Both
+ * are strings a person typed when saving a file, not one they would ever type
+ * into Google.
+ */
+function looksLikeFilename(words) {
+    // Initialisms and stray single letters: "pm m", "a b c".
+    const shortWords = words.filter((w) => w.length <= 2).length;
+    if (shortWords >= 2) return true;
+    if (words.length <= 2 && shortWords >= 1) return true;
+
+    // Honorifics only ever appear in a person's filename, never in a query.
+    const HONORIFIC = new Set(['ma', 'am', 'sir', 'madam', 'mam', 'maam', 'by', 'prof', 'dr']);
+    if (words.filter((w) => HONORIFIC.has(w)).length >= 2) return true;
+
+    return false;
+}
 
 /**
  * Derive a human search phrase from a URL path.
@@ -76,7 +123,13 @@ export function phraseFromPath(path) {
         .filter((w) => w && !STOPWORDS.has(w) && !/^\d+$/.test(w));
 
     if (words.length === 0) return null;
+
+    // A single generic word describes a folder, not a topic worth a credit.
+    if (words.length === 1 && TOO_GENERIC.has(words[0])) return null;
+
+    if (looksLikeFilename(words)) return null;
+
     return words.join(' ');
 }
 
-export default { phraseFromPath, STOPWORDS, NON_CONTENT };
+export default { phraseFromPath, STOPWORDS, NON_CONTENT, TOO_GENERIC };

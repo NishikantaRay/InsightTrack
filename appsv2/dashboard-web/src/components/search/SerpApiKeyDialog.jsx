@@ -69,8 +69,8 @@ export default function SerpApiKeyDialog({ siteId, open, onClose, onChanged }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-            <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl">
-                <div className="flex items-start justify-between gap-3 p-5 border-b border-gray-200 dark:border-gray-800">
+            <div className="w-full sm:max-w-lg max-h-[90vh] sm:max-h-[85vh] flex flex-col overflow-hidden bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl">
+                <div className="shrink-0 flex items-start justify-between gap-3 p-5 border-b border-gray-200 dark:border-gray-800">
                     <div className="flex items-start gap-3">
                         <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50">
                             <KeyRound className="w-5 h-5 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
@@ -88,7 +88,7 @@ export default function SerpApiKeyDialog({ siteId, open, onClose, onChanged }) {
                     </button>
                 </div>
 
-                <div className="p-5 space-y-4">
+                <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
                     {/* Current state, stated plainly */}
                     {connected ? (
                         <div className="flex items-start gap-2 rounded-lg border border-green-200 dark:border-green-900/60 bg-green-50 dark:bg-green-950/30 p-3">

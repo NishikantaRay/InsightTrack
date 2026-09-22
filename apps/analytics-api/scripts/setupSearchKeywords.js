@@ -25,13 +25,16 @@
  *   npm run setup:keywords -- --site site_abc123 --budget 250
  *   npm run setup:keywords -- --site site_abc123 --budget 250 --dry-run
  *
- * Options:
- *   --site      site id (required)
- *   --budget    SerpApi searches per month (default 250)
- *   --max       hard ceiling on keywords regardless of budget (default 40)
- *   --location  SERP locale (default "India")
- *   --days      traffic window to rank pages by (default 90d)
- *   --dry-run   print the plan, write nothing
+ * Options (each has an env-var equivalent, for hosts with no shell):
+ *   --site      SEARCH_SETUP_SITE_ID   site id (required)
+ *   --budget    SEARCH_SETUP_BUDGET    SerpApi searches per month (default 250)
+ *   --max       SEARCH_SETUP_MAX       ceiling on keywords (default 40)
+ *   --location  SEARCH_SETUP_LOCATION  SERP locale (default "India")
+ *   --days      SEARCH_SETUP_DAYS      traffic window (default 90d)
+ *   --by        SEARCH_SETUP_BY        "movement" (default) or "traffic"
+ *   --min-move  SEARCH_SETUP_MIN_MOVE  min weekly visitor change (default 3)
+ *   --exclude   SEARCH_SETUP_EXCLUDE   comma-separated path prefixes to skip
+ *   --dry-run   SEARCH_SETUP_DRY_RUN=1 print the plan, write nothing
  */
 import { createPool, initializeDatabase, query, closeConnection } from '../src/db/postgres.js';
 import { phraseFromPath } from '../src/services/pathKeyword.js';
@@ -89,15 +92,25 @@ const cadenceLabel = (h) => (h < 24 ? `every ${h}h` : `every ${Math.round(h / 24
 
 async function main() {
     const args = parseArgs(process.argv.slice(2));
+    // Every option also reads an env var, because some hosts (Railway, Render)
+    // only offer a one-off command box or a start-command override, where
+    // passing flags through `npm run … --` is fiddly or impossible.
     const siteId = args.site || process.env.SEARCH_SETUP_SITE_ID;
-    const budget = parseInt(args.budget) || 250;
-    const maxKeywords = parseInt(args.max) || 40;
-    const location = args.location || 'India';
-    const dateRange = args.days || '90d';
-    const dryRun = !!args['dry-run'];
+    const budget = parseInt(args.budget || process.env.SEARCH_SETUP_BUDGET) || 250;
+    const maxKeywords = parseInt(args.max || process.env.SEARCH_SETUP_MAX) || 40;
+    const location = args.location || process.env.SEARCH_SETUP_LOCATION || 'India';
+    const dateRange = args.days || process.env.SEARCH_SETUP_DAYS || '90d';
+    const rankBy = String(args.by || process.env.SEARCH_SETUP_BY || 'movement').toLowerCase();
+    const minMove = parseInt(args['min-move'] || process.env.SEARCH_SETUP_MIN_MOVE) || 3;
+    const exclude = String(args.exclude || process.env.SEARCH_SETUP_EXCLUDE || '')
+        .split(',').map((x) => x.trim()).filter(Boolean);
+    const dryRun = !!args['dry-run']
+        || /^(1|true|yes)$/i.test(process.env.SEARCH_SETUP_DRY_RUN || '');
 
     if (!siteId) {
-        console.error('❌ --site is required.  e.g. npm run setup:keywords -- --site site_abc123 --budget 250');
+        console.error('❌ A site id is required.');
+        console.error('   Flag:    npm run setup:keywords -- --site site_abc123 --budget 250');
+        console.error('   Or env:  SEARCH_SETUP_SITE_ID=site_abc123 npm run setup:keywords');
         process.exit(1);
     }
 
@@ -112,7 +125,11 @@ async function main() {
     }
     console.log(`  site:     ${site[0].name} (${site[0].domain})`);
     console.log(`  budget:   ${budget} SerpApi searches/month`);
-    console.log(`  traffic:  busiest pages over ${dateRange}\n`);
+    console.log(`  ranking:  ${rankBy === 'traffic'
+        ? `busiest pages over ${dateRange}`
+        : `pages that moved ${minMove}+ visitors this week`}`);
+    if (exclude.length) console.log(`  skipping: ${exclude.join(', ')}`);
+    console.log();
 
     // 1 — busiest pages, most-visited first.
     //
@@ -121,22 +138,73 @@ async function main() {
     // script would refuse to start. Setup has to work on a LIVE instance
     // without taking the server down, and events is the source of truth anyway.
     const days = parseInt(String(dateRange).replace(/\D/g, '')) || 90;
-    const { rows: top } = await query(
-        `SELECT path, COUNT(DISTINCT user_id)::int AS visitors
-           FROM events
-          WHERE site_id = $1
-            AND type = 'pageview'
-            AND timestamp >= NOW() - ($2 || ' days')::interval
-            AND path IS NOT NULL AND path <> ''
-          GROUP BY path
-          ORDER BY visitors DESC
-          LIMIT 200`,
-        [siteId, String(days)],
-    );
+
+    // Ranked by MOVEMENT, not raw traffic.
+    //
+    // Sorting by visitors favours whatever is structurally busiest — on a site
+    // with a file browser, that is directory listings nobody searches for and
+    // nobody can optimise. The pages worth a credit are the ones whose traffic
+    // actually CHANGED, because that is the question this feature answers:
+    // "why did this move?" A page sitting flat at any volume has nothing to
+    // explain.
+    //
+    // Week-over-week on visitors, with the shape of getPageTrafficWoW — but
+    // written against PostgreSQL, since DuckDB is single-writer and a running
+    // API server holds the lock.
+    const { rows: top } = rankBy === 'traffic'
+        ? await query(
+            `SELECT path, COUNT(DISTINCT user_id)::int AS visitors
+               FROM events
+              WHERE site_id = $1 AND type = 'pageview'
+                AND timestamp >= NOW() - ($2 || ' days')::interval
+                AND path IS NOT NULL AND path <> ''
+              GROUP BY path
+              ORDER BY visitors DESC
+              LIMIT 200`,
+            [siteId, String(days)],
+        )
+        : await query(
+            `WITH w AS (
+               SELECT path,
+                      COUNT(DISTINCT user_id) FILTER (
+                        WHERE timestamp > NOW() - INTERVAL '7 days') AS cur,
+                      COUNT(DISTINCT user_id) FILTER (
+                        WHERE timestamp <= NOW() - INTERVAL '7 days'
+                          AND timestamp >  NOW() - INTERVAL '14 days') AS prev,
+                      COUNT(DISTINCT user_id) AS total
+                 FROM events
+                WHERE site_id = $1 AND type = 'pageview'
+                  AND timestamp >= NOW() - ($2 || ' days')::interval
+                  AND path IS NOT NULL AND path <> ''
+                GROUP BY path
+             )
+             SELECT path, total::int AS visitors, cur::int AS cur, prev::int AS prev,
+                    ABS(cur - prev)::int AS movement
+               FROM w
+              -- Two floors, both necessary.
+              --
+              -- A 1→0 week is not a traffic change, it is one person; tracking
+              -- it spends ~15 credits/month to explain nothing. So the change
+              -- itself must be big enough to be a signal ($3), AND the page
+              -- must have current traffic worth explaining — a page that has
+              -- gone quiet has no ranking left to investigate.
+              WHERE ABS(cur - prev) >= $3
+                AND cur >= $3
+              ORDER BY movement DESC, total DESC
+              LIMIT 200`,
+            [siteId, String(days), minMove],
+        );
     if (!top.length) {
-        console.error('❌ No traffic recorded for this site yet.');
-        console.error('   Rank tracking is only useful for pages people actually land on,');
-        console.error('   so let the tracker collect some pageviews first.');
+        if (rankBy === 'traffic') {
+            console.error('❌ No traffic recorded for this site yet.');
+            console.error('   Rank tracking is only useful for pages people actually land on,');
+            console.error('   so let the tracker collect some pageviews first.');
+        } else {
+            console.error(`❌ No page moved by ${minMove}+ visitors this week.`);
+            console.error('   Nothing changed enough to be worth explaining. Either wait for');
+            console.error(`   real movement, lower the bar with --min-move 1, or rank by raw`);
+            console.error('   volume instead with --by traffic.');
+        }
         process.exit(1);
     }
 
@@ -150,11 +218,16 @@ async function main() {
     for (const p of top) {
         const path = p.path || p.page;
         if (!path || path === '/' || mapped.has(path)) continue;
+        if (exclude.some((prefix) => path.startsWith(prefix))) continue;
         const keyword = phraseFromPath(path);
         // phraseFromPath returns null for app routes (/login) and topicless paths.
         if (!keyword || seen.has(keyword.toLowerCase())) continue;
         seen.add(keyword.toLowerCase());
-        candidates.push({ path, keyword, visitors: p.visitors ?? p.views ?? 0 });
+        candidates.push({
+            path, keyword,
+            visitors: p.visitors ?? p.views ?? 0,
+            cur: p.cur, prev: p.prev, movement: p.movement,
+        });
     }
 
     if (!candidates.length) {
@@ -176,7 +249,12 @@ async function main() {
     }
 
     for (const [i, c] of chosen.entries()) {
-        console.log(`   ${String(i + 1).padStart(2)}. ${c.keyword.padEnd(38)} ← ${c.path}`);
+        // Show WHY each page was picked, so the list can be judged rather than
+        // taken on trust.
+        const why = c.movement !== undefined
+            ? `  ${c.prev} → ${c.cur} visitors/wk`
+            : `  ${c.visitors} visitors`;
+        console.log(`   ${String(i + 1).padStart(2)}. ${c.keyword.padEnd(34)}${why.padEnd(24)} ← ${c.path}`);
     }
     console.log();
 
