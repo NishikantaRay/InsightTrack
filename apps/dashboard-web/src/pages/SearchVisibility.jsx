@@ -6,6 +6,7 @@ import RankTrafficPanel from '../components/search/RankTrafficPanel';
 import KeywordManager from '../components/search/KeywordManager';
 import SerpApiKeyDialog from '../components/search/SerpApiKeyDialog';
 import SearchAlerts from '../components/search/SearchAlerts';
+import SteadyPagesTable from '../components/search/SteadyPagesTable';
 import PageNote from '../components/ui/PageNote';
 
 /**
@@ -165,17 +166,9 @@ export default function SearchVisibility() {
                 <div className="space-y-4">
                     {flagged.map((p) => <RankTrafficPanel key={p.path} page={p} />)}
 
-                    {flagged.length > 0 && steady.length > 0 && (
-                        <div className="flex items-center gap-3 pt-2">
-                            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
-                            <span className="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                                Steady
-                            </span>
-                            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
-                        </div>
-                    )}
-
-                    {steady.map((p) => <RankTrafficPanel key={p.path} page={p} />)}
+                    {/* Steady pages as one compact table: on a small site that is
+                        nearly every page, and a full card each buried what to fix. */}
+                    {steady.length > 0 && <SteadyPagesTable pages={steady} />}
                 </div>
             )}
 

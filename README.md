@@ -226,6 +226,21 @@ how far it moved, and whether Google's **AI Overview** cites you or your
 competitors. Powered by [SerpApi](https://serpapi.com), cached so repeat views
 cost no API credits.
 
+**It tells you who beat you.** Each rank check is compared with the previous
+one, so a loss names the domains that moved above you. A traffic drop can also
+be explained by Google adding a featured snippet, "People also ask", videos or
+shopping results above your listing. Both comparisons use results already
+stored, so they cost no extra credits.
+
+**In-app alerts.** A page falling off page one, a real rank drop, losing your
+quote in Google's AI answer, or a newly added results-page feature raises an
+alert. So does good news. Alerts appear on the Search Visibility page with an
+unread count in the sidebar. Nothing is emailed or sent anywhere.
+
+**Built for small sites too.** Pages whose traffic didn't move enough to
+explain are grouped into one table, sorted so the ones with a search problem
+come first.
+
 The same correlation is available to Pulse and any MCP client as
 `explain_traffic_change` — so you can just ask *"why did traffic to /page drop
 last week?"* and get the joined answer.
@@ -355,7 +370,7 @@ InsightsTrack/
 | **Team** | `/api/team/:siteId/{members,invite,roles}` · `/api/demo/join` | PostgreSQL |
 | **Pulse (AI)** | `POST /api/assistant/chat` (SSE) · `GET /api/assistant/{status,threads}` · `PUT /api/assistant/settings` | DuckDB (read-only tools) |
 | **MCP** | `POST /api/mcp/http` (JSON-RPC 2.0) · `/api/mcp/connect` · `/api/mcp/run` | DuckDB (read-only tools) |
-| **Search** | `/api/search/:siteId/{overview,explain,rankings,ai-overview,related,keywords}` | DuckDB + SerpApi (cached) |
+| **Search** | `/api/search/:siteId/{overview,explain,rankings,ai-overview,related,keywords,rank-history,rank-budget,alerts}` | DuckDB + SerpApi (cached) |
 
 All analytics endpoints accept `?dateRange=today|7d|30d|90d|custom:YYYY-MM-DD:YYYY-MM-DD`.
 Full reference: [docs/api-reference.md](docs/api-reference.md)

@@ -75,6 +75,7 @@ export function detectChange(weeks = [], { excludePartial = true } = {}) {
             direction: 'unknown',
             significant: false,
             reason: 'Not enough weekly history to compare.',
+            thresholds: { minPct: MIN_CHANGE_PCT, minViews: MIN_CHANGE_ABS },
             weeks: series,
         };
     }
@@ -99,6 +100,9 @@ export function detectChange(weeks = [], { excludePartial = true } = {}) {
         reason: significant
             ? null
             : `Change of ${Math.round(changePct)}% (${changeAbs} views) is below the ${MIN_CHANGE_PCT}% / ${MIN_CHANGE_ABS}-view significance floor.`,
+        // The floors are env-configurable, so the UI reads them from here
+        // rather than hardcoding numbers that could silently disagree.
+        thresholds: { minPct: MIN_CHANGE_PCT, minViews: MIN_CHANGE_ABS },
         weeks: series,
     };
 }

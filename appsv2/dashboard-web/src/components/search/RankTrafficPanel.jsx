@@ -198,7 +198,11 @@ export default function RankTrafficPanel({ page }) {
             <div className={`flex items-start gap-4 p-4 ${tone.bg}`}>
                 <div className={`flex flex-col items-center justify-center shrink-0 w-[92px] ${tone.text}`}>
                     <tone.Icon className="w-5 h-5 mb-0.5" aria-hidden="true" />
-                    <div className="text-[28px] leading-none font-bold tabular-nums">
+                    {/* Below the significance floor the % is noise (6 → 12 views is
+                        "+100%"), so it is shown small and grey rather than as a headline. */}
+                    <div className={`leading-none tabular-nums ${t.significant
+                        ? 'text-[28px] font-bold'
+                        : 'text-lg font-semibold text-gray-400 dark:text-gray-500'}`}>
                         {t.changePct > 0 ? '+' : ''}{t.changePct ?? '—'}%
                     </div>
                     <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap">
@@ -214,11 +218,19 @@ export default function RankTrafficPanel({ page }) {
                         {page.explanation}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${conf}`}>
-                            {page.confidence} confidence
-                        </span>
+                        {/* Confidence qualifies a cause. With nothing to explain there
+                            is no cause, and a green "high confidence" read as a finding. */}
+                        {t.significant && (
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${conf}`}>
+                                {page.confidence} confidence
+                            </span>
+                        )}
                         <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                            last complete week vs. the one before
+                            {t.significant
+                                ? 'last complete week vs. the one before'
+                                : t.thresholds
+                                    ? `below the change threshold (${t.thresholds.minPct}% and ${t.thresholds.minViews} views)`
+                                    : 'below the change threshold'}
                         </span>
                     </div>
                 </div>

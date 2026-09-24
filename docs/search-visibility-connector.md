@@ -1033,3 +1033,18 @@ names appear once, on the first rank cause only.
 **Dashboard:** each keyword row in `RankTrafficPanel.jsx` shows "Moved above you: domain (#old → #new)" and +/− chips for feature changes since the last check.
 
 Tests: 10 in `tests/correlationService.test.js`, 2 in `tests/searchAlerts.test.js`.
+
+---
+
+## 17. Low-traffic layout
+
+On a small site almost no page crosses the significance floor. For example,
+6 → 12 views is "+100%" but only 6 views. The old layout gave every page a full
+card with a big % and a green "high confidence" badge, so steady pages looked
+like findings and hid the few things worth fixing.
+
+- **Steady pages form one table.** `SteadyPagesTable.jsx` has columns for page, keyword, Google position, AI answer and views per week. Rows sort by search-side problems first: dropped from the AI answer, not quoted in it, a rank loss, a rival that moved above. Ties sort by traffic. Clicking a row opens the full card. Pages that did cross the floor keep their full cards above the table.
+- **Card changes.** On a card below the floor, the % is small and grey and the confidence badge is hidden, because confidence qualifies a cause and there is none. The card reads "below the change threshold (X% and Y views)".
+- **Real thresholds.** `detectChange()` now returns `thresholds: { minPct, minViews }`. The UI shows these values instead of hardcoding them, since both are env-configurable (`CORRELATION_MIN_PCT`, `CORRELATION_MIN_ABS`).
+
+Tests: `src/__tests__/SteadyPagesTable.test.jsx` (3).
