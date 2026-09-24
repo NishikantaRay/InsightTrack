@@ -12,7 +12,7 @@
  * The rank threshold is the correlation's own, so an alert and an explanation
  * never disagree about what counts as a real move rather than SERP jitter.
  */
-import { RANK_MOVE_THRESHOLD } from './correlationService.js';
+import { RANK_MOVE_THRESHOLD, DISPLACING_FEATURES } from './correlationService.js';
 
 const PAGE_ONE = 10;
 
@@ -38,14 +38,17 @@ export function detectAlerts(prev, cur, { keyword } = {}) {
     const q = `“${keyword}”`;
     const add = (type, severity, message) =>
         alerts.push({ type, severity, previousPosition: was, position: now, message });
+    // Name who passed you on a loss — "lost to whom?" is the next question.
+    const above = (cur.overtakenBy || []).slice(0, 2).map((o) => o.domain);
+    const passedBy = above.length ? ` Now above you: ${above.join(', ')}.` : '';
 
     // ── rank: one alert per observation, most serious first ───────────────
     if (onPageOne(was) && !onPageOne(now)) {
-        add('page_one_exit', SEVERITY.CRITICAL, `${q} fell off page one: ${pos(was)} → ${pos(now)}.`);
+        add('page_one_exit', SEVERITY.CRITICAL, `${q} fell off page one: ${pos(was)} → ${pos(now)}.${passedBy}`);
     } else if (was != null && now == null) {
-        add('ranking_lost', SEVERITY.CRITICAL, `${q} no longer ranks (was ${pos(was)}).`);
+        add('ranking_lost', SEVERITY.CRITICAL, `${q} no longer ranks (was ${pos(was)}).${passedBy}`);
     } else if (was != null && now != null && now - was >= RANK_MOVE_THRESHOLD) {
-        add('rank_drop', SEVERITY.WARNING, `${q} dropped ${now - was} places: ${pos(was)} → ${pos(now)}.`);
+        add('rank_drop', SEVERITY.WARNING, `${q} dropped ${now - was} places: ${pos(was)} → ${pos(now)}.${passedBy}`);
     } else if (!onPageOne(was) && onPageOne(now)) {
         add('page_one_entry', SEVERITY.POSITIVE, `${q} reached page one: ${pos(was)} → ${pos(now)}.`);
     } else if (was == null && now != null) {
@@ -62,6 +65,16 @@ export function detectAlerts(prev, cur, { keyword } = {}) {
     } else if (!prev.hasAiOverview && cur.hasAiOverview && !cur.isCited) {
         // Rank can hold steady while clicks fall — the AI answer sits above you.
         add('ai_overview_appeared', SEVERITY.WARNING, `Google now shows an AI answer for ${q}, and it doesn't quote you.`);
+    }
+
+    // ── results page got busier ───────────────────────────────────────────
+    // Only while on page one: a new carousel does not cost a page-four result.
+    if (onPageOne(now) && cur.featuresAdded?.length) {
+        const names = cur.featuresAdded.map((f) => DISPLACING_FEATURES[f]).filter(Boolean);
+        if (names.length) {
+            add('serp_feature_added', SEVERITY.WARNING,
+                `Google added ${names.join(' and ')} to the results for ${q} — expect fewer clicks at the same rank.`);
+        }
     }
 
     return alerts;

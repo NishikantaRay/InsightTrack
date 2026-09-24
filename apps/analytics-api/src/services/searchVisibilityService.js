@@ -18,6 +18,7 @@ import { analyticsCache, CACHE_TTL } from './cache.js';
 import { search, isFixtureMode } from './serpapi/client.js';
 import serpapiKeys from './serpapiKeyService.js';
 import searchAlerts from './searchAlertsService.js';
+import { serpDiff } from './correlationService.js';
 import {
     normalizeSnapshot, findDomainPosition, domainMatches,
 } from './serpapi/normalize.js';
@@ -159,7 +160,7 @@ export async function getSerp({
 /** The most recent rank row BEFORE `before` — i.e. the previous observation. */
 export async function getPreviousRank(siteId, keyword, location, device, before) {
     const { rows } = await query(
-        `SELECT position, url, ai_overview, is_cited, checked_at
+        `SELECT position, url, ai_overview, is_cited, checked_at, snapshot_id
            FROM rank_history
           WHERE site_id = $1 AND keyword = $2 AND location = $3 AND device = $4
             AND checked_at < $5
@@ -174,7 +175,19 @@ export async function getPreviousRank(siteId, keyword, location, device, before)
         hasAiOverview: rows[0].ai_overview,
         isCited: rows[0].is_cited,
         checkedAt: rows[0].checked_at,
+        snapshotId: rows[0].snapshot_id ?? null,
     };
+}
+
+/** The organic list + features of a stored snapshot — the "before" of a diff. */
+export async function getSnapshotById(id) {
+    if (!id) return null;
+    const { rows } = await query(
+        `SELECT organic, features FROM serp_snapshots WHERE id = $1`,
+        [id],
+    );
+    if (!rows[0]) return null;
+    return { organic: rows[0].organic || [], features: rows[0].features || [] };
 }
 
 export async function recordRank(siteId, { keyword, location, device, position, url, hasAiOverview, isCited, snapshotId, checkedAt }) {
@@ -228,6 +241,17 @@ export async function checkKeyword(siteId, domain, { keyword, location = DEFAULT
 
     const prev = await getPreviousRank(siteId, keyword, location, device, serp.fetchedAt || new Date());
 
+    // Compare against the previous observation's SERP: which features appeared
+    // and who moved above the site. Both snapshots are stored — no credits.
+    const diff = serpDiff({
+        previous: await getSnapshotById(prev?.snapshotId).catch(() => null),
+        organic: serp.organic,
+        features: serp.features,
+        domain,
+        previousPosition: prev?.position ?? null,
+        position,
+    });
+
     // Citation transition — 'new_overview' is called out separately because an
     // AI Overview appearing where there was none is the single highest-signal
     // explanation for a traffic drop with a stable rank.
@@ -253,7 +277,7 @@ export async function checkKeyword(siteId, domain, { keyword, location = DEFAULT
         if (prev && serp.source !== 'fixture') {
             await searchAlerts.recordAlerts(siteId, {
                 rankHistoryId: recorded?.id, keyword, location, device, prev,
-                cur: { position, isCited: domainIsCited, hasAiOverview },
+                cur: { position, isCited: domainIsCited, hasAiOverview, ...diff },
             }).catch((err) => console.warn(`⚠  search alert failed for "${keyword}":`, err.message));
         }
     }
@@ -275,6 +299,9 @@ export async function checkKeyword(siteId, domain, { keyword, location = DEFAULT
         newCitedDomains: citations.map((c) => c.domain).filter((d) => d && !domainMatches(d, domain)),
         competitors: serp.organic.slice(0, 10),
         features: serp.features,
+        featuresAdded: diff.featuresAdded,
+        featuresRemoved: diff.featuresRemoved,
+        overtakenBy: diff.overtakenBy,
         changeObservedAt: prev?.checkedAt ?? null,
         source: serp.source,
         cached: !!serp.cached,
@@ -292,6 +319,6 @@ export async function isFixtureModeForSite(siteId) {
 
 export default {
     getKeywordsForPage, getSiteKeywords, addPageKeyword, removePageKeyword,
-    getSerp, getRecentSnapshot, getPreviousRank, recordRank, getRankHistory,
+    getSerp, getRecentSnapshot, getPreviousRank, getSnapshotById, recordRank, getRankHistory,
     checkKeyword, isFixtureMode, isFixtureModeForSite,
 };

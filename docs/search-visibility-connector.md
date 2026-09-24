@@ -993,3 +993,43 @@ and an explanation never disagree about what counts as a real move.
 |---|---|---|
 | `GET /api/search/:siteId/alerts?status=all\|unread&limit=` | member | `{ alerts, unreadCount }`; each alert lists the pages its keyword maps to |
 | `POST /api/search/:siteId/alerts/read` | member | `{ ids?: number[] }`; no ids marks every alert read |
+
+---
+
+## 16. Result-page changes: SERP features and competitor overtakes
+
+Every rank check already stores the full results page (`serp_snapshots`), and
+`rank_history.snapshot_id` points at it. So comparing this check's page with the
+previous check's costs **zero SerpApi credits**. `serpDiff()` in
+`correlationService.js` is pure and returns:
+
+| Field | Meaning |
+|---|---|
+| `featuresAdded` / `featuresRemoved` | Displacing features that appeared or vanished: featured snippet, People also ask, videos, shopping, knowledge panel. The AI Overview is excluded because it has its own citation rules. |
+| `overtakenBy` | Up to 3 domains now **above** the site that were below it, or not listed, last time. The site's own subdomains are never counted. |
+
+With no previous snapshot every list is empty, so the first check makes no claim.
+The fields are added to each keyword finding returned by `checkKeyword()`.
+
+**New attribution rules** (rule 7, `unexplained_by_serp`, still fires when none apply):
+
+| Code | Direction | Fires when |
+|---|---|---|
+| `serp_feature_added` | drop | A displacing feature appeared **while the page is on page one** |
+| `serp_feature_removed` | spike | A displacing feature went away while on page one |
+
+A rank loss (`rank_drop` or `page_one_exit`) now names the winners in its phrase:
+*"rank slipped #4 → #12 on 'kw', with b.com and c.com moving above you"*. The
+names appear once, on the first rank cause only.
+
+**Next step:**
+- `pickRival` now prefers, in order: a domain that overtook you and is quoted in the AI answer, one that overtook you, one quoted in the AI answer, then the top result above you. It returns `overtookYou`.
+- When the rank held but a feature appeared, `nextStep` returns `action: 'target_feature'` with feature-specific advice (answer the question early for snippet or PAA, add a video for a video carousel).
+
+**Alerts:**
+- Rank-loss alerts end with *"Now above you: b.com, c.com."*
+- A new `serp_feature_added` alert (warning) fires when a feature appears while on page one.
+
+**Dashboard:** each keyword row in `RankTrafficPanel.jsx` shows "Moved above you: domain (#old → #new)" and +/− chips for feature changes since the last check.
+
+Tests: 10 in `tests/correlationService.test.js`, 2 in `tests/searchAlerts.test.js`.

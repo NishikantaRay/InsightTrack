@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-    weekStart, bucketByWeek, detectChange, attributeKeyword, explain,
+    weekStart, bucketByWeek, detectChange, attributeKeyword, explain, serpDiff, pickRival, nextStep,
 } from '../src/services/correlationService.js';
 
 /** Build a daily series from consecutive weekly totals, spread evenly. */
@@ -205,5 +205,86 @@ describe('explanations', () => {
     it('warns when no keywords are mapped to the page', () => {
         const r = explain({ path: '/x', traffic: drop, keywordFindings: [], caveats: ['No target keywords are mapped to /x.'] });
         expect(r.caveats.join(' ')).toContain('No target keywords');
+    });
+});
+
+describe('SERP diff — features and overtakes', () => {
+    const org = (...domains) => domains.map((d, i) => ({ domain: d, url: `https://${d}/`, position: i + 1 }));
+
+    it('reports nothing without a previous snapshot', () => {
+        expect(serpDiff({ previous: null, organic: org('a.com'), features: ['videos'], domain: 'me.com', previousPosition: 3, position: 5 }))
+            .toEqual({ featuresAdded: [], featuresRemoved: [], overtakenBy: [] });
+    });
+
+    it('finds displacing features added and removed, ignoring the AI Overview', () => {
+        const d = serpDiff({
+            previous: { organic: [], features: ['shopping', 'ai_overview'] },
+            features: ['videos', 'people_also_ask', 'ai_overview'],
+            domain: 'me.com',
+        });
+        expect(d.featuresAdded).toEqual(['videos', 'people_also_ask']);
+        expect(d.featuresRemoved).toEqual(['shopping']);
+    });
+
+    it('names domains that moved from below (or nowhere) to above the site', () => {
+        const d = serpDiff({
+            previous: { organic: org('a.com', 'me.com', 'b.com'), features: [] },
+            organic: org('a.com', 'b.com', 'new.com', 'me.com'),
+            domain: 'me.com', previousPosition: 2, position: 4,
+        });
+        expect(d.overtakenBy.map((o) => o.domain)).toEqual(['b.com', 'new.com']);
+        expect(d.overtakenBy[0]).toMatchObject({ previousPosition: 3, position: 2 });
+    });
+
+    it('never lists the site itself (or a subdomain) as an overtaker', () => {
+        const d = serpDiff({
+            previous: { organic: org('x.com', 'me.com'), features: [] },
+            organic: org('blog.me.com', 'x.com', 'me.com'),
+            domain: 'me.com', previousPosition: 2, position: 3,
+        });
+        expect(d.overtakenBy).toEqual([]);
+    });
+});
+
+describe('rules 8 & 9 — SERP features, overtakers', () => {
+    it('rule 8 — a new feature on page one explains a rank-stable drop', () => {
+        const causes = attributeKeyword({ keyword: 'kw', position: 3, previousPosition: 3, featuresAdded: ['videos'] }, 'drop');
+        expect(causes.map((c) => c.code)).toEqual(['serp_feature_added']);
+        expect(causes[0].phrase).toBe("Google added a video carousel to the results for 'kw', pushing organic listings down");
+    });
+
+    it('rule 8 — ignored below page one', () => {
+        expect(attributeKeyword({ keyword: 'kw', position: 30, previousPosition: 30, featuresAdded: ['videos'] }, 'drop')).toEqual([]);
+    });
+
+    it('rule 9 — a removed feature counts only when explaining a spike', () => {
+        const f = { keyword: 'kw', position: 3, previousPosition: 3, featuresRemoved: ['shopping'] };
+        expect(attributeKeyword(f, 'spike').map((c) => c.code)).toEqual(['serp_feature_removed']);
+        expect(attributeKeyword(f, 'drop')).toEqual([]);
+    });
+
+    it('names who overtook the site, once, on the first rank cause', () => {
+        const causes = attributeKeyword({
+            keyword: 'kw', position: 12, previousPosition: 4,
+            overtakenBy: [{ domain: 'b.com', position: 2 }, { domain: 'c.com', position: 3 }],
+        }, 'drop');
+        expect(causes.map((c) => c.code)).toEqual(['rank_drop', 'page_one_exit']);
+        expect(causes[0].phrase).toBe("rank slipped #4 → #12 on 'kw', with b.com and c.com moving above you");
+        expect(causes[1].phrase).toBe("you dropped off page one for 'kw'");
+    });
+
+    it('pickRival prefers the domain that just overtook the site', () => {
+        const rival = pickRival({
+            position: 6,
+            competitors: [{ domain: 'old.com', position: 1 }, { domain: 'b.com', position: 2 }],
+            overtakenBy: [{ domain: 'b.com', position: 2 }],
+        });
+        expect(rival).toMatchObject({ domain: 'b.com', overtookYou: true });
+    });
+
+    it('suggests answering the question when a snippet or PAA box appears and rank held', () => {
+        const causes = [{ code: 'serp_feature_added', features: ['people_also_ask'] }];
+        const step = nextStep(causes, [{ keyword: 'kw', positionChange: 0 }], 'drop');
+        expect(step.action).toBe('target_feature');
     });
 });

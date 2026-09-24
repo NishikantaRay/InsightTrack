@@ -73,6 +73,19 @@ describe('detectAlerts', () => {
     });
 });
 
+describe('detectAlerts — SERP diff', () => {
+    it('names who moved above the site on a loss', () => {
+        const [a] = detectAlerts(obs(4), obs(12, { overtakenBy: [{ domain: 'b.com' }, { domain: 'c.com' }] }), { keyword: 'kw' });
+        expect(a.type).toBe('page_one_exit');
+        expect(a.message).toContain('Now above you: b.com, c.com.');
+    });
+
+    it('warns about a new SERP feature only while on page one', () => {
+        expect(types(obs(3), obs(3, { featuresAdded: ['videos'] }))).toEqual(['serp_feature_added']);
+        expect(types(obs(30), obs(30, { featuresAdded: ['videos'] }))).toEqual([]);
+    });
+});
+
 describe('searchAlertsService', () => {
     it('inserts idempotently and parameterised', async () => {
         await recordAlerts('s1', {

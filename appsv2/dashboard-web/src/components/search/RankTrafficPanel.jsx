@@ -1,9 +1,18 @@
 import { useState } from 'react';
-import { TrendingDown, TrendingUp, Minus, ArrowRight, Sparkles, ChevronDown, ExternalLink, Target } from 'lucide-react';
+import { TrendingDown, TrendingUp, Minus, ArrowRight, Sparkles, ChevronDown, ExternalLink, Target, Users, LayoutList } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
 import AiOverviewBadge from './AiOverviewBadge';
 import { useAssistantStore } from '../../store/useAssistantStore';
 import { formatNumber } from '../../utils/formatters';
+
+// Plain-language names for the SERP features the backend reports as changed.
+const FEATURE_LABELS = {
+    featured_snippet: 'Featured snippet',
+    people_also_ask: 'People also ask',
+    videos: 'Videos',
+    shopping: 'Shopping',
+    knowledge_graph: 'Knowledge panel',
+};
 
 /**
  * One tracked page: traffic change, the reason, and the SERP evidence.
@@ -58,6 +67,9 @@ function KeywordRow({ finding, blamed }) {
     const worse = positionChange != null && positionChange < 0;
     const cited = finding.citations || [];
     const showCitations = finding.hasAiOverview && !finding.domainIsCited && cited.length > 0;
+    const overtakers = finding.overtakenBy ?? [];
+    const featuresAdded = finding.featuresAdded ?? [];
+    const featuresRemoved = finding.featuresRemoved ?? [];
 
     return (
         <div className={`rounded-lg border px-3 py-2.5 ${
@@ -114,6 +126,42 @@ function KeywordRow({ finding, blamed }) {
                         ))}
                         {' '}— not you.
                     </span>
+                </div>
+            )}
+
+            {/* What changed on the results page since the last check. */}
+            {overtakers.length > 0 && (
+                <div className="mt-2 flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                    <Users className="w-3.5 h-3.5 mt-px shrink-0 text-rose-500" aria-hidden="true" />
+                    <span>
+                        Moved above you:{' '}
+                        {overtakers.map((o, i) => (
+                            <span key={o.domain}>
+                                {i > 0 && ', '}
+                                <a href={o.url || undefined} target="_blank" rel="noopener noreferrer"
+                                    className="font-medium text-gray-800 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline">
+                                    {o.domain}
+                                </a>
+                                <span className="tabular-nums"> ({o.previousPosition == null ? 'new' : `#${o.previousPosition}`} → #{o.position})</span>
+                            </span>
+                        ))}
+                    </span>
+                </div>
+            )}
+            {(featuresAdded.length > 0 || featuresRemoved.length > 0) && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                    <LayoutList className="w-3.5 h-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                    {featuresAdded.map((f) => (
+                        <span key={`+${f}`} className="px-1.5 py-0.5 rounded text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40">
+                            + {FEATURE_LABELS[f] || f}
+                        </span>
+                    ))}
+                    {featuresRemoved.map((f) => (
+                        <span key={`-${f}`} className="px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40">
+                            − {FEATURE_LABELS[f] || f}
+                        </span>
+                    ))}
+                    <span className="text-gray-400 dark:text-gray-500">on the results page since last check</span>
                 </div>
             )}
         </div>
