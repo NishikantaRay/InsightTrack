@@ -25,7 +25,7 @@ const MIN_CHANGE_PCT = parseFloat(process.env.CORRELATION_MIN_PCT) || 15;
 const MIN_CHANGE_ABS = parseInt(process.env.CORRELATION_MIN_ABS) || 20;
 
 // A rank move of this many positions counts as a cause, not normal SERP jitter.
-const RANK_MOVE_THRESHOLD = 3;
+export const RANK_MOVE_THRESHOLD = 3;
 
 // A prior snapshot older than this makes a delta untrustworthy → confidence drops.
 const STALE_SNAPSHOT_DAYS = 14;

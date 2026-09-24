@@ -580,24 +580,55 @@ export default function Landing() {
     // the viewport meta to a desktop width so the browser renders the FULL
     // desktop layout and then auto-scales it to fit the device — visitors see
     // everything compactly with far less scrolling, instead of an endless
-    // single column. Restored to responsive on unmount so the app's internal
-    // pages stay mobile-friendly.
+    // single column. Restored on unmount so the app's internal pages stay
+    // mobile-friendly.
+    //
+    // MEASURE THE SCREEN, NOT THE VIEWPORT. window.innerWidth reports the
+    // viewport we just overrode: on a 390px phone it reads 1280 the moment the
+    // meta tag is applied. Deciding from it created a feedback loop — widen,
+    // resize fires, innerWidth is now 1280, 1280 >= 768 so revert, resize
+    // fires again, widen… which is the flicker. screen.width is the physical
+    // display and the meta tag cannot change it, so the decision is stable.
     useEffect(() => {
         const meta = document.querySelector('meta[name="viewport"]');
         if (!meta) return;
-        const original = meta.getAttribute('content');
-        const apply = () => {
-            if (window.innerWidth < 768) {
-                meta.setAttribute('content', 'width=1280, initial-scale=' + (window.innerWidth / 1280));
-            } else {
-                meta.setAttribute('content', original || 'width=device-width, initial-scale=1');
-            }
+        const original = meta.getAttribute('content')
+            || 'width=device-width, initial-scale=1.0';
+
+        const DESKTOP_W = 1280;
+        /** Physical screen width, orientation-independent where possible. */
+        const screenWidth = () => {
+            const w = window.screen?.width ?? window.innerWidth;
+            const h = window.screen?.height ?? window.innerHeight;
+            // Some browsers report screen dimensions unrotated; in landscape
+            // the usable width is the larger side.
+            const landscape = Math.abs(window.orientation ?? 0) === 90
+                || window.matchMedia?.('(orientation: landscape)')?.matches;
+            return landscape ? Math.max(w, h) : Math.min(w, h);
         };
+
+        let applied = null;   // what we last wrote, so we never write it twice
+        const apply = () => {
+            const wide = screenWidth() >= 768;
+            const next = wide
+                ? original
+                : `width=${DESKTOP_W}, initial-scale=${screenWidth() / DESKTOP_W}`;
+            if (next === applied) return;   // no-op writes still fire resize
+            applied = next;
+            meta.setAttribute('content', next);
+        };
+
         apply();
-        window.addEventListener('resize', apply, { passive: true });
+        // Orientation is the only thing that legitimately changes the answer.
+        // Plain resize on mobile fires for the URL bar hiding, the keyboard and
+        // our own meta write, none of which should re-run this.
+        const mq = window.matchMedia?.('(orientation: landscape)');
+        mq?.addEventListener?.('change', apply);
+        window.addEventListener('orientationchange', apply, { passive: true });
         return () => {
-            window.removeEventListener('resize', apply);
-            meta.setAttribute('content', original || 'width=device-width, initial-scale=1');
+            mq?.removeEventListener?.('change', apply);
+            window.removeEventListener('orientationchange', apply);
+            meta.setAttribute('content', original);
         };
     }, []);
 

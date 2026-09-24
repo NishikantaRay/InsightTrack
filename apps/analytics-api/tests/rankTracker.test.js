@@ -35,7 +35,10 @@ vi.mock('../src/services/searchVisibilityService.js', () => ({
 
 const resolveKey = vi.fn(async () => ({ key: 'k'.repeat(64), source: 'site' }));
 vi.mock('../src/services/serpapiKeyService.js', () => ({
-    default: { resolveKey: (...a) => resolveKey(...a) },
+    default: {
+        resolveKey: (...a) => resolveKey(...a),
+        getBudget: async () => ({ minHours: 24, maxPerRun: 10 }),
+    },
 }));
 
 const { sweepRanks, pendingCount } = await import('../src/services/rankTrackerService.js');

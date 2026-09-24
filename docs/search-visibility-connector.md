@@ -938,3 +938,58 @@ re-exported, so existing importers are unaffected.
 
 No server restart and no env file. The scheduler resolves keys and budgets at
 sweep time rather than at boot, so changes apply from the next sweep.
+
+---
+
+## 15. In-app alerts
+
+Each fresh rank check is compared with the previous observation of the same
+keyword. When the change matters, an alert is stored and shown **inside the
+dashboard only**: an Alerts panel on `/search` and an unread count on the
+Search Visibility sidebar item. Nothing is emailed, posted to a webhook or sent
+to any third party. No extra SerpApi credits are spent, because alerts are
+derived from rank checks that already happen.
+
+| Type | Severity | Fires when |
+|---|---|---|
+| `page_one_exit` | critical | Was #1–10, now below #10 or not ranking |
+| `ranking_lost` | critical | Was ranking (below page one), now not in the results |
+| `rank_drop` | warning | Fell ≥ `RANK_MOVE_THRESHOLD` (3) places |
+| `ai_citation_lost` | warning | Google's AI answer quoted the site, and no longer does |
+| `ai_overview_appeared` | warning | An AI answer appeared and does not quote the site |
+| `page_one_entry` | positive | Moved onto page one |
+| `ranking_found` | positive | Started ranking |
+| `rank_gain` | positive | Climbed ≥ 3 places |
+| `ai_citation_gained` | positive | The AI answer now quotes the site |
+
+At most one rank alert per observation (the most serious one). An AI-answer
+alert can be added alongside it. The threshold is the correlation's own
+(`RANK_MOVE_THRESHOLD` is exported from `correlationService.js`), so an alert
+and an explanation never disagree about what counts as a real move.
+
+**Guardrails**
+- The first check of a keyword is a baseline and raises nothing.
+- Fixture (sample) SERPs never raise alerts, and the panel is hidden in fixture mode.
+- Cached SERPs are not re-recorded, so re-reading a snapshot cannot duplicate an alert. `UNIQUE (rank_history_id, type)` backs this up.
+- An alert failure is logged and swallowed. It never fails the rank check itself.
+- Alerts older than 180 days are pruned.
+- Read state is **per site, not per user**: marking an alert read clears it for the whole team.
+
+**Files**
+
+| Layer | File |
+|---|---|
+| Rules (pure) | `analytics-api/src/services/searchAlertRules.js` (`detectAlerts(prev, cur)`) |
+| Persistence | `analytics-api/src/services/searchAlertsService.js` |
+| Hook-in | `searchVisibilityService.checkKeyword()`, after `recordRank()` |
+| Schema | `search_alerts` in `analytics-api/src/db/postgres.js` |
+| UI | `dashboard-web/src/components/search/SearchAlerts.jsx`, `Sidebar.jsx` badge |
+| Hook | `useSearchAlerts(status, limit)` in `hooks/useAnalytics.js` |
+| Tests | `tests/searchAlerts.test.js` (13) |
+
+**REST**
+
+| Route | Role | Notes |
+|---|---|---|
+| `GET /api/search/:siteId/alerts?status=all\|unread&limit=` | member | `{ alerts, unreadCount }`; each alert lists the pages its keyword maps to |
+| `POST /api/search/:siteId/alerts/read` | member | `{ ids?: number[] }`; no ids marks every alert read |

@@ -38,3 +38,9 @@ benchmark-results/*.duckdb.wal
 # The test sources under passmark-tests/tests/ ARE tracked; their output is not.
 **/test-results/
 **/playwright-report/
+
+# Launch kit — drafts for submission, video and social. Local working material,
+# deliberately untracked so nothing half-written gets published by accident.
+launch-kit/
+
+.attic/

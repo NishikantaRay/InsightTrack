@@ -20,6 +20,7 @@ import { getMemberRole, roleAtLeast } from '../services/teamService.js';
 import searchVisibility from '../services/searchVisibilityService.js';
 import serpapiKeys from '../services/serpapiKeyService.js';
 import rankTracker from '../services/rankTrackerService.js';
+import searchAlerts from '../services/searchAlertsService.js';
 import { query } from '../db/postgres.js';
 import keywordDiscovery from '../services/keywordDiscoveryService.js';
 import { bucketByWeek, detectChange, explain } from '../services/correlationService.js';
@@ -226,6 +227,37 @@ router.put('/:siteId/rank-budget', async (req, res) => {
         const status = error.status || 500;
         if (status >= 500) console.error('Error saving rank budget:', error);
         res.status(status).json({ success: false, error: safeMsg(error, status) });
+    }
+});
+
+// ── In-app alerts ────────────────────────────────────────────────────────────
+//
+// Rank / AI-answer changes raised by each fresh rank check. Shown on /search and
+// counted in the sidebar; nothing is emailed or sent anywhere.
+
+// GET /api/search/:siteId/alerts?status=unread|all&limit=
+router.get('/:siteId/alerts', async (req, res) => {
+    try {
+        const unreadOnly = req.query.status === 'unread';
+        const [alerts, unread] = await Promise.all([
+            searchAlerts.listAlerts(req.siteId, { unreadOnly, limit: req.query.limit }),
+            searchAlerts.unreadCount(req.siteId),
+        ]);
+        res.json({ success: true, data: { alerts, unreadCount: unread } });
+    } catch (error) {
+        console.error('Error fetching search alerts:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
+    }
+});
+
+// POST /api/search/:siteId/alerts/read — { ids?: number[] }; no ids → mark all
+router.post('/:siteId/alerts/read', async (req, res) => {
+    try {
+        const updated = await searchAlerts.markRead(req.siteId, req.body?.ids);
+        res.json({ success: true, data: { updated, unreadCount: await searchAlerts.unreadCount(req.siteId) } });
+    } catch (error) {
+        console.error('Error marking search alerts read:', error);
+        res.status(500).json({ success: false, error: safeError(error) });
     }
 });
 

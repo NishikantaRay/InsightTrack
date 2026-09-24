@@ -160,3 +160,11 @@ export function useRankHistory(keyword) {
 export function useRelatedQueries(keyword, limit = 10) {
     return useAnalytics('getSearchRelated', { params: { keyword, limit }, enabled: !!keyword });
 }
+
+/**
+ * In-app rank / AI-answer alerts, newest first, plus the unread count.
+ * `status` is 'all' or 'unread'. Refreshes on the usual 60s cadence.
+ */
+export function useSearchAlerts(status = 'all', limit = 50) {
+    return useAnalytics('getSearchAlerts', { params: { status, limit } });
+}

@@ -17,6 +17,7 @@ import { query } from '../db/postgres.js';
 import { analyticsCache, CACHE_TTL } from './cache.js';
 import { search, isFixtureMode } from './serpapi/client.js';
 import serpapiKeys from './serpapiKeyService.js';
+import searchAlerts from './searchAlertsService.js';
 import {
     normalizeSnapshot, findDomainPosition, domainMatches,
 } from './serpapi/normalize.js';
@@ -240,11 +241,21 @@ export async function checkKeyword(siteId, domain, { keyword, location = DEFAULT
 
     // Record this observation (skipped for a cached SERP we already logged today).
     if (!serp.cached) {
-        await recordRank(siteId, {
+        const recorded = await recordRank(siteId, {
             keyword, location, device, position, url,
             hasAiOverview, isCited: domainIsCited,
             snapshotId: serp.id, checkedAt: serp.fetchedAt,
         });
+
+        // Raise in-app alerts for a real move. Never from fixtures — a sample
+        // SERP "dropping" the site would be an alert about nothing. A failure
+        // here must not fail the rank check that has already been recorded.
+        if (prev && serp.source !== 'fixture') {
+            await searchAlerts.recordAlerts(siteId, {
+                rankHistoryId: recorded?.id, keyword, location, device, prev,
+                cur: { position, isCited: domainIsCited, hasAiOverview },
+            }).catch((err) => console.warn(`⚠  search alert failed for "${keyword}":`, err.message));
+        }
     }
 
     return {

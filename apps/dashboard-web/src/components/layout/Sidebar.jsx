@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
     BarChart3, Globe, Layers, Activity, Settings, FileText,
@@ -6,6 +7,8 @@ import {
     LayoutDashboard, Shield, Terminal, Map, Sliders, X, Bug, Search,
 } from 'lucide-react';
 import { useFeatureStore } from '../../store/useFeatureStore';
+import { useSearchAlerts } from '../../hooks/useAnalytics';
+import { SEARCH_ALERTS_CHANGED } from '../search/SearchAlerts';
 
 const NAV_ITEMS = [
     { key: 'dashboard',    to: '/',            icon: BarChart3,       label: 'Dashboard' },
@@ -35,6 +38,14 @@ export default function Sidebar({ collapsed, onToggleCollapse, onClose }) {
     const hiddenCount = useFeatureStore((s) => s.hiddenCount());
 
     const visibleItems = NAV_ITEMS.filter(item => isVisible(item.key));
+
+    // Unread search alerts, shown as a count on the Search Visibility item.
+    const { data: alertData, refetch: refetchAlerts } = useSearchAlerts('unread', 1);
+    const badges = { search: alertData?.unreadCount || 0 };
+    useEffect(() => {
+        window.addEventListener(SEARCH_ALERTS_CHANGED, refetchAlerts);
+        return () => window.removeEventListener(SEARCH_ALERTS_CHANGED, refetchAlerts);
+    }, [refetchAlerts]);
 
     return (
         <aside
@@ -86,8 +97,19 @@ export default function Sidebar({ collapsed, onToggleCollapse, onClose }) {
                                 }`}
                             title={collapsed ? label : undefined}
                         >
-                            <Icon className="w-5 h-5 shrink-0" />
+                            <span className="relative shrink-0">
+                                <Icon className="w-5 h-5" />
+                                {collapsed && badges[key] > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-600 ring-2 ring-card dark:ring-card-dark" />
+                                )}
+                            </span>
                             {!collapsed && <span className="whitespace-nowrap">{label}</span>}
+                            {!collapsed && badges[key] > 0 && (
+                                <span className="ml-auto min-w-[1.25rem] px-1.5 py-0.5 text-[11px] leading-none font-semibold text-center rounded-full bg-rose-600 text-white tabular-nums"
+                                    aria-label={`${badges[key]} unread alert${badges[key] === 1 ? '' : 's'}`}>
+                                    {badges[key] > 99 ? '99+' : badges[key]}
+                                </span>
+                            )}
                         </NavLink>
                     );
                 })}

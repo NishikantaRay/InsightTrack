@@ -220,6 +220,13 @@ export const analyticsAPI = {
         api.get(`/search/${siteId}/related`, { params: { keyword, limit } }),
     getSearchRankHistory: (siteId, dateRange, keyword) =>
         api.get(`/search/${siteId}/rank-history`, { params: { keyword } }),
+    getSearchAlerts: (siteId, dateRange, status = 'all', limit = 50) =>
+        api.get(`/search/${siteId}/alerts`, { params: { status, limit } }),
+};
+
+// In-app search alerts (write — not part of useAnalytics). No ids → mark all.
+export const searchAlertsAPI = {
+    markRead: (siteId, ids = []) => api.post(`/search/${siteId}/alerts/read`, { ids }),
 };
 
 // Search-visibility keyword mapping (writes — not part of useAnalytics).

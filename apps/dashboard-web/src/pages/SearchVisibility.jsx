@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Search, Settings2, KeyRound, FlaskConical } from 'lucide-react';
-import { useSearchVisibility } from '../hooks/useAnalytics';
+import { useSearchVisibility, useSearchAlerts } from '../hooks/useAnalytics';
 import { useSiteStore } from '../store/useSiteStore';
 import RankTrafficPanel from '../components/search/RankTrafficPanel';
 import KeywordManager from '../components/search/KeywordManager';
 import SerpApiKeyDialog from '../components/search/SerpApiKeyDialog';
+import SearchAlerts from '../components/search/SearchAlerts';
 import PageNote from '../components/ui/PageNote';
 
 /**
@@ -19,6 +20,7 @@ export default function SearchVisibility() {
     const [keywordsOpen, setKeywordsOpen] = useState(false);
     const [keyOpen, setKeyOpen] = useState(false);
     const { data, loading, error, refetch } = useSearchVisibility(10);
+    const alerts = useSearchAlerts();
 
     const pages = data?.pages ?? [];
     const significant = data?.significantCount ?? 0;
@@ -151,6 +153,12 @@ export default function SearchVisibility() {
                         Map a keyword
                     </button>
                 </div>
+            )}
+
+            {/* Alerts need live history; sample data never raises one. */}
+            {!fixtureMode && pages.length > 0 && (
+                <SearchAlerts siteId={siteId} data={alerts.data} loading={alerts.loading}
+                    onChanged={alerts.refetch} />
             )}
 
             {!loading && pages.length > 0 && (

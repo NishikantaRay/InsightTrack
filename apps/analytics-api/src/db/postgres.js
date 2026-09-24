@@ -509,6 +509,32 @@ export async function initializeDatabase() {
     await query(`CREATE INDEX IF NOT EXISTS idx_rank_history_lookup ON rank_history(site_id, keyword, location, checked_at DESC)`);
     console.log('  ✓ rank_history');
 
+    // search_alerts — rank/AI-answer changes worth a human's attention, derived
+    // from consecutive rank_history rows. In-app only: shown on /search and as a
+    // sidebar count, never sent anywhere. One row per (observation, type), so a
+    // re-run over the same observation cannot duplicate an alert.
+    await query(`
+    CREATE TABLE IF NOT EXISTS search_alerts (
+      id                SERIAL PRIMARY KEY,
+      site_id           VARCHAR(64)  NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+      rank_history_id   INTEGER      REFERENCES rank_history(id) ON DELETE CASCADE,
+      keyword           VARCHAR(200) NOT NULL,
+      location          VARCHAR(100) NOT NULL DEFAULT 'United States',
+      device            VARCHAR(20)  NOT NULL DEFAULT 'desktop',
+      type              VARCHAR(40)  NOT NULL,
+      severity          VARCHAR(20)  NOT NULL CHECK (severity IN ('critical','warning','positive')),
+      previous_position INTEGER,
+      position          INTEGER,
+      message           TEXT         NOT NULL,
+      created_at        TIMESTAMPTZ  DEFAULT NOW(),
+      read_at           TIMESTAMPTZ,
+      UNIQUE (rank_history_id, type)
+    )
+  `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_search_alerts_site_created ON search_alerts(site_id, created_at DESC)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_search_alerts_site_unread ON search_alerts(site_id) WHERE read_at IS NULL`);
+    console.log('  ✓ search_alerts');
+
     // ── Team / multi-user tables ─────────────────────────────────────────────
 
     // site_members: which users can access which site, and with what role
