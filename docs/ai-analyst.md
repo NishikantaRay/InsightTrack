@@ -52,6 +52,7 @@ Pulse needs an **Anthropic (Claude)**, **OpenAI (GPT)**, or **Google (Gemini)** 
 - Your key is stored **encrypted at rest** (AES-256-GCM) and is **never shown again** — only a masked hint like `sk-…a1b2`.
 - **Precedence:** your saved key is used first; if you don’t set one, the server’s key is used.
 - Optional **model override**: e.g. `claude-sonnet-5` or `gpt-4o-mini`. Leave blank for the default.
+- **Which model?** See [analyst-benchmark.md](./analyst-benchmark.md): 480 test cases of Pulse's real job. `claude-sonnet-5` scored 100%, and `gemini-3.7-flash` scored 97.7% at about half the cost. Small or non-reasoning models often get "why did traffic change?" wrong.
 - Remove your key anytime with the **trash** button next to the key field — the panel falls back to the server key.
 
 ---

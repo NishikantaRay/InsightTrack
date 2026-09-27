@@ -88,4 +88,5 @@ Implementation guides are in `docs/`:
 - `docs/ai-analyst.md` — Pulse (AI analyst) user guide (in-panel use, BYO key, Claude Desktop/MCP setup)
 - `docs/mcp-toolkit.md` — MCP toolkit architecture & build phases (registry, assistant service, MCP server)
 - `docs/search-visibility-connector.md` — Search Visibility (SerpApi × traffic correlation, MCP tools, fixture mode)
+- `docs/analyst-benchmark.md` — InsightTrack Analyst Bench (Kaggle benchmark for Pulse's model; re-run its tests after changing correlationService.js, the tool registry, or the events/sessions schema)
 

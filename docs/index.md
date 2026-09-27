@@ -36,6 +36,7 @@ Start here. Docs are grouped by what you're trying to do.
 | [reporting-studio.md](reporting-studio.md) | Reporting Studio & exports |
 | [ai-analyst.md](ai-analyst.md) | Pulse — the AI analyst (in-panel use, BYO key, MCP clients) |
 | [mcp-toolkit.md](mcp-toolkit.md) | MCP toolkit architecture & build phases |
+| [analyst-benchmark.md](analyst-benchmark.md) | InsightTrack Analyst Bench: the Kaggle benchmark for Pulse's model (results, model choice, keeping it in sync) |
 | [mcp-improvement-plan.md](mcp-improvement-plan.md) | MCP/AI Analyst audit findings & prioritized improvement roadmap |
 | [team-access.md](team-access.md) | Multi-user sites, roles, invites |
 | [alerts.md](alerts.md) | Alerts panel |
